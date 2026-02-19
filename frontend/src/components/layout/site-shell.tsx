@@ -1,15 +1,16 @@
 import { ReactNode } from "react";
 
-import { appConfig } from "@/config/app-config";
+import { appConfig, type ThemePreset } from "@/config/app-config";
 
 type SiteShellProps = {
   children: ReactNode;
   showDesignLink?: boolean;
+  themePreset: ThemePreset;
 };
 
-export function SiteShell({ children, showDesignLink = false }: SiteShellProps) {
+export function SiteShell({ children, showDesignLink = false, themePreset }: SiteShellProps) {
   return (
-    <main className="background-grain font-context theme-page" data-theme="rose-sand">
+    <main className="background-grain font-context theme-page" data-theme={themePreset}>
       <div className="theme-orb-a" />
       <div className="theme-orb-b" />
       <div className="theme-orb-c" />
@@ -21,18 +22,21 @@ export function SiteShell({ children, showDesignLink = false }: SiteShellProps) 
           </a>
 
           <div className="flex items-center gap-2">
-            <a href={appConfig.routes.privacy} className="glass-panel partner-pill rounded-full px-4 py-1 text-xs tracking-wider">
-              Privacy
+            <a
+              href={appConfig.routes.privacy}
+              className="glass-pill hover-glow partner-pill rounded-full px-4 py-1 text-xs tracking-wider"
+            >
+              Privatliv
             </a>
             {showDesignLink && (
               <a
                 href={appConfig.routes.design}
-                className="glass-panel partner-pill rounded-full px-4 py-1 text-xs tracking-wider"
+                className="glass-pill hover-glow partner-pill rounded-full px-4 py-1 text-xs tracking-wider"
               >
                 Design
               </a>
             )}
-            <span className="glass-panel partner-pill rounded-full px-4 py-1 text-[0.66rem] uppercase tracking-wider">
+            <span className="glass-pill partner-pill rounded-full px-4 py-1 text-[0.66rem] uppercase tracking-wider">
               I samarbejde med Dansk Sexologisk Akademi
             </span>
           </div>

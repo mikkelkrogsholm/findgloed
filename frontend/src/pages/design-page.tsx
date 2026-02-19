@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { appConfig } from "@/config/app-config";
+import { appConfig, type ThemePreset } from "@/config/app-config";
 import { designSystem, type TokenItem } from "@/config/design-system";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -69,12 +69,67 @@ function TokenPreview({ token }: { token: TokenItem }) {
   }, [token.variable]);
 
   return (
-    <div className="glass-panel rounded-2xl p-4">
+    <div className="glass-pill rounded-2xl p-4">
       <div className="mb-3 h-12 rounded-xl border border-[color:var(--border-subtle)]" style={{ background: `var(${token.variable})` }} />
       <p className="display-text text-sm font-semibold">{token.label}</p>
       <p className="body-text-muted text-xs">{token.variable}</p>
       <p className="body-text-muted mt-1 text-xs">{resolvedValue}</p>
       <p className="body-text mt-2 text-xs">{token.note}</p>
+    </div>
+  );
+}
+
+function ThemeComparisonCard({ preset }: { preset: ThemePreset }) {
+  const presetMeta = designSystem.presets[preset];
+  const consentId = `theme-consent-${preset}`;
+  const coreTokens: TokenItem[] = [
+    { label: "Accent", variable: "--color-accent", note: "Primær handling" },
+    { label: "Link", variable: "--color-link", note: "Sekundær handling" },
+    { label: "Baggrund", variable: "--color-bg-base", note: "Grundtone" },
+    { label: "Glass", variable: "--glass-card-surface", note: "Kortlag" }
+  ];
+
+  return (
+    <div data-theme={preset} className="rounded-3xl border border-[color:var(--border-subtle)] p-4 md:p-6">
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <p className="noxus-kicker kicker-text text-[0.68rem]">{presetMeta.name}</p>
+          <p className="display-text text-lg font-semibold">{presetMeta.tone}</p>
+        </div>
+
+        <div className="glass-shell space-y-4 rounded-3xl p-4">
+          <p className="noxus-title display-text text-2xl">Kurateret event-atmosfære</p>
+          <p className="body-text text-sm">Samme komponenter, nyt token-lag. Fokus på tryghed, læsbarhed og ro.</p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {coreTokens.map((token) => (
+              <div key={`${preset}-${token.variable}`} className="glass-pill rounded-xl p-2">
+                <div className="mb-1 h-6 rounded-md border border-[color:var(--border-subtle)]" style={{ background: `var(${token.variable})` }} />
+                <p className="body-text text-xs font-semibold">{token.label}</p>
+              </div>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <span className="glass-pill rounded-full px-3 py-1 text-xs">MitID-verificeret</span>
+            <span className="glass-pill rounded-full px-3 py-1 text-xs">Tryg adgang</span>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor={`compare-email-${preset}`}>Email</Label>
+            <Input id={`compare-email-${preset}`} placeholder={designSystem.componentCopy.inputPlaceholder} />
+          </div>
+          <div className="glass-pill flex items-start gap-3 rounded-xl p-3">
+            <Checkbox id={consentId} checked />
+            <Label htmlFor={consentId} className="body-text text-sm leading-relaxed">
+              Jeg har læst og accepterer handelsbetingelserne og persondatapolitikken.
+            </Label>
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm">Primær</Button>
+            <Button size="sm" variant="outline">
+              Sekundær
+            </Button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -98,13 +153,27 @@ export function DesignPage() {
   return (
     <ToastProvider>
       <section className="mx-auto w-full max-w-6xl space-y-8 px-6 py-16">
-        <Card className="p-8 md:p-10">
+        <Card className="reveal-up p-8 md:p-10">
           <CardContent className="space-y-4 pt-0">
             <CardTitle>{designSystem.title}</CardTitle>
             <p className="body-text">{designSystem.description}</p>
+            <p className="body-text text-sm">
+              Aktivt preset: <strong>{designSystem.presets[designSystem.activePreset].name}</strong>
+            </p>
             <p className="body-text-muted text-sm">
               Deploy toggle: <code>VITE_ENABLE_DESIGN_PAGE=false</code>
             </p>
+            <p className="body-text-muted text-sm">
+              Theme toggle: <code>VITE_THEME_PRESET=legacy|anthro-v1</code>
+            </p>
+            <div className="glass-pill rounded-2xl p-4">
+              <p className="display-text text-sm font-semibold">Designprincipper</p>
+              <ul className="body-text mt-2 list-inside list-disc space-y-1 text-sm">
+                {designSystem.principles.map((principle) => (
+                  <li key={principle}>{principle}</li>
+                ))}
+              </ul>
+            </div>
             <div className="flex flex-wrap gap-3">
               <Button asChild>
                 <a href={appConfig.routes.landing}>Til landing</a>
@@ -116,12 +185,25 @@ export function DesignPage() {
           </CardContent>
         </Card>
 
-        <Card className="p-8 md:p-10">
+        <Card className="reveal-up reveal-delay-1 p-8 md:p-10">
+          <CardContent className="space-y-6 pt-0">
+            <CardTitle>Theme Comparison</CardTitle>
+            <p className="body-text">
+              Samme primitives og komponenter vist i begge presets, så forskellen kan vurderes direkte.
+            </p>
+            <div className="grid gap-4 xl:grid-cols-2">
+              <ThemeComparisonCard preset="legacy" />
+              <ThemeComparisonCard preset="anthro-v1" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="reveal-up reveal-delay-2 p-8 md:p-10">
           <CardContent className="space-y-6 pt-0">
             <CardTitle>Typografi</CardTitle>
             <div className="space-y-4">
               {designSystem.typography.map((font) => (
-                <div key={font.variable} className="glass-panel rounded-2xl p-4">
+                <div key={font.variable} className="glass-pill rounded-2xl p-4">
                   <p className="body-text-muted text-xs">{font.variable}</p>
                   <p className="display-text mt-2 text-sm font-semibold">{font.label}</p>
                   <p className="display-text mt-2 text-2xl" style={{ fontFamily: `var(${font.variable})` }}>
@@ -166,7 +248,7 @@ export function DesignPage() {
               <Badge variant="outline">Partner</Badge>
             </div>
 
-            <div className="glass-panel rounded-2xl p-6">
+            <div className="glass-card rounded-2xl p-6">
               <p className="display-text text-lg font-semibold">{designSystem.componentCopy.cardTitle}</p>
               <p className="body-text mt-2">{designSystem.componentCopy.cardBody}</p>
             </div>
@@ -206,7 +288,7 @@ export function DesignPage() {
               <Textarea placeholder="Skriv en intern note..." />
             </div>
 
-            <div className="flex items-start gap-3 rounded-xl border border-[color:var(--border-subtle)] bg-[color:var(--glass-panel-surface)] p-4">
+            <div className="glass-pill flex items-start gap-3 rounded-xl p-4">
               <Checkbox id="consent" checked={consentAccepted} onCheckedChange={(value) => setConsentAccepted(Boolean(value))} />
               <Label htmlFor="consent" className="body-text text-sm leading-relaxed">
                 Jeg accepterer handelsbetingelserne og persondatapolitikken. <a className="link-inline" href={appConfig.routes.privacy}>Læs vilkår</a>
@@ -267,17 +349,17 @@ export function DesignPage() {
                 <TabsTrigger value="settings">Indstillinger</TabsTrigger>
               </TabsList>
               <TabsContent value="events">
-                <div className="glass-panel rounded-xl p-4">
+                <div className="glass-pill rounded-xl p-4">
                   <p className="body-text">Event-oversigt med kommende datoer, lokation og kapacitet.</p>
                 </div>
               </TabsContent>
               <TabsContent value="tickets">
-                <div className="glass-panel rounded-xl p-4">
+                <div className="glass-pill rounded-xl p-4">
                   <p className="body-text">Billetstatus med check-in historik og QR id.</p>
                 </div>
               </TabsContent>
               <TabsContent value="settings">
-                <div className="glass-panel rounded-xl p-4">
+                <div className="glass-pill rounded-xl p-4">
                   <p className="body-text">Brugerindstillinger og datapræferencer.</p>
                 </div>
               </TabsContent>
@@ -379,7 +461,7 @@ export function DesignPage() {
             <CardTitle>Domain Patterns</CardTitle>
 
             <div className="grid gap-4 xl:grid-cols-2">
-              <div className="glass-panel rounded-2xl p-5">
+              <div className="glass-card rounded-2xl p-5">
                 <p className="display-text text-base font-semibold">Waitlist Form States</p>
                 <Tabs defaultValue="idle" className="mt-4 w-full">
                   <TabsList>
@@ -404,7 +486,7 @@ export function DesignPage() {
                 </Tabs>
               </div>
 
-              <div className="glass-panel rounded-2xl p-5">
+              <div className="glass-card rounded-2xl p-5">
                 <p className="display-text text-base font-semibold">Ticket Card + QR</p>
                 <div className="mt-4 space-y-3">
                   <div className="flex items-center justify-between">
@@ -421,7 +503,7 @@ export function DesignPage() {
                 </div>
               </div>
 
-              <div className="glass-panel rounded-2xl p-5 xl:col-span-2">
+              <div className="glass-card rounded-2xl p-5 xl:col-span-2">
                 <p className="display-text text-base font-semibold">Scan Result States</p>
                 <div className="mt-4 grid gap-3 md:grid-cols-3">
                   <div className="rounded-xl border border-[color:var(--color-success-border)] bg-[color:var(--color-success-soft)] p-4">
@@ -442,7 +524,7 @@ export function DesignPage() {
                 </div>
               </div>
 
-              <div className="glass-panel rounded-2xl p-5">
+              <div className="glass-card rounded-2xl p-5">
                 <p className="display-text text-base font-semibold">Empty State</p>
                 <p className="body-text-muted mt-2 text-sm">Ingen events endnu. Opret første event for at komme i gang.</p>
                 <Button className="mt-4" variant="outline">
@@ -450,7 +532,7 @@ export function DesignPage() {
                 </Button>
               </div>
 
-              <div className="glass-panel rounded-2xl p-5">
+              <div className="glass-card rounded-2xl p-5">
                 <p className="display-text text-base font-semibold">Error State</p>
                 <Alert variant="error" className="mt-3">
                   <AlertDescription>Kunne ikke hente events. Prøv igen eller kontakt support.</AlertDescription>

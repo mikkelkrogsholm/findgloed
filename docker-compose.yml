@@ -55,6 +55,7 @@ services:
       PORT: 5173
       VITE_API_URL: ${API_URL}
       VITE_ENABLE_DESIGN_PAGE: ${VITE_ENABLE_DESIGN_PAGE}
+      VITE_THEME_PRESET: ${VITE_THEME_PRESET:-anthro-v1}
     ports:
       - "${APP_PORT}:5173"
     depends_on:

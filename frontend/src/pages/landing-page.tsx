@@ -68,24 +68,24 @@ export function LandingPage() {
   }
 
   return (
-    <section className="mx-auto grid w-full max-w-6xl gap-10 px-6 py-20 md:grid-cols-[1.15fr_1fr]">
-      <div className="glass-stage">
-        <p className="noxus-kicker kicker-text mb-5 text-xs">Event-First fællesskab</p>
+    <section className="mx-auto grid w-full max-w-6xl items-start gap-10 px-6 py-20 md:grid-cols-[1.15fr_1fr]">
+      <div className="glass-shell reveal-up p-8 md:p-10">
+        <p className="noxus-kicker kicker-text mb-5 text-xs">Kurateret event-platform</p>
         <h2 className="noxus-title display-text mb-6 text-4xl leading-tight md:text-6xl">
-          Mød mennesker i virkeligheden. Fortsæt samtalen digitalt.
+          Et trygt sted at mødes i virkeligheden. Digitalt bagefter.
         </h2>
-        <p className="body-text max-w-xl text-lg">
-          Glød åbner med kuraterede events sammen med DKSA. Skriv dig på ventelisten og få tidlig adgang til
-          de første arrangementer.
+        <p className="body-text max-w-xl text-lg leading-relaxed">
+          Glød starter med events i samarbejde med DKSA. Du skriver dig på ventelisten nu, bekræfter via email,
+          og får tidlig adgang til invitationer, når første program åbner.
         </p>
         <div className="mt-8 flex flex-wrap gap-3 text-sm">
-          <span className="glass-panel rounded-full px-4 py-2">MitID verificeret</span>
-          <span className="glass-panel rounded-full px-4 py-2">Event-first tilgang</span>
-          <span className="glass-panel rounded-full px-4 py-2">Privacy by design</span>
+          <span className="glass-pill hover-glow rounded-full px-4 py-2">MitID-verificeret adgang</span>
+          <span className="glass-pill hover-glow rounded-full px-4 py-2">Event-first struktur</span>
+          <span className="glass-pill hover-glow rounded-full px-4 py-2">Tryghed og klare rammer</span>
         </div>
       </div>
 
-      <Card className="p-8 md:p-10">
+      <Card className="reveal-up reveal-delay-2 p-8 md:p-10">
         <CardContent className="pt-0">
           {!isSuccess && (
             <form className="space-y-5" onSubmit={onSubmit}>
@@ -109,7 +109,7 @@ export function LandingPage() {
                 placeholder="dig@eksempel.dk"
               />
 
-              <div className="space-y-3 rounded-xl border border-[color:var(--border-subtle)] bg-[color:var(--glass-panel-surface)] p-4">
+              <div className="glass-pill space-y-3 rounded-2xl p-4">
                 <div className="flex items-start gap-3">
                   <Checkbox
                     id="terms_privacy"
@@ -117,7 +117,7 @@ export function LandingPage() {
                     onCheckedChange={(value) => setAcceptedTermsPrivacy(Boolean(value))}
                   />
                   <Label htmlFor="terms_privacy" className="body-text text-sm leading-relaxed">
-                    Jeg accepterer handelsbetingelserne og persondatapolitikken.
+                    Jeg har læst og accepterer handelsbetingelserne og persondatapolitikken.
                   </Label>
                 </div>
 
@@ -140,7 +140,7 @@ export function LandingPage() {
               )}
 
               <Button disabled={loading || !acceptedTermsPrivacy} type="submit" className="w-full">
-                {loading ? "Gemmer..." : "Skriv mig op"}
+                {loading ? "Gemmer..." : "Få tidlig adgang"}
               </Button>
             </form>
           )}

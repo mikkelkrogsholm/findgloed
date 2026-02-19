@@ -15,7 +15,7 @@ describe("LandingPage", () => {
   it("blocks submit until required consent is checked", async () => {
     render(<LandingPage />);
 
-    const submitButton = screen.getByRole("button", { name: "Skriv mig op" });
+    const submitButton = screen.getByRole("button", { name: "Få tidlig adgang" });
     expect(submitButton).toBeDisabled();
   });
 
@@ -30,9 +30,9 @@ describe("LandingPage", () => {
     const user = userEvent.setup();
 
     await user.type(screen.getByLabelText("Din email"), "gdpr@example.com");
-    await user.click(screen.getByLabelText("Jeg accepterer handelsbetingelserne og persondatapolitikken."));
+    await user.click(screen.getByLabelText("Jeg har læst og accepterer handelsbetingelserne og persondatapolitikken."));
     await user.click(screen.getByLabelText("Ja tak - send mig eksklusive invites, nyheder og updates fra Glød."));
-    await user.click(screen.getByRole("button", { name: "Skriv mig op" }));
+    await user.click(screen.getByRole("button", { name: "Få tidlig adgang" }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     const requestInit = fetchMock.mock.calls[0]?.[1] as RequestInit;
@@ -57,8 +57,8 @@ describe("LandingPage", () => {
     const user = userEvent.setup();
 
     await user.type(screen.getByLabelText("Din email"), "duplicate@example.com");
-    await user.click(screen.getByLabelText("Jeg accepterer handelsbetingelserne og persondatapolitikken."));
-    await user.click(screen.getByRole("button", { name: "Skriv mig op" }));
+    await user.click(screen.getByLabelText("Jeg har læst og accepterer handelsbetingelserne og persondatapolitikken."));
+    await user.click(screen.getByRole("button", { name: "Få tidlig adgang" }));
 
     expect(await screen.findByText("Tjek din email for at bekræfte din tilmelding.")).toBeInTheDocument();
   });
