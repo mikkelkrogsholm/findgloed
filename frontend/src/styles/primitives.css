@@ -1,0 +1,241 @@
+.font-context {
+  font-family: var(--font-body);
+}
+
+.noxus-title {
+  font-family: var(--font-display);
+  letter-spacing: var(--letter-display);
+  text-wrap: balance;
+}
+
+.noxus-kicker {
+  font-family: var(--font-kicker);
+  letter-spacing: var(--letter-kicker);
+  text-transform: uppercase;
+}
+
+.theme-page {
+  min-height: 100vh;
+  color: var(--color-text-primary);
+}
+
+.theme-orb-a,
+.theme-orb-b,
+.theme-orb-c {
+  position: fixed;
+  pointer-events: none;
+  border-radius: 999px;
+  filter: blur(56px);
+}
+
+.theme-orb-a {
+  top: 5rem;
+  left: -6rem;
+  height: 18rem;
+  width: 18rem;
+  background: var(--color-overlay-gold);
+}
+
+.theme-orb-b {
+  top: -3rem;
+  right: -5rem;
+  height: 20rem;
+  width: 20rem;
+  background: var(--color-overlay-blue);
+}
+
+.theme-orb-c {
+  bottom: -8rem;
+  left: 33%;
+  height: 24rem;
+  width: 24rem;
+  background: var(--color-overlay-blue-deep);
+}
+
+.theme-header {
+  border-bottom: 1px solid var(--border-header);
+  background: var(--glass-header-gradient), var(--glass-header-surface);
+  box-shadow: var(--shadow-header);
+  -webkit-backdrop-filter: blur(var(--glass-header-backdrop-blur)) saturate(var(--glass-header-backdrop-saturation));
+  backdrop-filter: blur(var(--glass-header-backdrop-blur)) saturate(var(--glass-header-backdrop-saturation));
+}
+
+.brand-mark {
+  color: var(--color-accent);
+}
+
+.partner-pill {
+  color: var(--color-text-primary);
+}
+
+.display-text {
+  color: var(--color-text-primary);
+}
+
+.body-text {
+  color: var(--color-text-secondary);
+}
+
+.body-text-muted {
+  color: var(--color-text-tertiary);
+}
+
+.kicker-text {
+  color: var(--color-accent);
+}
+
+.link-inline {
+  display: inline-block;
+  color: var(--color-link);
+  text-decoration: underline;
+  text-decoration-color: var(--link-underline-color);
+  text-underline-offset: 4px;
+  transition: color var(--duration-fast) var(--ease-standard);
+}
+
+.link-inline:hover {
+  color: var(--color-link-strong);
+}
+
+.form-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.input-field {
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-input);
+  background: var(--surface-input);
+  color: var(--color-text-primary);
+  outline: none;
+  transition:
+    border-color var(--duration-fast) var(--ease-standard),
+    box-shadow var(--duration-fast) var(--ease-standard);
+}
+
+.input-field::placeholder {
+  color: var(--color-placeholder);
+}
+
+.input-field:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-focus-ring);
+}
+
+.btn-primary {
+  border-radius: var(--radius-input);
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+  font-weight: 600;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    box-shadow var(--duration-fast) var(--ease-standard);
+}
+
+.btn-primary:hover {
+  background: var(--color-accent-strong);
+  box-shadow: var(--shadow-button-primary-hover);
+}
+
+.btn-primary:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.error-text {
+  color: var(--color-danger);
+}
+
+.success-title {
+  color: var(--color-accent);
+}
+
+.success-body {
+  color: var(--color-text-secondary);
+}
+
+.background-grain::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: radial-gradient(var(--grain-dot) 0.5px, transparent 0.5px);
+  background-size: 3px 3px;
+  opacity: var(--grain-opacity);
+}
+
+.glass-stage {
+  position: relative;
+  border-radius: calc(var(--radius-card) + 0.5rem);
+  padding: 2rem;
+  border: 1px solid var(--border-stage);
+  background: var(--glass-stage-gradient), var(--glass-stage-surface);
+  box-shadow: var(--shadow-stage);
+  -webkit-backdrop-filter: blur(var(--glass-stage-backdrop-blur)) saturate(var(--glass-stage-backdrop-saturation));
+  backdrop-filter: blur(var(--glass-stage-backdrop-blur)) saturate(var(--glass-stage-backdrop-saturation));
+  overflow: hidden;
+}
+
+.glass-stage::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: var(--glass-stage-overlay);
+}
+
+@media (max-width: 768px) {
+  .glass-stage {
+    padding: 1.25rem;
+  }
+}
+
+.glass-panel {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  background: var(--glass-panel-gradient), var(--glass-panel-surface);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-panel);
+  -webkit-backdrop-filter: blur(var(--glass-panel-backdrop-blur)) saturate(var(--glass-panel-backdrop-saturation));
+  backdrop-filter: blur(var(--glass-panel-backdrop-blur)) saturate(var(--glass-panel-backdrop-saturation));
+}
+
+.glass-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: var(--glass-panel-highlight);
+  opacity: var(--glass-panel-highlight-opacity);
+  z-index: -1;
+}
+
+.glass-panel-intense {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  background: var(--glass-panel-intense-surface);
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--shadow-card);
+  -webkit-backdrop-filter: blur(var(--glass-panel-intense-backdrop-blur)) saturate(var(--glass-panel-intense-backdrop-saturation));
+  backdrop-filter: blur(var(--glass-panel-intense-backdrop-blur)) saturate(var(--glass-panel-intense-backdrop-saturation));
+}
+
+.accent-edge {
+  position: relative;
+}
+
+.accent-edge::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  border: 1px solid var(--border-strong);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: xor;
+  padding: 1px;
+  pointer-events: none;
+}
