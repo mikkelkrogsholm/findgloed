@@ -13,9 +13,15 @@ function createTestApp(options?: {
       upsertWaitlistLead: async () => ({ status: "created_pending", shouldSendConfirm: true }),
       confirmLeadByToken: async () => ({ status: "invalid" })
     },
+    partnerRepository: {
+      upsertPartnerInterest: async () => ({ status: "created_pending", shouldSendConfirm: true }),
+      confirmPartnerByToken: async () => ({ status: "invalid" })
+    },
     emailService: {
       sendWaitlistConfirm: async () => undefined,
-      sendWaitlistWelcome: async () => undefined
+      sendWaitlistWelcome: async () => undefined,
+      sendPartnerInterestConfirm: async () => undefined,
+      sendPartnerInterestReceived: async () => undefined
     },
     rateLimiter: options?.rateLimiter,
     rateLimitEnabled: options?.rateLimitEnabled,
@@ -54,11 +60,17 @@ describe("POST /api/waitlist", () => {
         upsertWaitlistLead: async () => ({ status: "created_pending", shouldSendConfirm: true }),
         confirmLeadByToken: async () => ({ status: "invalid" })
       },
+      partnerRepository: {
+        upsertPartnerInterest: async () => ({ status: "created_pending", shouldSendConfirm: true }),
+        confirmPartnerByToken: async () => ({ status: "invalid" })
+      },
       emailService: {
         sendWaitlistConfirm: async (email, confirmUrl) => {
           confirmPayload = { email, confirmUrl };
         },
-        sendWaitlistWelcome: async () => undefined
+        sendWaitlistWelcome: async () => undefined,
+        sendPartnerInterestConfirm: async () => undefined,
+        sendPartnerInterestReceived: async () => undefined
       },
       rateLimitEnabled: false,
       corsOrigins: ["http://localhost:4563"],

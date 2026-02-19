@@ -17,6 +17,11 @@ describe("LandingPage", () => {
 
     const submitButton = screen.getByRole("button", { name: "Få tidlig adgang" });
     expect(submitButton).toBeDisabled();
+    expect(
+      screen.getByText(
+        "Skriv dig op, så holder vi dig opdateret om Glød, det vi bygger, og hvornår vi lancerer. Ingen endeløs chat. Ingen swipe-loop. Bare et fællesskab, der starter i virkeligheden."
+      )
+    ).toBeInTheDocument();
   });
 
   it("sends marketing_opt_in and required consent in payload", async () => {

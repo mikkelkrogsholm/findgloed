@@ -73,4 +73,71 @@ export class ResendEmailService implements EmailService {
       throw new Error(`Resend welcome failed with status ${response.status}`);
     }
   }
+
+  async sendPartnerInterestConfirm(email: string, confirmUrl: string): Promise<void> {
+    if (!this.apiKey || !this.fromEmail) {
+      return;
+    }
+
+    const subject = "Bekræft din samarbejdsforespørgsel hos Glød";
+    const text = [
+      "Tak for din interesse i at blive samarbejdspartner.",
+      "Klik på linket for at bekræfte din henvendelse:",
+      confirmUrl,
+      this.supportEmail ? `Support: ${this.supportEmail}` : ""
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${this.apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        from: this.fromEmail,
+        to: [email],
+        subject,
+        text
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Resend partner confirm failed with status ${response.status}`);
+    }
+  }
+
+  async sendPartnerInterestReceived(email: string): Promise<void> {
+    if (!this.apiKey || !this.fromEmail) {
+      return;
+    }
+
+    const subject = "Tak for din bekræftelse";
+    const text = [
+      "Din samarbejdsforespørgsel er bekræftet.",
+      "Vi vender tilbage hurtigst muligt.",
+      this.supportEmail ? `Support: ${this.supportEmail}` : ""
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${this.apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        from: this.fromEmail,
+        to: [email],
+        subject,
+        text
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Resend partner receipt failed with status ${response.status}`);
+    }
+  }
 }

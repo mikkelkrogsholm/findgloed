@@ -41,8 +41,11 @@ async function bootstrap(): Promise<void> {
     }
   }
 
+  const repository = new PostgresLeadRepository(pool);
+
   const app = createApp({
-    leadRepository: new PostgresLeadRepository(pool),
+    leadRepository: repository,
+    partnerRepository: repository,
     emailService: new ResendEmailService(
       config.resendApiKey,
       config.resendFromEmail,
@@ -52,6 +55,7 @@ async function bootstrap(): Promise<void> {
     corsOrigins: config.corsOrigins,
     appUrl: config.appUrl,
     waitlistConfirmPath: config.waitlistConfirmPath,
+    partnerConfirmPath: config.partnerConfirmPath,
     confirmationTokenTtlHours: config.waitlistTokenTtlHours,
     resendCooldownMinutes: config.waitlistResendCooldownMinutes,
     rateLimitEnabled: config.rateLimitEnabled,

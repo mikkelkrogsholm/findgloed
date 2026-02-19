@@ -30,7 +30,7 @@ export class RedisRateLimiter implements RateLimiter {
 
   async check(input: RateLimitCheckInput): Promise<RateLimitCheckResult> {
     const nowMs = Date.now();
-    const isWaitlist = input.scope === "waitlist";
+    const isWaitlist = input.scope === "waitlist" || input.scope === "partner_interest";
     const max = isWaitlist ? this.options.waitlistMax : this.options.confirmMax;
     const windowSeconds = isWaitlist
       ? this.options.waitlistWindowSeconds

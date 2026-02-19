@@ -7,9 +7,15 @@ function createHealthApp(options?: { enableHsts?: boolean; trustProxy?: boolean 
       upsertWaitlistLead: async () => ({ status: "created_pending", shouldSendConfirm: true }),
       confirmLeadByToken: async () => ({ status: "invalid" })
     },
+    partnerRepository: {
+      upsertPartnerInterest: async () => ({ status: "created_pending", shouldSendConfirm: true }),
+      confirmPartnerByToken: async () => ({ status: "invalid" })
+    },
     emailService: {
       sendWaitlistConfirm: async () => undefined,
-      sendWaitlistWelcome: async () => undefined
+      sendWaitlistWelcome: async () => undefined,
+      sendPartnerInterestConfirm: async () => undefined,
+      sendPartnerInterestReceived: async () => undefined
     },
     rateLimitEnabled: false,
     corsOrigins: ["http://localhost:4563"],

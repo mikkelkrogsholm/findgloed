@@ -22,6 +22,22 @@ API:
 - `http://localhost:4564/api/health`
 - `POST http://localhost:4564/api/waitlist`
 
+## Frontend hot reload (Docker)
+- Frontend service now uses bind mount (`./frontend:/app`) and Vite dev server.
+- Start once:
+
+```bash
+docker compose up --build web
+```
+
+- Afterwards, start without rebuild:
+
+```bash
+docker compose up web
+```
+
+- Changes in `/frontend` should appear automatically on `http://localhost:4563`.
+
 ## TDD test run (Docker)
 ```bash
 docker compose run --build --rm api bun test

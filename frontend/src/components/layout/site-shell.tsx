@@ -23,6 +23,12 @@ export function SiteShell({ children, showDesignLink = false, themePreset }: Sit
 
           <div className="flex items-center gap-2">
             <a
+              href={appConfig.routes.vision}
+              className="glass-pill hover-glow partner-pill rounded-full px-4 py-1 text-xs tracking-wider"
+            >
+              Vision
+            </a>
+            <a
               href={appConfig.routes.privacy}
               className="glass-pill hover-glow partner-pill rounded-full px-4 py-1 text-xs tracking-wider"
             >
@@ -36,9 +42,14 @@ export function SiteShell({ children, showDesignLink = false, themePreset }: Sit
                 Design
               </a>
             )}
-            <span className="glass-pill partner-pill rounded-full px-4 py-1 text-[0.66rem] uppercase tracking-wider">
+            <a
+              href="https://www.dksa.dk/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="glass-pill hover-glow partner-pill rounded-full px-4 py-1 text-[0.66rem] uppercase tracking-wider"
+            >
               I samarbejde med Dansk Sexologisk Akademi
-            </span>
+            </a>
           </div>
         </div>
       </header>

@@ -6,9 +6,14 @@ import { DesignPage } from "@/pages/design-page";
 import { LandingPage } from "@/pages/landing-page";
 import { NotFoundPage } from "@/pages/not-found-page";
 import { PrivacyPage } from "@/pages/privacy-page";
+import { VisionPage } from "@/pages/vision-page";
+import { PartnerConfirmPage } from "@/pages/partner-confirm-page";
 import { WaitlistConfirmPage } from "@/pages/waitlist-confirm-page";
 
 function resolveRoute(pathname: string): AppRouteName {
+  if (pathname === "/vision" || pathname === appConfig.routes.vision) {
+    return "vision";
+  }
   if (pathname === "/privacy" || pathname === appConfig.routes.privacy) {
     return "privacy";
   }
@@ -19,6 +24,14 @@ function resolveRoute(pathname: string): AppRouteName {
     pathname === "/waitlist/confirm/index.html"
   ) {
     return "waitlist-confirm";
+  }
+  if (
+    pathname === appConfig.routes.partnerConfirm ||
+    pathname === `${appConfig.routes.partnerConfirm}/` ||
+    pathname === `${appConfig.routes.partnerConfirm}.html` ||
+    pathname === "/partner/confirm/index.html"
+  ) {
+    return "partner-confirm";
   }
   if (pathname === "/design" || pathname === appConfig.routes.design) {
     return appConfig.features.designPage ? "design" : "not-found";
@@ -54,29 +67,39 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (route === "vision") {
+      document.title = "Glød - Vision";
+      return;
+    }
     if (route === "privacy") {
-      document.title = "Glod - Persondatapolitik";
+      document.title = "Glød - Persondatapolitik";
       return;
     }
     if (route === "waitlist-confirm") {
-      document.title = "Glod - Bekræft tilmelding";
+      document.title = "Glød - Bekræft tilmelding";
+      return;
+    }
+    if (route === "partner-confirm") {
+      document.title = "Glød - Bekræft samarbejde";
       return;
     }
     if (route === "design") {
-      document.title = "Glod - Design System";
+      document.title = "Glød - Design System";
       return;
     }
     if (route === "not-found") {
-      document.title = "Glod - Side ikke fundet";
+      document.title = "Glød - Side ikke fundet";
       return;
     }
-    document.title = "Glod";
+    document.title = "Glød";
   }, [route]);
 
   return (
     <SiteShell showDesignLink={appConfig.features.designPage} themePreset={appConfig.themePreset}>
+      {route === "vision" && <VisionPage />}
       {route === "privacy" && <PrivacyPage />}
       {route === "waitlist-confirm" && <WaitlistConfirmPage />}
+      {route === "partner-confirm" && <PartnerConfirmPage />}
       {route === "design" && <DesignPage />}
       {route === "not-found" && <NotFoundPage />}
       {route === "landing" && <LandingPage />}

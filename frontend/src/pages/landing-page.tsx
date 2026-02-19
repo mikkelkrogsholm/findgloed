@@ -70,13 +70,13 @@ export function LandingPage() {
   return (
     <section className="mx-auto grid w-full max-w-6xl items-start gap-10 px-6 py-20 md:grid-cols-[1.15fr_1fr]">
       <div className="glass-shell reveal-up p-8 md:p-10">
-        <p className="noxus-kicker kicker-text mb-5 text-xs">Kurateret event-platform</p>
+        <p className="noxus-kicker kicker-text mb-5 text-xs">Fællesskab før swipes</p>
         <h2 className="noxus-title display-text mb-6 text-4xl leading-tight md:text-6xl">
-          Et trygt sted at mødes i virkeligheden. Digitalt bagefter.
+          Bliv set uden at skulle performe.
         </h2>
         <p className="body-text max-w-xl text-lg leading-relaxed">
-          Glød starter med events i samarbejde med DKSA. Du skriver dig på ventelisten nu, bekræfter via email,
-          og får tidlig adgang til invitationer, når første program åbner.
+          Glød er for dig, der er nysgerrig på mere, men ikke føler dig hjemme i klassiske dating-apps. Vi starter
+          med events sammen med DKSA, hvor relationer får lov at vokse gennem fælles oplevelser i trygge rammer.
         </p>
         <div className="mt-8 flex flex-wrap gap-3 text-sm">
           <span className="glass-pill hover-glow rounded-full px-4 py-2">MitID-verificeret adgang</span>
@@ -91,8 +91,8 @@ export function LandingPage() {
             <form className="space-y-5" onSubmit={onSubmit}>
               <div className="space-y-2">
                 <p className="body-text-muted text-sm leading-relaxed">
-                  Vi bruger din email til venteliste-flowet, lancering og relevante event-opdateringer. Du
-                  bekræfter din tilmelding via email (double opt-in).
+                  Skriv dig op, så holder vi dig opdateret om Glød, det vi bygger, og hvornår vi lancerer. Ingen
+                  endeløs chat. Ingen swipe-loop. Bare et fællesskab, der starter i virkeligheden.
                 </p>
                 <a href={appConfig.routes.privacy} className="link-inline text-sm">
                   Læs persondatapolitik

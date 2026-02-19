@@ -8,6 +8,7 @@ export type Config = {
   hstsMaxAgeSeconds: number;
   appUrl: string;
   waitlistConfirmPath: string;
+  partnerConfirmPath: string;
   waitlistTokenTtlHours: number;
   waitlistResendCooldownMinutes: number;
   rateLimitEnabled: boolean;
@@ -85,6 +86,7 @@ export function readConfig(): Config {
     hstsMaxAgeSeconds: parseInteger(process.env.HSTS_MAX_AGE_SECONDS, 31_536_000),
     appUrl: process.env.APP_URL ?? "http://localhost:4563",
     waitlistConfirmPath: process.env.WAITLIST_CONFIRM_PATH ?? "/waitlist/confirm",
+    partnerConfirmPath: process.env.PARTNER_CONFIRM_PATH ?? "/partner/confirm",
     waitlistTokenTtlHours: parseInteger(process.env.WAITLIST_CONFIRM_TOKEN_TTL_HOURS, 72),
     waitlistResendCooldownMinutes: parseInteger(process.env.WAITLIST_RESEND_COOLDOWN_MINUTES, 15),
     rateLimitEnabled: parseBoolean(process.env.RATE_LIMIT_ENABLED, true),

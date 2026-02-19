@@ -1,15 +1,25 @@
 import { Hono } from "hono";
 import { createHash, randomBytes } from "node:crypto";
-import type { EmailService, RateLimitScope, RateLimiter, WaitlistRepository } from "./types";
+import type {
+  EmailService,
+  PartnerInterestOption,
+  PartnerInterestRepository,
+  PartnerRole,
+  RateLimitScope,
+  RateLimiter,
+  WaitlistRepository
+} from "./types";
 import { isValidEmail, normalizeEmail } from "./validators";
 
 type AppDeps = {
   leadRepository: WaitlistRepository;
+  partnerRepository?: PartnerInterestRepository;
   emailService: EmailService;
   rateLimiter?: RateLimiter;
   corsOrigins?: string[];
   appUrl: string;
   waitlistConfirmPath: string;
+  partnerConfirmPath?: string;
   confirmationTokenTtlHours?: number;
   resendCooldownMinutes?: number;
   rateLimitEnabled?: boolean;
@@ -25,6 +35,18 @@ const DEFAULT_RATE_LIMIT_FAIL_OPEN = false;
 const DEFAULT_HSTS_MAX_AGE_SECONDS = 31_536_000;
 const CORS_METHODS = "GET,POST,OPTIONS";
 const CORS_HEADERS = "Content-Type";
+const PARTNER_ROLES: PartnerRole[] = [
+  "Forening/organisation",
+  "Eventarrangør",
+  "Fagperson/behandler",
+  "Andet"
+];
+const PARTNER_INTERESTS: PartnerInterestOption[] = [
+  "Oprette events",
+  "Nå nye deltagere",
+  "Styrke trygge rammer",
+  "Samarbejde om platformen"
+];
 
 function hashToken(value: string): string {
   return createHash("sha256").update(value).digest("hex");
@@ -40,6 +62,43 @@ function buildWaitlistConfirmUrl(appUrl: string, confirmPath: string, token: str
   const target = new URL(normalizedPath, base);
   target.searchParams.set("token", token);
   return target.toString();
+}
+
+function asRequiredTrimmedString(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function parsePartnerRole(value: unknown): PartnerRole | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  if (!PARTNER_ROLES.includes(value as PartnerRole)) {
+    return null;
+  }
+
+  return value as PartnerRole;
+}
+
+function parsePartnerInterests(value: unknown): PartnerInterestOption[] | null {
+  if (!Array.isArray(value)) {
+    return null;
+  }
+
+  const valid = value.filter((entry): entry is PartnerInterestOption =>
+    typeof entry === "string" && PARTNER_INTERESTS.includes(entry as PartnerInterestOption)
+  );
+
+  if (valid.length === 0 || valid.length !== value.length) {
+    return null;
+  }
+
+  return Array.from(new Set(valid));
 }
 
 export function resolveClientIp(headers: Headers, trustProxy: boolean): string {
@@ -117,6 +176,16 @@ export function createApp(deps: AppDeps): Hono {
   const rateLimitFailOpen = deps.rateLimitFailOpen ?? DEFAULT_RATE_LIMIT_FAIL_OPEN;
   const enableHsts = deps.enableHsts ?? false;
   const hstsMaxAgeSeconds = deps.hstsMaxAgeSeconds ?? DEFAULT_HSTS_MAX_AGE_SECONDS;
+  const partnerRepository =
+    deps.partnerRepository ??
+    ({
+      upsertPartnerInterest: async () => ({
+        status: "created_pending",
+        shouldSendConfirm: true
+      }),
+      confirmPartnerByToken: async () => ({ status: "invalid" })
+    } satisfies PartnerInterestRepository);
+  const partnerConfirmPath = deps.partnerConfirmPath ?? "/partner/confirm";
 
   async function enforceRateLimit(
     c: {
@@ -273,6 +342,93 @@ export function createApp(deps: AppDeps): Hono {
     );
   });
 
+  app.post("/api/partner-interest", async (c) => {
+    const body = await c.req.json().catch(() => null);
+    const email = normalizeEmail(typeof body?.email === "string" ? body.email : "");
+    const name = asRequiredTrimmedString(body?.name);
+    const organization = asRequiredTrimmedString(body?.organization);
+    const role = parsePartnerRole(body?.role);
+    const regionValue = asRequiredTrimmedString(body?.region);
+    const interests = parsePartnerInterests(body?.interests);
+    const acceptedTermsPrivacy = body?.accept_terms_privacy === true;
+    const marketingOptIn = body?.marketing_opt_in === true;
+
+    if (!isValidEmail(email)) {
+      return c.json(
+        {
+          ok: false,
+          code: "INVALID_EMAIL",
+          message: "Ugyldig email"
+        },
+        422
+      );
+    }
+
+    if (!name || !organization || !role || !interests) {
+      return c.json(
+        {
+          ok: false,
+          code: "INVALID_PARTNER_INPUT",
+          message: "Udfyld venligst alle obligatoriske felter."
+        },
+        422
+      );
+    }
+
+    if (!acceptedTermsPrivacy) {
+      return c.json(
+        {
+          ok: false,
+          code: "CONSENT_REQUIRED",
+          message: "Du skal acceptere handelsbetingelser og persondatapolitik"
+        },
+        422
+      );
+    }
+
+    const partnerRateLimitResponse = await enforceRateLimit(c, "partner_interest", email);
+    if (partnerRateLimitResponse) {
+      return partnerRateLimitResponse;
+    }
+
+    const acceptedAt = new Date();
+    const confirmationToken = createConfirmationToken();
+    const confirmationTokenHash = hashToken(confirmationToken);
+    const confirmationTokenExpiresAt = new Date(
+      acceptedAt.getTime() + confirmationTokenTtlHours * 60 * 60 * 1000
+    );
+
+    const result = await partnerRepository.upsertPartnerInterest({
+      email,
+      name,
+      organization,
+      role,
+      region: regionValue,
+      interests,
+      source: "vision_modal",
+      acceptedAt,
+      marketingOptIn,
+      confirmationTokenHash,
+      confirmationTokenExpiresAt,
+      resendCooldownMinutes
+    });
+
+    if (result.shouldSendConfirm && deps.emailService.sendPartnerInterestConfirm) {
+      const confirmUrl = buildWaitlistConfirmUrl(deps.appUrl, partnerConfirmPath, confirmationToken);
+      deps.emailService.sendPartnerInterestConfirm(email, confirmUrl).catch(() => {
+        console.error("Failed to send partner confirmation email");
+      });
+    }
+
+    return c.json(
+      {
+        ok: true,
+        message: "Tjek din e-mail for at bekræfte din henvendelse."
+      },
+      200
+    );
+  });
+
   app.get("/api/waitlist/confirm", async (c) => {
     c.header("Cache-Control", "no-store");
 
@@ -349,6 +505,89 @@ export function createApp(deps: AppDeps): Hono {
         ok: true,
         status: "confirmed",
         message: "Din tilmelding er bekræftet."
+      },
+      200
+    );
+  });
+
+  app.get("/api/partner-interest/confirm", async (c) => {
+    c.header("Cache-Control", "no-store");
+
+    const confirmRateLimitResponse = await enforceRateLimit(c, "partner_confirm");
+    if (confirmRateLimitResponse) {
+      return confirmRateLimitResponse;
+    }
+
+    const tokenRaw = c.req.query("token");
+    if (!tokenRaw) {
+      return c.json(
+        {
+          ok: false,
+          status: "invalid",
+          message: "Ugyldig bekræftelseskode."
+        },
+        400
+      );
+    }
+
+    const token = tokenRaw.trim();
+    if (token.length === 0) {
+      return c.json(
+        {
+          ok: false,
+          status: "invalid",
+          message: "Ugyldig bekræftelseskode."
+        },
+        400
+      );
+    }
+
+    const confirmation = await partnerRepository.confirmPartnerByToken(hashToken(token), new Date());
+
+    if (confirmation.status === "invalid") {
+      return c.json(
+        {
+          ok: false,
+          status: "invalid",
+          message: "Ugyldig bekræftelseskode."
+        },
+        400
+      );
+    }
+
+    if (confirmation.status === "expired") {
+      return c.json(
+        {
+          ok: false,
+          status: "expired",
+          message: "Bekræftelseslinket er udløbet."
+        },
+        410
+      );
+    }
+
+    if (confirmation.status === "already_confirmed") {
+      return c.json(
+        {
+          ok: true,
+          status: "already_confirmed",
+          message: "Din henvendelse er allerede bekræftet."
+        },
+        200
+      );
+    }
+
+    if (deps.emailService.sendPartnerInterestReceived) {
+      deps.emailService.sendPartnerInterestReceived(confirmation.email).catch(() => {
+        console.error("Failed to send partner receipt email");
+      });
+    }
+
+    return c.json(
+      {
+        ok: true,
+        status: "confirmed",
+        message: "Din henvendelse er bekræftet. Vi vender tilbage."
       },
       200
     );

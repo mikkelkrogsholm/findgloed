@@ -11,8 +11,10 @@ function resolveThemePreset(rawValue: string | undefined): ThemePreset {
 export const appConfig = {
   routes: {
     landing: "/",
+    vision: "/vision.html",
     privacy: "/privacy.html",
     waitlistConfirm: "/waitlist/confirm",
+    partnerConfirm: "/partner/confirm",
     design: "/design.html"
   },
   features: {
@@ -21,6 +23,13 @@ export const appConfig = {
   themePreset: resolveThemePreset(import.meta.env.VITE_THEME_PRESET)
 } as const;
 
-export type AppRouteName = "landing" | "privacy" | "waitlist-confirm" | "design" | "not-found";
+export type AppRouteName =
+  | "landing"
+  | "vision"
+  | "privacy"
+  | "waitlist-confirm"
+  | "partner-confirm"
+  | "design"
+  | "not-found";
 
 export { resolveThemePreset };

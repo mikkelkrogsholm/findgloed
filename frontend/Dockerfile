@@ -3,9 +3,12 @@ WORKDIR /app
 COPY package.json tsconfig.json vite.config.ts vitest.config.ts tailwind.config.ts postcss.config.js ./
 RUN bun install
 COPY index.html ./index.html
+COPY vision.html ./vision.html
 COPY privacy.html ./privacy.html
 COPY design.html ./design.html
 COPY waitlist ./waitlist
+COPY partner ./partner
+COPY public ./public
 COPY src ./src
 EXPOSE 5173
 CMD ["bun", "run", "dev"]

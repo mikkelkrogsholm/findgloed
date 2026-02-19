@@ -8,8 +8,9 @@ export function PrivacyPage() {
         <p className="noxus-kicker kicker-text mb-4 text-xs">Privatliv og databeskyttelse</p>
         <h1 className="noxus-title display-text text-4xl leading-tight md:text-5xl">Persondatapolitik</h1>
         <p className="body-text mt-4 max-w-3xl leading-relaxed">
-          Glød indsamler kun data, der er nødvendig for venteliste-flow, samtykkehåndtering og relevante
-          event-opdateringer. Vi arbejder med dataminimering, neutral kommunikation og tydelige valgmuligheder.
+          Glød indsamler kun de oplysninger, der er nødvendige for at håndtere ventelisten, bekræfte din tilmelding
+          og holde dig opdateret om platformen. Opdateringer om Glød og lancering er en del af venteliste-tilmeldingen.
+          Markedsføring om events, tilbud og samarbejdspartnere er altid et separat tilvalg.
         </p>
       </div>
 
@@ -21,7 +22,7 @@ export function PrivacyPage() {
               <li>Emailadresse, når du skriver dig på ventelisten.</li>
               <li>Tidspunkt for tilmelding og bekræftelse (double opt-in).</li>
               <li>Samtykke til handelsbetingelser og persondatapolitik.</li>
-              <li>Valgfri marketing-opt-in, hvis du aktivt vælger det.</li>
+              <li>Dit valg om markedsføring (kun hvis du aktivt siger ja).</li>
             </ul>
           </div>
 
@@ -29,8 +30,8 @@ export function PrivacyPage() {
             <h2 className="noxus-title display-text text-2xl">Hvad vi bruger data til</h2>
             <ul className="body-text mt-3 list-inside list-disc space-y-1">
               <li>At sende bekræftelsesmail og aktivere venteliste-tilmelding.</li>
-              <li>At sende velkomstmail efter bekræftelse.</li>
-              <li>At sende marketing/opdateringer kun ved separat samtykke.</li>
+              <li>At sende opdateringer om Glød, vores fremdrift og besked om lancering.</li>
+              <li>At sende markedsføring om events, tilbud og samarbejder, kun hvis du har givet særskilt samtykke.</li>
             </ul>
           </div>
 
@@ -45,8 +46,8 @@ export function PrivacyPage() {
           <div>
             <h2 className="noxus-title display-text text-2xl">Deling af data</h2>
             <p className="body-text mt-3">
-              Vi deler ikke dine data med uvedkommende. Vi bruger databehandlere til mail og drift, når det er
-              nødvendigt for at levere tjenesten sikkert.
+              Vi deler ikke dine oplysninger med uvedkommende. Vi bruger kun databehandlere, der er nødvendige for
+              sikker drift af platformen og udsendelse af emails.
             </p>
           </div>
 
@@ -57,7 +58,7 @@ export function PrivacyPage() {
               <a className="link-inline" href="mailto:support@findgloed.dk">
                 support@findgloed.dk
               </a>
-              . Du kan også framelde marketing ved at skrive til samme adresse.
+              . Du kan også altid afmelde markedsføring uden at miste vigtige opdateringer om din venteliste-tilmelding.
             </p>
           </div>
 
