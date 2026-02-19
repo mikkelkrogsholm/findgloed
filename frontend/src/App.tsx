@@ -33,6 +33,27 @@ export default function App() {
   const route = resolveRoute(window.location.pathname);
 
   useEffect(() => {
+    const root = document.documentElement;
+    root.setAttribute("data-theme", appConfig.themePreset);
+
+    if (typeof window.matchMedia !== "function") {
+      root.setAttribute("data-motion", "default");
+      return;
+    }
+
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const applyMotionPreference = () => {
+      root.setAttribute("data-motion", mediaQuery.matches ? "reduced" : "default");
+    };
+
+    applyMotionPreference();
+    mediaQuery.addEventListener("change", applyMotionPreference);
+    return () => {
+      mediaQuery.removeEventListener("change", applyMotionPreference);
+    };
+  }, []);
+
+  useEffect(() => {
     if (route === "privacy") {
       document.title = "Glod - Persondatapolitik";
       return;
@@ -53,7 +74,7 @@ export default function App() {
   }, [route]);
 
   return (
-    <SiteShell showDesignLink={appConfig.features.designPage}>
+    <SiteShell showDesignLink={appConfig.features.designPage} themePreset={appConfig.themePreset}>
       {route === "privacy" && <PrivacyPage />}
       {route === "waitlist-confirm" && <WaitlistConfirmPage />}
       {route === "design" && <DesignPage />}
