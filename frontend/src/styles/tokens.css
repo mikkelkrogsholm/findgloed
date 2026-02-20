@@ -68,8 +68,11 @@
   --radius-input: 1rem;
   --duration-fast: 180ms;
   --duration-base: 300ms;
+  --duration-slow: 500ms;
+  --duration-sensual: 700ms;
   --ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
   --ease-reveal: cubic-bezier(0.21, 0.78, 0.32, 1);
+  --ease-glod: cubic-bezier(0.32, 0, 0.18, 1);
 
   /* Effects */
   --grain-dot: rgba(126, 172, 181, 0.18);
@@ -181,8 +184,11 @@
   --radius-input: 0.95rem;
   --duration-fast: 170ms;
   --duration-base: 320ms;
+  --duration-slow: 500ms;
+  --duration-sensual: 700ms;
   --ease-standard: cubic-bezier(0.2, 0.74, 0.24, 1);
   --ease-reveal: cubic-bezier(0.21, 0.78, 0.32, 1);
+  --ease-glod: cubic-bezier(0.32, 0, 0.18, 1);
 
   /* Effects */
   --grain-dot: rgba(60, 115, 128, 0.14);

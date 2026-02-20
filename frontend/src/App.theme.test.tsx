@@ -11,21 +11,25 @@ type MatchMediaController = {
 function createMatchMediaController(initialMatch: boolean): MatchMediaController {
   let currentValue = initialMatch;
   const listeners: Array<(event: MediaQueryListEvent) => void> = [];
+  const addListener = (listener: (event: MediaQueryListEvent) => void) => {
+    listeners.push(listener);
+  };
+  const removeListener = (listener: (event: MediaQueryListEvent) => void) => {
+    const index = listeners.indexOf(listener);
+    if (index > -1) {
+      listeners.splice(index, 1);
+    }
+  };
   const mediaQueryList = {
     get matches() {
       return currentValue;
     },
     media: "(prefers-reduced-motion: reduce)",
     onchange: null,
-    addEventListener: (_type: string, listener: (event: MediaQueryListEvent) => void) => {
-      listeners.push(listener);
-    },
-    removeEventListener: (_type: string, listener: (event: MediaQueryListEvent) => void) => {
-      const index = listeners.indexOf(listener);
-      if (index > -1) {
-        listeners.splice(index, 1);
-      }
-    },
+    addEventListener: (_type: string, listener: (event: MediaQueryListEvent) => void) => addListener(listener),
+    removeEventListener: (_type: string, listener: (event: MediaQueryListEvent) => void) => removeListener(listener),
+    addListener,
+    removeListener,
     dispatchEvent: () => true
   } as MediaQueryList;
 
