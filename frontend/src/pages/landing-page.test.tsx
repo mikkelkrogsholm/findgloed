@@ -15,11 +15,11 @@ describe("LandingPage", () => {
   it("blocks submit until required consent is checked", async () => {
     render(<LandingPage />);
 
-    const submitButton = screen.getByRole("button", { name: "Få tidlig adgang" });
+    const submitButton = screen.getByRole("button", { name: "Skriv mig op" });
     expect(submitButton).toBeDisabled();
     expect(
       screen.getByText(
-        "Skriv dig op, så holder vi dig opdateret om Glød, det vi bygger, og hvornår vi lancerer. Ingen endeløs chat. Ingen swipe-loop. Bare et fællesskab, der starter i virkeligheden."
+        "Skriv dig på ventelisten. Du får besked om lancering, early access og kommende events. Ingen støj. Kun relevante opdateringer."
       )
     ).toBeInTheDocument();
   });
@@ -37,7 +37,7 @@ describe("LandingPage", () => {
     await user.type(screen.getByLabelText("Din email"), "gdpr@example.com");
     await user.click(screen.getByLabelText("Jeg har læst og accepterer handelsbetingelserne og persondatapolitikken."));
     await user.click(screen.getByLabelText("Ja tak - send mig eksklusive invites, nyheder og updates fra Glød."));
-    await user.click(screen.getByRole("button", { name: "Få tidlig adgang" }));
+    await user.click(screen.getByRole("button", { name: "Skriv mig op" }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     const requestInit = fetchMock.mock.calls[0]?.[1] as RequestInit;
@@ -63,8 +63,10 @@ describe("LandingPage", () => {
 
     await user.type(screen.getByLabelText("Din email"), "duplicate@example.com");
     await user.click(screen.getByLabelText("Jeg har læst og accepterer handelsbetingelserne og persondatapolitikken."));
-    await user.click(screen.getByRole("button", { name: "Få tidlig adgang" }));
+    await user.click(screen.getByRole("button", { name: "Skriv mig op" }));
 
-    expect(await screen.findByText("Tjek din email for at bekræfte din tilmelding.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Bekræft din e-mail for at aktivere din plads på ventelisten.")
+    ).toBeInTheDocument();
   });
 });

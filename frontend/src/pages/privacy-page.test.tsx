@@ -13,14 +13,15 @@ describe("PrivacyPage", () => {
 
     expect(
       screen.getByText(
-        /Opdateringer om Glød og lancering er en del af venteliste-tilmeldingen. Markedsføring om events, tilbud og samarbejdspartnere er altid et separat tilvalg\./
+        /Vi indsamler kun de oplysninger, der er nødvendige for at håndtere din tilmelding og kommunikere om Glød\./
       )
     ).toBeInTheDocument();
-    expect(screen.getByText("At sende opdateringer om Glød, vores fremdrift og besked om lancering.")).toBeInTheDocument();
+    expect(screen.getByText("At sende praktiske opdateringer om venteliste og lancering.")).toBeInTheDocument();
     expect(
       screen.getByText(
-        "At sende markedsføring om events, tilbud og samarbejder, kun hvis du har givet særskilt samtykke."
+        "At sende markedsføring om events og tilbud, kun hvis du har givet særskilt samtykke."
       )
     ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Dataminimering" })).toBeInTheDocument();
   });
 });

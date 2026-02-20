@@ -9,23 +9,18 @@ export function VisionPage() {
       <div className="glass-shell reveal-up p-8 md:p-10">
         <p className="noxus-kicker kicker-text mb-4 text-xs">Vores vision</p>
         <h1 className="noxus-title display-text text-4xl leading-tight md:text-5xl">
-          Et trygt sted at udforske, mødes og høre til
+          Et voksent fællesskab, bygget omkring oplevelser
         </h1>
         <p className="body-text mt-4 max-w-3xl leading-relaxed">
-          Glød er en platform for mennesker, der vil mødes i virkeligheden først.
+          Glød er for mennesker, der vil mødes i virkeligheden først.
         </p>
         <p className="body-text mt-3 max-w-3xl leading-relaxed">
-          Ikke kun for dating, men også for nysgerrighed, læring, fælles oplevelser og fællesskab omkring
-          seksualitet og relationer.
-        </p>
-        <p className="body-text mt-3 max-w-3xl leading-relaxed">
-          Vi tror på, at ægte forbindelser starter bedre i et rum, hvor man kan være sig selv, end i en endeløs
-          chat.
+          Vi bygger en platform, hvor nysgerrighed, respekt og samtykke går hånd i hånd.
         </p>
         <div className="mt-6 flex flex-wrap gap-3 text-sm">
           <span className="glass-pill rounded-full px-4 py-2">Vi mødes i virkeligheden først</span>
           <span className="glass-pill rounded-full px-4 py-2">Fællesskab før algoritmer</span>
-          <span className="glass-pill rounded-full px-4 py-2">Tryghed, samtykke og diskretion</span>
+          <span className="glass-pill rounded-full px-4 py-2">Diskretion, samtykke og respekt</span>
         </div>
       </div>
 
@@ -34,44 +29,31 @@ export function VisionPage() {
           <div>
             <CardTitle>Vi starter med Dansk Sexologisk Akademi</CardTitle>
             <p className="body-text mt-3">
-              Glød er startet i tæt samarbejde med Dansk Sexologisk Akademi i Sønderjylland. Det er vores første
-              partner, fordi behovet er tydeligt, og fordi vi deler samme mål: mere tryghed, mere respekt og bedre
-              rammer for mennesker, der vil udforske.
+              Glød starter i samarbejde med Dansk Sexologisk Akademi i Sønderjylland. Det gør vi, fordi vi deler
+              samme mål: trygge rammer, tydelige normer og bedre møder mellem mennesker.
             </p>
             <p className="body-text mt-3">
-              Samarbejdet er begyndelsen, ikke grænsen. Platformen er åben for flere foreninger, fagpersoner og
-              organisationer, der vil være med til at skabe et stærkt miljø.
+              Samarbejdet er første skridt. Over tid åbner vi for flere relevante partnere.
             </p>
           </div>
 
           <div>
-            <h2 className="noxus-title display-text text-2xl">For dig, der kommer som menneske</h2>
+            <h2 className="noxus-title display-text text-2xl">For dig, der deltager</h2>
             <ul className="body-text mt-3 list-inside list-disc space-y-1">
-              <li>At udforske din seksualitet i trygge rammer.</li>
-              <li>At møde andre mennesker gennem fælles oplevelser.</li>
-              <li>At finde relationer, venskaber eller dating med mere dybde.</li>
-              <li>At være en del af et fællesskab, hvor respekt er udgangspunktet.</li>
+              <li>Mød mennesker gennem events og fælles oplevelser.</li>
+              <li>Udforsk relationer i rammer med tydelige forventninger.</li>
+              <li>Vær en del af et miljø, hvor respekt er standard.</li>
+              <li>Find venskaber, relationer eller dating med mere dybde.</li>
             </ul>
           </div>
 
           <div>
-            <h2 className="noxus-title display-text text-2xl">For jer, der arbejder med mennesker</h2>
+            <h2 className="noxus-title display-text text-2xl">For jer, der arrangerer</h2>
             <ul className="body-text mt-3 list-inside list-disc space-y-1">
-              <li>At nå de rigtige mennesker med de rigtige events.</li>
-              <li>At skabe trygge overgange fra første nysgerrighed til reel deltagelse.</li>
-              <li>At bygge et sundt miljø med tydelige normer for samtykke og respekt.</li>
-              <li>At stå stærkere sammen på tværs af organisationer.</li>
-            </ul>
-          </div>
-
-          <div>
-            <h2 className="noxus-title display-text text-2xl">Vores værdier</h2>
-            <ul className="body-text mt-3 list-inside list-disc space-y-1">
-              <li>Samtykke før alt.</li>
-              <li>Respekt i måden vi mødes på.</li>
-              <li>Tryghed gennem fællesskab.</li>
-              <li>Plads til nysgerrighed uden fordømmelse.</li>
-              <li>Diskretion og omtanke for privatliv.</li>
+              <li>Nå de rigtige deltagere med tydelig målretning.</li>
+              <li>Skab trygge overgange fra interesse til deltagelse.</li>
+              <li>Arbejd med klare normer for samtykke og adfærd.</li>
+              <li>Bliv en del af et stærkere partnernetværk.</li>
             </ul>
           </div>
 
@@ -81,24 +63,23 @@ export function VisionPage() {
               <div className="glass-pill rounded-2xl p-4">
                 <p className="display-text text-base font-semibold">MitID-verificeret adgang</p>
                 <p className="body-text mt-2 text-sm">
-                  Vi bruger MitID for at sikre, at der er rigtige mennesker på platformen. Med en zero-knowledge
-                  tilgang ved vi ikke, hvem du er i detaljer, kun at du findes i virkeligheden.
+                  Vi bruger MitID til at sikre, at der står rigtige mennesker bag profilerne. Vi gemmer kun det
+                  nødvendige.
                 </p>
               </div>
 
               <div className="glass-pill rounded-2xl p-4">
-                <p className="display-text text-base font-semibold">Event-first struktur</p>
+                <p className="display-text text-base font-semibold">Event-first</p>
                 <p className="body-text mt-2 text-sm">
-                  Vi tror på, at det fysiske møde gennem fælles oplevelser giver bedre relationer. Derfor mødes vi
-                  først i virkeligheden og tager det digitale derfra.
+                  Glød er bygget omkring events. Mennesker mødes først i virkeligheden, og det digitale understøtter
+                  bagefter.
                 </p>
               </div>
 
               <div className="glass-pill rounded-2xl p-4">
-                <p className="display-text text-base font-semibold">Tryghed og klare rammer</p>
+                <p className="display-text text-base font-semibold">Klare rammer</p>
                 <p className="body-text mt-2 text-sm">
-                  Tydelige forventninger, samtykke og respekt skaber ro. Det gør det lettere at udforske og møde
-                  andre mennesker på en måde, der føles sikker og ordentlig.
+                  Tydelige regler giver ro. Det gør det lettere at være nysgerrig, social og til stede.
                 </p>
               </div>
             </div>

@@ -12,20 +12,19 @@ describe("VisionPage", () => {
   it("renders mission and core principles in Danish", () => {
     render(<VisionPage />);
 
-    expect(screen.getByRole("heading", { name: "Et trygt sted at udforske, mødes og høre til" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Et voksent fællesskab, bygget omkring oplevelser" })).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Ikke kun for dating, men også for nysgerrighed, læring, fælles oplevelser og fællesskab omkring seksualitet og relationer."
+        "Glød er for mennesker, der vil mødes i virkeligheden først."
       )
     ).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Vi starter med Dansk Sexologisk Akademi" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "For dig, der kommer som menneske" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "For jer, der arbejder med mennesker" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Vores værdier" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "For dig, der deltager" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "For jer, der arrangerer" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Tre principper i praksis" })).toBeInTheDocument();
     expect(screen.getByText("MitID-verificeret adgang")).toBeInTheDocument();
-    expect(screen.getByText("Event-first struktur")).toBeInTheDocument();
-    expect(screen.getByText("Tryghed og klare rammer")).toBeInTheDocument();
+    expect(screen.getByText("Event-first")).toBeInTheDocument();
+    expect(screen.getByText("Klare rammer")).toBeInTheDocument();
   });
 
   it("offers CTA for both waitlist and partner collaboration", async () => {
