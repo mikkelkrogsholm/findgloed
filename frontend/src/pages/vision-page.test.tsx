@@ -12,6 +12,8 @@ describe("VisionPage", () => {
   it("renders mission and core principles in Danish", () => {
     render(<VisionPage />);
 
+    expect(screen.getByTestId("vision-hero-shell")).toBeInTheDocument();
+    expect(screen.getByTestId("vision-content-card")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Et voksent fællesskab, bygget omkring oplevelser" })).toBeInTheDocument();
     expect(
       screen.getByText(

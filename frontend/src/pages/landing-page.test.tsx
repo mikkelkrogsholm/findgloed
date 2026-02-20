@@ -15,6 +15,8 @@ describe("LandingPage", () => {
   it("blocks submit until required consent is checked", async () => {
     render(<LandingPage />);
 
+    expect(screen.getByTestId("landing-hero-shell")).toBeInTheDocument();
+    expect(screen.getByTestId("landing-signup-card")).toBeInTheDocument();
     const submitButton = screen.getByRole("button", { name: "Skriv mig op" });
     expect(submitButton).toBeDisabled();
     expect(

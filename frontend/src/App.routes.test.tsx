@@ -13,7 +13,7 @@ describe("App routing", () => {
     window.history.pushState({}, "", "/vision");
     render(<App />);
 
-    expect(screen.getByRole("heading", { name: "Et trygt sted at udforske, mødes og høre til" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Et voksent fællesskab, bygget omkring oplevelser" })).toBeInTheDocument();
     expect(document.title).toBe("Glød - Vision");
   });
 
@@ -21,7 +21,7 @@ describe("App routing", () => {
     window.history.pushState({}, "", "/vision.html");
     render(<App />);
 
-    expect(screen.getByRole("heading", { name: "Et trygt sted at udforske, mødes og høre til" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Et voksent fællesskab, bygget omkring oplevelser" })).toBeInTheDocument();
     expect(document.title).toBe("Glød - Vision");
   });
 

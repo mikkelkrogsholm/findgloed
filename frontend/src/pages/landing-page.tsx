@@ -1,4 +1,5 @@
 import { FormEvent, useMemo, useState } from "react";
+import { motion } from "framer-motion";
 
 import { appConfig } from "@/config/app-config";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -7,6 +8,7 @@ import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { getMotionMode, hoverLiftVariants, revealVariants, staggerContainerVariants } from "@/lib/motion";
 
 type WaitlistSuccess = {
   ok: true;
@@ -29,6 +31,8 @@ export function LandingPage() {
   const [marketingOptIn, setMarketingOptIn] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>("");
   const isSuccess = useMemo(() => submitted, [submitted]);
+  const motionMode = getMotionMode();
+  const pillVariants = hoverLiftVariants(motionMode);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -68,24 +72,59 @@ export function LandingPage() {
   }
 
   return (
-    <section className="mx-auto grid w-full max-w-6xl items-start gap-10 px-6 py-20 md:grid-cols-[1.15fr_1fr]">
-      <div className="glass-shell reveal-up p-8 md:p-10">
+    <section className="mx-auto grid w-full max-w-6xl items-start gap-10 px-6 py-14 md:grid-cols-[1.15fr_1fr] md:py-16">
+      <motion.div
+        className="glass-shell ambient-breathe motion-reveal-shell p-8 md:p-10"
+        data-testid="landing-hero-shell"
+        initial="hidden"
+        animate="visible"
+        variants={revealVariants(motionMode, "hero")}
+      >
         <p className="noxus-kicker kicker-text mb-5 text-xs">Mød mennesker i virkeligheden først</p>
-        <h2 className="noxus-title display-text mb-6 text-4xl leading-tight md:text-6xl">
+        <h2 className="noxus-title display-text mb-6 text-4xl leading-tight md:text-6xl xl:text-7xl">
           Et trygt sted for nysgerrige voksne.
         </h2>
-        <p className="body-text max-w-xl text-lg leading-relaxed">
+        <p className="body-text max-w-xl text-lg leading-relaxed md:text-[1.15rem]">
           Glød er for dig, der vil møde mennesker gennem oplevelser - ikke swipe-kultur. Vi starter med events i
           samarbejde med Dansk Sexologisk Akademi.
         </p>
-        <div className="mt-8 flex flex-wrap gap-3 text-sm">
-          <span className="glass-pill hover-glow rounded-full px-4 py-2">MitID-verificeret adgang</span>
-          <span className="glass-pill hover-glow rounded-full px-4 py-2">Event-first</span>
-          <span className="glass-pill hover-glow rounded-full px-4 py-2">Klare rammer for samtykke og respekt</span>
-        </div>
-      </div>
+        <motion.div
+          className="mt-8 flex flex-wrap gap-3 text-sm"
+          variants={staggerContainerVariants(motionMode, "hero")}
+          initial="hidden"
+          animate="visible"
+        >
+          <motion.span
+            className="glass-pill hover-glow rounded-full px-4 py-2"
+            variants={{ ...revealVariants(motionMode, "item"), ...pillVariants }}
+            whileHover="hover"
+          >
+            MitID-verificeret adgang
+          </motion.span>
+          <motion.span
+            className="glass-pill hover-glow rounded-full px-4 py-2"
+            variants={{ ...revealVariants(motionMode, "item"), ...pillVariants }}
+            whileHover="hover"
+          >
+            Event-first
+          </motion.span>
+          <motion.span
+            className="glass-pill hover-glow rounded-full px-4 py-2"
+            variants={{ ...revealVariants(motionMode, "item"), ...pillVariants }}
+            whileHover="hover"
+          >
+            Klare rammer for samtykke og respekt
+          </motion.span>
+        </motion.div>
+      </motion.div>
 
-      <Card className="reveal-up reveal-delay-2 p-8 md:p-10">
+      <motion.div
+        data-testid="landing-signup-card"
+        initial="hidden"
+        animate="visible"
+        variants={revealVariants(motionMode, "section")}
+      >
+      <Card className="motion-reveal-card p-8 md:p-10">
         <CardContent className="pt-0">
           {!isSuccess && (
             <form className="space-y-5" onSubmit={onSubmit}>
@@ -139,7 +178,7 @@ export function LandingPage() {
                 </Alert>
               )}
 
-              <Button disabled={loading || !acceptedTermsPrivacy} type="submit" className="w-full">
+              <Button disabled={loading || !acceptedTermsPrivacy} type="submit" className="w-full glow-cta">
                 {loading ? "Sender..." : "Skriv mig op"}
               </Button>
             </form>
@@ -153,6 +192,7 @@ export function LandingPage() {
           )}
         </CardContent>
       </Card>
+      </motion.div>
     </section>
   );
 }

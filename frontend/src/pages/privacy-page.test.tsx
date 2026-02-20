@@ -11,6 +11,8 @@ describe("PrivacyPage", () => {
   it("separates waitlist updates from optional marketing", () => {
     render(<PrivacyPage />);
 
+    expect(screen.getByTestId("privacy-hero-shell")).toBeInTheDocument();
+    expect(screen.getByTestId("privacy-content-card")).toBeInTheDocument();
     expect(
       screen.getByText(
         /Vi indsamler kun de oplysninger, der er nødvendige for at håndtere din tilmelding og kommunikere om Glød\./
