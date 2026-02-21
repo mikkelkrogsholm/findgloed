@@ -83,6 +83,8 @@ BETTER_AUTH_URL=https://api.findgloed.dk
 IDURA_REDIRECT_URI=https://api.findgloed.dk/auth/callback
 ```
 
+> `API_URL` bruges to steder: backend bruger den som sin egen offentlige URL, og `docker-compose.prod.yml` sender den som build-arg `VITE_API_URL` til frontend-buildet, hvor Vite bager den ind i JS-bundlet. Sæt den til `https://api.findgloed.dk`.
+
 ### Database
 
 ```
