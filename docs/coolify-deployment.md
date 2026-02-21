@@ -111,15 +111,6 @@ SUPERADMIN_EMAIL=admin@findgloed.dk
 SUPERADMIN_PASSWORD=<stærkt-password>
 ```
 
-### Auth (Idura / MitID)
-
-```
-IDURA_BASE_URL=https://idura.eu
-IDURA_ISSUER_URL=<fra-idura-dashboard>
-IDURA_CLIENT_ID=<fra-idura-dashboard>
-IDURA_CLIENT_SECRET=<fra-idura-dashboard>
-```
-
 ### Email (Resend)
 
 ```
@@ -127,15 +118,6 @@ RESEND_API_KEY=re_<din-api-nøgle>
 RESEND_FROM_EMAIL=noreply@findgloed.dk
 SUPPORT_EMAIL=support@findgloed.dk
 ```
-
-### Betalinger (Stripe)
-
-```
-STRIPE_SECRET_KEY=sk_live_<din-nøgle>
-STRIPE_WEBHOOK_SECRET=whsec_<din-webhook-secret>
-```
-
-Stripe webhook endpoint skal sættes til `https://api.findgloed.dk/api/stripe/webhook` i Stripe Dashboard.
 
 ### Waitlist / Consent
 
@@ -224,7 +206,5 @@ Coolify kan konfigureres til at deploye automatisk ved push til `main`:
 | 502 Bad Gateway | `api` ikke klar endnu | Vent — `start_period` er 15s; tjek logs |
 | TLS virker ikke | DNS ikke propageret | Vent på DNS TTL; tjek A-record peger på server |
 | Auth fejler | `BETTER_AUTH_URL` forkert | Skal være `https://api.findgloed.dk` |
-| MitID callback fejler | `IDURA_REDIRECT_URI` forkert | Skal være `https://api.findgloed.dk/auth/callback` |
-| Stripe webhook fejler | Webhook endpoint forkert | Sæt endpoint til `https://api.findgloed.dk/api/stripe/webhook` |
 | Migrationer fejler ved start | `DATABASE_URL` forkert | Tjek user/password/host matcher db-service |
 | `/api` returnerer 404 fra `findgloed.dk` | nginx proxy fejler | Tjek at `api`-containeren er healthy; se nginx-logs |
