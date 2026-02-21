@@ -1,0 +1,15 @@
+{
+	email {$ACME_EMAIL}
+}
+
+findgloed.dk, www.findgloed.dk {
+	reverse_proxy web:80
+}
+
+api.findgloed.dk {
+	reverse_proxy api:4564
+}
+
+umami.findgloed.dk {
+	reverse_proxy umami:3000
+}
