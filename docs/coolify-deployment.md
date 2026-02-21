@@ -4,11 +4,27 @@ Denne guide beskriver hvordan Findgloed deployes til produktion via Coolify med 
 
 ---
 
+## Arkitektur
+
+```
+Browser
+  │
+  ├─ findgloed.dk ──────► Traefik ──► web (nginx:80)
+  │                                        │
+  │                              /api proxies internt til
+  │                                        │
+  └─ api.findgloed.dk ──► Traefik ──► api (bun:4564)
+```
+
+`web`-servicens nginx proxyer `/api/*` internt til `api`-containeren på `http://api:4564`. `api.findgloed.dk` bruges til direkte adgang — primært Stripe webhooks og Idura/MitID auth callbacks.
+
+---
+
 ## Forudsætninger
 
 - Coolify installeret og tilgængeligt på din server
+- `findgloed.dk` og `api.findgloed.dk` peger på serverens IP (A-record)
 - Git-repo tilgængeligt (GitHub, GitLab eller Gitea)
-- Domænenavn konfigureret med DNS der peger på din server
 - Adgang til Resend, Stripe og Idura credentials
 
 ---
@@ -24,16 +40,25 @@ Denne guide beskriver hvordan Findgloed deployes til produktion via Coolify med 
 
 ---
 
-## Trin 2 — Konfigurer domæne på `web`-service
+## Trin 2 — Konfigurer domæner
 
 Coolify's Traefik proxy håndterer routing og TLS automatisk.
 
-1. I application-indstillinger under **Services**, find `web`-servicen
-2. Tilføj dit domæne, f.eks. `findgloed.dk` og `www.findgloed.dk`
-3. Sæt **HTTPS** til aktiveret — Traefik udsteder automatisk Let's Encrypt certifikat
-4. Lad port-feltet stå tomt (nginx eksponerer port 80 internt via `expose`)
+### `web`-service → `findgloed.dk`
 
-> `web`-servicen bruger `expose: ["80"]` ikke `ports`, så Traefik er den eneste der rammer containeren.
+1. Under **Services**, find `web`-servicen
+2. Tilføj domæne: `findgloed.dk`
+3. Sæt **HTTPS** til aktiveret — Traefik udsteder automatisk Let's Encrypt certifikat
+4. Port-feltet: `80`
+
+### `api`-service → `api.findgloed.dk`
+
+1. Under **Services**, find `api`-servicen
+2. Tilføj domæne: `api.findgloed.dk`
+3. Sæt **HTTPS** til aktiveret
+4. Port-feltet: `4564`
+
+> `web`-servicen bruger `expose: ["80"]` ikke `ports`, så Traefik er den eneste der rammer containerne udefra.
 
 ---
 
@@ -48,14 +73,14 @@ APP_ENV=production
 APP_NAME=findgloed
 ```
 
-### URLs (tilpas til dit domæne)
+### URLs
 
 ```
 APP_URL=https://findgloed.dk
-API_URL=https://findgloed.dk/api
+API_URL=https://api.findgloed.dk
 CORS_ORIGINS=https://findgloed.dk
-BETTER_AUTH_URL=https://findgloed.dk
-IDURA_REDIRECT_URI=https://findgloed.dk/auth/callback
+BETTER_AUTH_URL=https://api.findgloed.dk
+IDURA_REDIRECT_URI=https://api.findgloed.dk/auth/callback
 ```
 
 ### Database
@@ -103,6 +128,8 @@ SUPPORT_EMAIL=support@findgloed.dk
 STRIPE_SECRET_KEY=sk_live_<din-nøgle>
 STRIPE_WEBHOOK_SECRET=whsec_<din-webhook-secret>
 ```
+
+Stripe webhook endpoint skal sættes til `https://api.findgloed.dk/api/stripe/webhook` i Stripe Dashboard.
 
 ### Waitlist / Consent
 
@@ -153,7 +180,11 @@ HSTS_MAX_AGE_SECONDS=31536000
 Kør disse tjek efter deployment:
 
 ```sh
-# API health
+# API health — direkte
+curl https://api.findgloed.dk/api/health
+# → {"ok":true}
+
+# API health — via nginx proxy
 curl https://findgloed.dk/api/health
 # → {"ok":true}
 
@@ -190,6 +221,8 @@ Coolify kan konfigureres til at deploye automatisk ved push til `main`:
 | `api` starter aldrig | DB healthcheck fejler | Tjek `POSTGRES_PASSWORD` matcher på tværs af vars |
 | 502 Bad Gateway | `api` ikke klar endnu | Vent — `start_period` er 15s; tjek logs |
 | TLS virker ikke | DNS ikke propageret | Vent på DNS TTL; tjek A-record peger på server |
-| Auth fejler | `BETTER_AUTH_URL` forkert | Skal matche den URL brugeren rammer, inkl. `https://` |
-| Stripe webhook fejler | `STRIPE_WEBHOOK_SECRET` forkert | Generer nyt secret i Stripe Dashboard → Webhooks |
+| Auth fejler | `BETTER_AUTH_URL` forkert | Skal være `https://api.findgloed.dk` |
+| MitID callback fejler | `IDURA_REDIRECT_URI` forkert | Skal være `https://api.findgloed.dk/auth/callback` |
+| Stripe webhook fejler | Webhook endpoint forkert | Sæt endpoint til `https://api.findgloed.dk/api/stripe/webhook` |
 | Migrationer fejler ved start | `DATABASE_URL` forkert | Tjek user/password/host matcher db-service |
+| `/api` returnerer 404 fra `findgloed.dk` | nginx proxy fejler | Tjek at `api`-containeren er healthy; se nginx-logs |
