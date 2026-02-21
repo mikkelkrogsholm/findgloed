@@ -373,7 +373,7 @@ export function createApp(deps: AppDeps): Hono<{ Variables: AppVariables }> {
   app.post("/api/waitlist", async (c) => {
     const body = await c.req.json().catch(() => null);
     const emailRaw = typeof body?.email === "string" ? body.email : "";
-    const source = body?.source === "landing" ? "landing" : "landing";
+    const source = "landing";
     const acceptedTermsPrivacy = body?.accept_terms_privacy === true;
     const marketingOptIn = body?.marketing_opt_in === true;
 

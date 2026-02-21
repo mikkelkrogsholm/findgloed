@@ -18,24 +18,8 @@ describe("App routing", () => {
     expect(document.title).toBe("Glød - Vision");
   });
 
-  it("renders vision page on /vision.html", () => {
-    window.history.pushState({}, "", "/vision.html");
-    render(<App />);
-
-    expect(screen.getByRole("heading", { name: "Et voksent fællesskab, bygget omkring oplevelser" })).toBeInTheDocument();
-    expect(document.title).toBe("Glød - Vision");
-  });
-
   it("renders partner confirm page on /partner/confirm", () => {
     window.history.pushState({}, "", "/partner/confirm");
-    render(<App />);
-
-    expect(screen.getByRole("heading", { name: "Bekræft samarbejdspartner-forespørgsel" })).toBeInTheDocument();
-    expect(document.title).toBe("Glød - Bekræft samarbejde");
-  });
-
-  it("renders partner confirm page on /partner/confirm.html", () => {
-    window.history.pushState({}, "", "/partner/confirm.html");
     render(<App />);
 
     expect(screen.getByRole("heading", { name: "Bekræft samarbejdspartner-forespørgsel" })).toBeInTheDocument();
@@ -46,7 +30,7 @@ describe("App routing", () => {
     window.history.pushState({}, "", "/");
     render(<App />);
 
-    expect(screen.getByRole("link", { name: "Vision" })).toHaveAttribute("href", "/vision.html");
+    expect(screen.getByRole("link", { name: "Vision" })).toHaveAttribute("href", "/vision");
   });
 
   it("shows a DKSA partner link in the shared header", () => {
@@ -63,7 +47,7 @@ describe("App routing", () => {
     window.history.pushState({}, "", "/login");
     render(<App />);
 
-    expect(screen.getByRole("heading", { name: "Administrator login" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Log ind" })).toBeInTheDocument();
     expect(document.title).toBe("Glød - Log ind");
   });
 

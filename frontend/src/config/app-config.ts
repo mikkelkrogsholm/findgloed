@@ -11,13 +11,13 @@ function resolveThemePreset(rawValue: string | undefined): ThemePreset {
 export const appConfig = {
   routes: {
     landing: "/",
-    vision: "/vision.html",
-    privacy: "/privacy.html",
+    vision: "/vision",
+    privacy: "/privacy",
     waitlistConfirm: "/waitlist/confirm",
     partnerConfirm: "/partner/confirm",
     login: "/login",
     admin: "/admin",
-    design: "/design.html"
+    design: "/design"
   },
   features: {
     designPage: import.meta.env.VITE_ENABLE_DESIGN_PAGE === "true"

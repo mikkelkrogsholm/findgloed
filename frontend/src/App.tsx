@@ -15,29 +15,19 @@ import { AdminPage } from "@/pages/admin-page";
 import { getMotionMode, pageTransitionVariants } from "@/lib/motion";
 
 function resolveRoute(pathname: string): AppRouteName {
-  if (pathname === "/vision" || pathname === appConfig.routes.vision) {
+  if (pathname === appConfig.routes.vision) {
     return "vision";
   }
-  if (pathname === "/privacy" || pathname === appConfig.routes.privacy) {
+  if (pathname === appConfig.routes.privacy) {
     return "privacy";
   }
-  if (
-    pathname === appConfig.routes.waitlistConfirm ||
-    pathname === `${appConfig.routes.waitlistConfirm}/` ||
-    pathname === `${appConfig.routes.waitlistConfirm}.html` ||
-    pathname === "/waitlist/confirm/index.html"
-  ) {
+  if (pathname === appConfig.routes.waitlistConfirm || pathname === `${appConfig.routes.waitlistConfirm}/`) {
     return "waitlist-confirm";
   }
-  if (
-    pathname === appConfig.routes.partnerConfirm ||
-    pathname === `${appConfig.routes.partnerConfirm}/` ||
-    pathname === `${appConfig.routes.partnerConfirm}.html` ||
-    pathname === "/partner/confirm/index.html"
-  ) {
+  if (pathname === appConfig.routes.partnerConfirm || pathname === `${appConfig.routes.partnerConfirm}/`) {
     return "partner-confirm";
   }
-  if (pathname === "/design" || pathname === appConfig.routes.design) {
+  if (pathname === appConfig.routes.design) {
     return appConfig.features.designPage ? "design" : "not-found";
   }
   if (pathname === appConfig.routes.login) {

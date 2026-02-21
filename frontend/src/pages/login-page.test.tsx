@@ -22,7 +22,7 @@ describe("LoginPage", () => {
   it("shows sign in by default", () => {
     render(<LoginPage />);
 
-    expect(screen.getByRole("heading", { name: "Administrator login" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Log ind" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Log ind" })).toBeInTheDocument();
     expect(screen.queryByText("Ny konto")).not.toBeInTheDocument();
   });

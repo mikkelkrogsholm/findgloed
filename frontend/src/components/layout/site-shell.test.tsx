@@ -19,10 +19,10 @@ describe("SiteShell", () => {
     expect(header).toBeInTheDocument();
 
     const primaryNav = screen.getByTestId("header-primary-nav");
-    expect(within(primaryNav).getByRole("link", { name: "Vision" })).toHaveAttribute("href", "/vision.html");
-    expect(within(primaryNav).getByRole("link", { name: "Privatliv" })).toHaveAttribute("href", "/privacy.html");
+    expect(within(primaryNav).getByRole("link", { name: "Vision" })).toHaveAttribute("href", "/vision");
+    expect(within(primaryNav).getByRole("link", { name: "Privatliv" })).toHaveAttribute("href", "/privacy");
     expect(within(primaryNav).getByRole("link", { name: "Log ind" })).toHaveAttribute("href", "/login");
-    expect(within(primaryNav).getByRole("link", { name: "Design" })).toHaveAttribute("href", "/design.html");
+    expect(within(primaryNav).getByRole("link", { name: "Design" })).toHaveAttribute("href", "/design");
 
     const partnerGroup = screen.getByTestId("header-partner-group");
     expect(

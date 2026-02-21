@@ -19,7 +19,7 @@ describe("resolveThemePreset", () => {
 
 describe("appConfig routes", () => {
   it("includes the vision page route", () => {
-    expect(appConfig.routes.vision).toBe("/vision.html");
+    expect(appConfig.routes.vision).toBe("/vision");
   });
 
   it("includes the partner confirmation route", () => {
