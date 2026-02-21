@@ -118,11 +118,14 @@ MVP target routes:
 - Infra: Coolify + Traefik + Hetzner
 
 ## Documentation lookup policy
-Prefer project skills before ad-hoc web search:
-- `findgloed-tech-docs` (router)
-- `findgloed-app-docs`
-- `findgloed-integrations-docs`
-- `findgloed-infra-docs`
+Prefer project skills before ad-hoc web search. The following skills are available and should be consulted when working with the respective technologies:
+- `better-auth`: For authentication, session management, and plugins.
+- `hono`: For backend routing, middleware, and API structure.
+- `bun`: For backend runtime, testing, and package management.
+- `react`: For frontend components, hooks, and architecture.
+- `vite`: For frontend build, dev server, and environment configuration.
+- `motion`: For frontend animations, page transitions, and "Nordic Noir" sensual movement.
+- Core Glød Personas & Tools: `copywriter-glød`, `designer-glød`, `persona-sofie`, `shadcn-ui`, `playwright-cli`
 
 Use canonical docs and `llms.txt` sources where available.
 
