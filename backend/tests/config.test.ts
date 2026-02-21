@@ -24,7 +24,8 @@ describe("readConfig", () => {
     resetEnv({
       NODE_ENV: "production",
       CORS_ORIGINS: undefined,
-      CORS_ORIGIN: undefined
+      CORS_ORIGIN: undefined,
+      BETTER_AUTH_SECRET: "test_secret_123456789012345678901234567890"
     });
 
     expect(() => readConfig()).toThrow("CORS_ORIGINS must be configured in production");
@@ -33,7 +34,8 @@ describe("readConfig", () => {
   test("parses comma-separated CORS allowlist", () => {
     resetEnv({
       NODE_ENV: "production",
-      CORS_ORIGINS: "https://findgloed.dk,https://app.findgloed.dk"
+      CORS_ORIGINS: "https://findgloed.dk,https://app.findgloed.dk",
+      BETTER_AUTH_SECRET: "test_secret_123456789012345678901234567890"
     });
 
     const config = readConfig();

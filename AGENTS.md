@@ -36,15 +36,19 @@ Project-specific operating rules for AI coding agents working in this repository
 ## Local environment rules
 - Hardware baseline: Apple Silicon (M3).
 - Architecture baseline: `linux/arm64` images by default.
-- Keep local setup reproducible with Docker Compose.
-- Run app, db, and supporting services via containers.
+- Keep local setup reproducible with **Docker Compose**. Always start the environment using `docker compose up -d`.
+- **CRITICAL:** Run ALL services (frontend/app, backend/api, db, redis) via Docker containers. Starting the frontend natively on the host via `bun run dev` (e.g., on port `5173`) will cause CORS and connection errors unless explicitly added to `CORS_ORIGINS` in `.env`.
 - Use nonstandard local ports based on GLOD mapping:
-  - `4563` app
-  - `4564` api
+  - `4563` app (Frontend web interface - accessed via browser)
+  - `4564` api (Backend API)
   - `4565` postgres
   - `4566` redis
   - `4567` maildev
   - `4568` adminer
+
+## Test Credentials
+- Local Superadmin: `mikkelkrogsholm@gmail.com`
+- Local Superadmin Password: `skaevinge2026!`
 
 ## Environment and secrets
 - Keep secrets only in environment variables.
@@ -122,6 +126,10 @@ Prefer project skills before ad-hoc web search:
 
 Use canonical docs and `llms.txt` sources where available.
 
+## Browser automation policy
+- For browser inspection, E2E checks, form interactions, and screenshots, use the `playwright-cli` skill and `playwright-cli` terminal commands only.
+- Do not use non-CLI browser automation paths when `playwright-cli` can solve the task.
+
 ## Git and change hygiene
 - Use small atomic commits (single purpose per commit).
 - Do not mix refactor + feature + formatting in one commit.
@@ -132,3 +140,14 @@ Use canonical docs and `llms.txt` sources where available.
 - Start with clarification/spec when requested.
 - After implementation approval, ship testable increments.
 - Report blockers immediately with concrete options.
+
+## Clarifying questions policy
+- Når du stiller afklarende spørgsmål i planlægningsfasen, skal de skrives i tydeligt dansk med nok kontekst til at beslutningen giver mening.
+- Hvert spørgsmål skal indeholde:
+  1) hvad vi beslutter,
+  2) hvorfor det betyder noget,
+  3) hvad konsekvensen er af de vigtigste valgmuligheder.
+- Hold spørgsmålene konkrete, men ikke overforenklede: undgå både intern jargon og for korte spørgsmål uden baggrund.
+- Giv svarmuligheder med korte trade-offs og markér en anbefalet default.
+- Brug et lille eksempel når det reducerer tvetydighed.
+- Opsummer brugerens valg kort bagefter, så det er tydeligt hvad der er besluttet og hvad næste skridt bliver.

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { appConfig, type AppRouteName } from "@/config/app-config";
 import { SiteShell } from "@/components/layout/site-shell";
@@ -9,6 +9,8 @@ import { PrivacyPage } from "@/pages/privacy-page";
 import { VisionPage } from "@/pages/vision-page";
 import { PartnerConfirmPage } from "@/pages/partner-confirm-page";
 import { WaitlistConfirmPage } from "@/pages/waitlist-confirm-page";
+import { LoginPage } from "@/pages/login-page";
+import { AdminPage } from "@/pages/admin-page";
 
 function resolveRoute(pathname: string): AppRouteName {
   if (pathname === "/vision" || pathname === appConfig.routes.vision) {
@@ -36,6 +38,12 @@ function resolveRoute(pathname: string): AppRouteName {
   if (pathname === "/design" || pathname === appConfig.routes.design) {
     return appConfig.features.designPage ? "design" : "not-found";
   }
+  if (pathname === appConfig.routes.login) {
+    return "login";
+  }
+  if (pathname === appConfig.routes.admin) {
+    return "admin";
+  }
   if (pathname !== appConfig.routes.landing) {
     return "not-found";
   }
@@ -43,7 +51,18 @@ function resolveRoute(pathname: string): AppRouteName {
 }
 
 export default function App() {
-  const route = resolveRoute(window.location.pathname);
+  const [route, setRoute] = useState<AppRouteName>(() => resolveRoute(window.location.pathname));
+
+  useEffect(() => {
+    const onPopState = () => {
+      setRoute(resolveRoute(window.location.pathname));
+    };
+
+    window.addEventListener("popstate", onPopState);
+    return () => {
+      window.removeEventListener("popstate", onPopState);
+    };
+  }, []);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -87,6 +106,14 @@ export default function App() {
       document.title = "Glød - Design System";
       return;
     }
+    if (route === "login") {
+      document.title = "Glød - Log ind";
+      return;
+    }
+    if (route === "admin") {
+      document.title = "Glød - Admin";
+      return;
+    }
     if (route === "not-found") {
       document.title = "Glød - Side ikke fundet";
       return;
@@ -100,6 +127,8 @@ export default function App() {
       {route === "privacy" && <PrivacyPage />}
       {route === "waitlist-confirm" && <WaitlistConfirmPage />}
       {route === "partner-confirm" && <PartnerConfirmPage />}
+      {route === "login" && <LoginPage />}
+      {route === "admin" && <AdminPage />}
       {route === "design" && <DesignPage />}
       {route === "not-found" && <NotFoundPage />}
       {route === "landing" && <LandingPage />}

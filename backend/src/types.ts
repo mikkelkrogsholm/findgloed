@@ -28,6 +28,31 @@ export type ConfirmLeadResult =
 export type WaitlistRepository = {
   upsertWaitlistLead: (input: WaitlistUpsertInput) => Promise<WaitlistUpsertResult>;
   confirmLeadByToken: (tokenHash: string, now: Date) => Promise<ConfirmLeadResult>;
+  emailExistsInLeads: (email: string) => Promise<boolean>;
+  listAdminLeads: () => Promise<AdminLeadsResult>;
+};
+
+export type AdminLead = {
+  id: string;
+  email: string;
+  status: "pending" | "confirmed" | "unsubscribed";
+  source: string;
+  marketing_opt_in: boolean;
+  created_at: Date;
+  confirmed_at: Date | null;
+  terms_accepted_at: Date | null;
+  privacy_accepted_at: Date | null;
+};
+
+export type AdminLeadsMeta = {
+  total: number;
+  confirmed: number;
+  pending: number;
+};
+
+export type AdminLeadsResult = {
+  items: AdminLead[];
+  meta: AdminLeadsMeta;
 };
 
 export type PartnerLeadStatus =
@@ -104,4 +129,25 @@ export type RateLimitCheckResult = {
 export type RateLimiter = {
   check: (input: RateLimitCheckInput) => Promise<RateLimitCheckResult>;
   close?: () => Promise<void>;
+};
+
+export type AuthSessionUser = {
+  id: string;
+  email: string;
+  role?: string | null;
+};
+
+export type AuthSession = {
+  user: AuthSessionUser;
+  session: {
+    id: string;
+    userId: string;
+    expiresAt: Date | string;
+  };
+};
+
+export type AuthService = {
+  handler: (request: Request) => Promise<Response>;
+  getSession: (headers: Headers) => Promise<AuthSession | null>;
+  ensureSuperAdmin: (email: string, password: string) => Promise<void>;
 };

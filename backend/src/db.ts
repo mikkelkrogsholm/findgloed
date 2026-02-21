@@ -1,5 +1,6 @@
 import { Pool } from "pg";
 import type {
+  AdminLeadsResult,
   ConfirmLeadResult,
   PartnerConfirmResult,
   PartnerInterestRepository,
@@ -33,7 +34,12 @@ type LeadRow = {
   id: string;
   email: string;
   status: "pending" | "confirmed" | "unsubscribed";
+  source: string;
   marketing_opt_in: boolean;
+  created_at: Date;
+  confirmed_at: Date | null;
+  terms_accepted_at: Date | null;
+  privacy_accepted_at: Date | null;
   confirmation_sent_at: Date | null;
   confirmation_token_expires_at: Date | null;
 };
@@ -50,6 +56,52 @@ type PartnerLeadRow = {
 export class PostgresLeadRepository implements WaitlistRepository, PartnerInterestRepository {
   constructor(private readonly pool: Pool) {}
 
+  async emailExistsInLeads(email: string): Promise<boolean> {
+    const result = await this.pool.query<{ exists: boolean }>(
+      `SELECT EXISTS(SELECT 1 FROM leads WHERE email = $1) AS exists`,
+      [email]
+    );
+    return Boolean(result.rows[0]?.exists);
+  }
+
+  async listAdminLeads(): Promise<AdminLeadsResult> {
+    const [itemsResult, metaResult] = await Promise.all([
+      this.pool.query<LeadRow>(
+        `SELECT id, email, status, source, marketing_opt_in, created_at, confirmed_at, terms_accepted_at, privacy_accepted_at,
+                confirmation_sent_at, confirmation_token_expires_at
+         FROM leads
+         ORDER BY created_at DESC`
+      ),
+      this.pool.query<{ total: string; confirmed: string; pending: string }>(
+        `SELECT
+          COUNT(*)::text AS total,
+          COUNT(*) FILTER (WHERE status = 'confirmed')::text AS confirmed,
+          COUNT(*) FILTER (WHERE status = 'pending')::text AS pending
+         FROM leads`
+      )
+    ]);
+
+    const summary = metaResult.rows[0] ?? { total: "0", confirmed: "0", pending: "0" };
+    return {
+      items: itemsResult.rows.map((row) => ({
+        id: row.id,
+        email: row.email,
+        status: row.status,
+        source: row.source,
+        marketing_opt_in: row.marketing_opt_in,
+        created_at: row.created_at,
+        confirmed_at: row.confirmed_at,
+        terms_accepted_at: row.terms_accepted_at,
+        privacy_accepted_at: row.privacy_accepted_at
+      })),
+      meta: {
+        total: Number(summary.total),
+        confirmed: Number(summary.confirmed),
+        pending: Number(summary.pending)
+      }
+    };
+  }
+
   async upsertWaitlistLead(input: WaitlistUpsertInput): Promise<WaitlistUpsertResult> {
     const client = await this.pool.connect();
 
@@ -57,7 +109,8 @@ export class PostgresLeadRepository implements WaitlistRepository, PartnerIntere
       await client.query("BEGIN");
 
       const existingResult = await client.query<LeadRow>(
-        `SELECT id, email, status, marketing_opt_in, confirmation_sent_at, confirmation_token_expires_at
+        `SELECT id, email, status, source, marketing_opt_in, created_at, confirmed_at, terms_accepted_at, privacy_accepted_at,
+                confirmation_sent_at, confirmation_token_expires_at
          FROM leads
          WHERE email = $1
          FOR UPDATE`,
@@ -228,7 +281,8 @@ export class PostgresLeadRepository implements WaitlistRepository, PartnerIntere
       await client.query("BEGIN");
 
       const result = await client.query<LeadRow>(
-        `SELECT id, email, status, marketing_opt_in, confirmation_sent_at, confirmation_token_expires_at
+        `SELECT id, email, status, source, marketing_opt_in, created_at, confirmed_at, terms_accepted_at, privacy_accepted_at,
+                confirmation_sent_at, confirmation_token_expires_at
          FROM leads
          WHERE confirmation_token_hash = $1
          FOR UPDATE`,

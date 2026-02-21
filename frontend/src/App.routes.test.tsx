@@ -1,5 +1,5 @@
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import App from "./App";
 
@@ -7,6 +7,7 @@ describe("App routing", () => {
   afterEach(() => {
     cleanup();
     document.title = "Glød";
+    vi.unstubAllGlobals();
   });
 
   it("renders vision page on /vision", () => {
@@ -56,5 +57,30 @@ describe("App routing", () => {
       "href",
       "https://www.dksa.dk/"
     );
+  });
+
+  it("renders login page on /login", () => {
+    window.history.pushState({}, "", "/login");
+    render(<App />);
+
+    expect(screen.getByRole("heading", { name: "Administrator login" })).toBeInTheDocument();
+    expect(document.title).toBe("Glød - Log ind");
+  });
+
+  it("renders admin page on /admin", () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        status: 401,
+        ok: false,
+        json: async () => ({ ok: false })
+      } as Response)
+    );
+
+    window.history.pushState({}, "", "/admin");
+    render(<App />);
+
+    expect(screen.getByRole("heading", { name: "Admin-overblik: Tilmeldte" })).toBeInTheDocument();
+    expect(document.title).toBe("Glød - Admin");
   });
 });

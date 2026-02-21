@@ -69,6 +69,18 @@ export function SiteShell({ children, showDesignLink = false, themePreset }: Sit
               >
                 Privatliv
               </motion.a>
+              <motion.a
+                href={appConfig.routes.login}
+                className="glass-pill hover-glow partner-pill rounded-full px-4 py-1 text-xs tracking-wider"
+                variants={navItemVariants}
+                initial="hidden"
+                animate="visible"
+                whileHover="hover"
+                whileTap="hover"
+                aria-label="Log ind"
+              >
+                Log ind
+              </motion.a>
               {showDesignLink && (
                 <motion.a
                   href={appConfig.routes.design}

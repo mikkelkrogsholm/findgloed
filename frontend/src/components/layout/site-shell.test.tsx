@@ -21,6 +21,7 @@ describe("SiteShell", () => {
     const primaryNav = screen.getByTestId("header-primary-nav");
     expect(within(primaryNav).getByRole("link", { name: "Vision" })).toHaveAttribute("href", "/vision.html");
     expect(within(primaryNav).getByRole("link", { name: "Privatliv" })).toHaveAttribute("href", "/privacy.html");
+    expect(within(primaryNav).getByRole("link", { name: "Log ind" })).toHaveAttribute("href", "/login");
     expect(within(primaryNav).getByRole("link", { name: "Design" })).toHaveAttribute("href", "/design.html");
 
     const partnerGroup = screen.getByTestId("header-partner-group");

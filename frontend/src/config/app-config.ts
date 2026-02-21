@@ -15,6 +15,8 @@ export const appConfig = {
     privacy: "/privacy.html",
     waitlistConfirm: "/waitlist/confirm",
     partnerConfirm: "/partner/confirm",
+    login: "/login",
+    admin: "/admin",
     design: "/design.html"
   },
   features: {
@@ -29,6 +31,8 @@ export type AppRouteName =
   | "privacy"
   | "waitlist-confirm"
   | "partner-confirm"
+  | "login"
+  | "admin"
   | "design"
   | "not-found";
 

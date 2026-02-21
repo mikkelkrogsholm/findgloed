@@ -1,6 +1,7 @@
 import { serve } from "bun";
 import { createClient } from "redis";
 import { createApp } from "./app";
+import { createAuthService, parseAdminEmails } from "./auth";
 import { readConfig } from "./config";
 import { createPool, PostgresLeadRepository } from "./db";
 import { ResendEmailService } from "./email";
@@ -43,6 +44,20 @@ async function bootstrap(): Promise<void> {
 
   const repository = new PostgresLeadRepository(pool);
 
+  const authService = createAuthService({
+    pool,
+    leadRepository: repository,
+    appName: config.appName,
+    baseURL: config.apiUrl,
+    trustedOrigins: config.corsOrigins,
+    secret: config.betterAuthSecret,
+    adminEmails: parseAdminEmails(config.adminEmails)
+  });
+
+  if (config.superAdminEmail && config.superAdminPassword) {
+    await authService.ensureSuperAdmin(config.superAdminEmail, config.superAdminPassword);
+  }
+
   const app = createApp({
     leadRepository: repository,
     partnerRepository: repository,
@@ -62,7 +77,8 @@ async function bootstrap(): Promise<void> {
     rateLimitFailOpen: config.rateLimitFailOpen,
     trustProxy: config.trustProxy,
     enableHsts: config.enableHsts,
-    hstsMaxAgeSeconds: config.hstsMaxAgeSeconds
+    hstsMaxAgeSeconds: config.hstsMaxAgeSeconds,
+    authService
   });
 
   const server = serve({

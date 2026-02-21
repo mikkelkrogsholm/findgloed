@@ -11,7 +11,9 @@ function createTestApp(options?: {
   return createApp({
     leadRepository: {
       upsertWaitlistLead: async () => ({ status: "created_pending", shouldSendConfirm: true }),
-      confirmLeadByToken: async () => ({ status: "invalid" })
+      confirmLeadByToken: async () => ({ status: "invalid" }),
+      emailExistsInLeads: async () => true,
+      listAdminLeads: async () => ({ items: [], meta: { total: 0, confirmed: 0, pending: 0 } })
     },
     partnerRepository: {
       upsertPartnerInterest: async () => ({ status: "created_pending", shouldSendConfirm: true }),
@@ -58,7 +60,9 @@ describe("POST /api/waitlist", () => {
     const app = createApp({
       leadRepository: {
         upsertWaitlistLead: async () => ({ status: "created_pending", shouldSendConfirm: true }),
-        confirmLeadByToken: async () => ({ status: "invalid" })
+        confirmLeadByToken: async () => ({ status: "invalid" }),
+        emailExistsInLeads: async () => true,
+        listAdminLeads: async () => ({ items: [], meta: { total: 0, confirmed: 0, pending: 0 } })
       },
       partnerRepository: {
         upsertPartnerInterest: async () => ({ status: "created_pending", shouldSendConfirm: true }),

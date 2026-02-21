@@ -5,7 +5,9 @@ function createHealthApp(options?: { enableHsts?: boolean; trustProxy?: boolean 
   return createApp({
     leadRepository: {
       upsertWaitlistLead: async () => ({ status: "created_pending", shouldSendConfirm: true }),
-      confirmLeadByToken: async () => ({ status: "invalid" })
+      confirmLeadByToken: async () => ({ status: "invalid" }),
+      emailExistsInLeads: async () => true,
+      listAdminLeads: async () => ({ items: [], meta: { total: 0, confirmed: 0, pending: 0 } })
     },
     partnerRepository: {
       upsertPartnerInterest: async () => ({ status: "created_pending", shouldSendConfirm: true }),

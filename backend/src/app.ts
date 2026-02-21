@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { createHash, randomBytes } from "node:crypto";
 import type {
+  AuthService,
   EmailService,
   PartnerInterestOption,
   PartnerInterestRepository,
@@ -27,6 +28,7 @@ type AppDeps = {
   trustProxy?: boolean;
   enableHsts?: boolean;
   hstsMaxAgeSeconds?: number;
+  authService?: AuthService;
 };
 
 const DEFAULT_TOKEN_TTL_HOURS = 72;
@@ -145,6 +147,7 @@ function applyCorsHeaders(c: { header: (name: string, value: string) => void }, 
   c.header("Vary", "Origin");
   c.header("Access-Control-Allow-Methods", CORS_METHODS);
   c.header("Access-Control-Allow-Headers", CORS_HEADERS);
+  c.header("Access-Control-Allow-Credentials", "true");
   c.header("Access-Control-Max-Age", "600");
 }
 
@@ -186,6 +189,7 @@ export function createApp(deps: AppDeps): Hono {
       confirmPartnerByToken: async () => ({ status: "invalid" })
     } satisfies PartnerInterestRepository);
   const partnerConfirmPath = deps.partnerConfirmPath ?? "/partner/confirm";
+  const authService = deps.authService;
 
   async function enforceRateLimit(
     c: {
@@ -271,6 +275,82 @@ export function createApp(deps: AppDeps): Hono {
 
   app.get("/api/health", (c) => {
     return c.json({ ok: true, service: "findgloed-api" });
+  });
+
+  app.on(["GET", "POST"], "/api/auth/*", async (c) => {
+    if (!authService) {
+      return c.json(
+        {
+          ok: false,
+          code: "AUTH_NOT_CONFIGURED",
+          message: "Login er midlertidigt utilgængeligt."
+        },
+        503
+      );
+    }
+    return authService.handler(c.req.raw);
+  });
+
+  app.use("/api/admin/*", async (c, next) => {
+    if (!authService) {
+      return c.json(
+        {
+          ok: false,
+          code: "AUTH_NOT_CONFIGURED",
+          message: "Login er midlertidigt utilgængeligt."
+        },
+        503
+      );
+    }
+
+    const authSession = await authService.getSession(c.req.raw.headers);
+    if (!authSession) {
+      return c.json(
+        {
+          ok: false,
+          code: "UNAUTHORIZED",
+          message: "Log ind for at få adgang."
+        },
+        401
+      );
+    }
+
+    c.set("authSession", authSession);
+    await next();
+  });
+
+  app.get("/api/admin/leads", async (c) => {
+    const authSession = c.get("authSession") as { user?: { role?: string | null } } | undefined;
+    const userRole = authSession?.user?.role ?? "user";
+
+    if (userRole !== "admin") {
+      return c.json(
+        {
+          ok: false,
+          code: "FORBIDDEN",
+          message: "Du har ikke adgang."
+        },
+        403
+      );
+    }
+
+    const result = await deps.leadRepository.listAdminLeads();
+
+    return c.json({
+      ok: true,
+      items: result.items.map((item) => ({
+        id: item.id,
+        email: item.email,
+        status: item.status,
+        source: item.source,
+        marketing_opt_in: item.marketing_opt_in,
+        created_at: item.created_at.toISOString(),
+        confirmed_at: item.confirmed_at ? item.confirmed_at.toISOString() : null,
+        terms_accepted_at: item.terms_accepted_at ? item.terms_accepted_at.toISOString() : null,
+        privacy_accepted_at: item.privacy_accepted_at ? item.privacy_accepted_at.toISOString() : null
+      })),
+      meta: result.meta
+    });
   });
 
   app.post("/api/waitlist", async (c) => {
