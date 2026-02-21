@@ -1,15 +1,19 @@
 # Coolify Deployment Guide
 
-Domæner og TLS er konfigureret direkte i `docker-compose.prod.yml` via Traefik-labels. Der er ingen manuel domain-konfiguration i Coolify UI.
+Coolify håndterer Traefik-routing selv via UI. Compose-filen definerer kun services, healthchecks og env vars.
 
 ---
 
-## Trin 1 — Opret application
+## Trin 1 — Opret application og konfigurer domæner
 
 1. Coolify dashboard → **+ New Resource** → **Docker Compose**
 2. Vælg repo og branch: `main`
 3. **Docker Compose Location**: `docker-compose.prod.yml`
 4. Klik **Save**
+5. Under **Services** → `web` → sæt domæne til `findgloed.dk`, port `80`
+6. Under **Services** → `api` → sæt domæne til `api.findgloed.dk`, port `4564`
+
+Coolify genererer selv Traefik-routing og TLS ud fra disse indstillinger.
 
 ---
 
@@ -107,8 +111,8 @@ curl -I https://findgloed.dk
 
 | Symptom | Løsning |
 |---------|---------|
-| Traefik giver 404/502 | Tjek at Coolify's proxy-network hedder `coolify` — se **Proxy Settings** i Coolify |
-| TLS-fejl / certifikat mangler | Tjek at `letsencrypt` er dit certresolver-navn i **Proxy → Traefik** |
+| Traefik giver 404/502 | Tjek at domæner er sat korrekt under Services i Coolify UI |
+| TLS-fejl / certifikat mangler | Vent et minut — Let's Encrypt udstedes automatisk af Coolify |
 | `api` starter ikke | `POSTGRES_PASSWORD` er sandsynligvis forkert eller db healthcheck fejler |
 | Frontend kalder `localhost:4564` | `API_URL` var tom da imagen blev bygget — redeploy efter env vars er sat |
 | Migrationer fejler | `DATABASE_URL` bygges fra `POSTGRES_*` — tjek alle tre er udfyldt |
