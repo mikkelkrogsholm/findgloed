@@ -16,7 +16,7 @@ Browser
   └─ api.findgloed.dk ──► Traefik ──► api (bun:4564)
 ```
 
-`web`-servicens nginx proxyer `/api/*` internt til `api`-containeren på `http://api:4564`. `api.findgloed.dk` bruges til direkte adgang — primært Stripe webhooks og Idura/MitID auth callbacks.
+`web`-servicens nginx proxyer `/api/*` internt til `api`-containeren på `http://api:4564`. `api.findgloed.dk` er tilgængeligt direkte udefra til f.eks. webhooks og mobile klienter.
 
 ---
 
@@ -64,87 +64,75 @@ Coolify's Traefik proxy håndterer routing og TLS automatisk.
 
 ## Trin 3 — Sæt environment variables
 
-Coolify har automatisk oprettet fire magic-variabler baseret på dine domæner:
+Klik **Bulk Edit** i Coolify og indsæt blokken nedenfor. Erstat de værdier der er markeret med `UDFYLD`.
 
-| Variabel | Værdi |
-|----------|-------|
-| `SERVICE_URL_API` | `https://api.findgloed.dk` |
-| `SERVICE_URL_WEB` | `https://findgloed.dk` |
-| `SERVICE_FQDN_API` | `api.findgloed.dk` |
-| `SERVICE_FQDN_WEB` | `findgloed.dk` |
+> URL-variablerne bruger Coolify's egne magic-variabler (`$SERVICE_URL_*`) og behøver ikke ændres.
+> `DATABASE_URL` sættes ikke her — den bygges automatisk fra `POSTGRES_*` i compose-filen.
+> Brug kun URL-safe tegn (`a-z`, `0-9`, `_`, `-`) i secrets.
 
-Brug disse som værdier i andre variabler (Coolify interpolerer dem automatisk), så URL-konfigurationen også fungerer korrekt i preview deployments.
-
-Udfyld de tomme felter med følgende værdier:
-
-### URLs — brug Coolify magic-variabler
+### Production
 
 ```
 APP_URL=$SERVICE_URL_WEB
 API_URL=$SERVICE_URL_API
 BETTER_AUTH_URL=$SERVICE_URL_API
 CORS_ORIGINS=$SERVICE_URL_WEB
-IDURA_REDIRECT_URI=${SERVICE_URL_API}/auth/callback
-```
-
-> `API_URL` bruges to steder: backend bruger den som sin egen offentlige URL, og compose-filen sender den som build-arg `VITE_API_URL` til frontend-buildet, hvor Vite bager den ind i JS-bundlet.
-
-### Database
-
-```
 POSTGRES_DB=findgloed
 POSTGRES_USER=findgloed
-POSTGRES_PASSWORD=<stærkt-random-password>
+POSTGRES_PASSWORD=UDFYLD
 DB_SSL_REJECT_UNAUTHORIZED=true
-```
-
-> `DATABASE_URL` behøver du ikke sætte manuelt — den er allerede defineret i `docker-compose.prod.yml` ud fra de tre `POSTGRES_*` variabler.
-
-### Auth (Better Auth)
-
-```
-BETTER_AUTH_SECRET=<min-32-tegn-url-safe-secret>
-JWT_SECRET=<langt-random-secret>
-ENCRYPTION_KEY=<min-32-tegn-secret>
+BETTER_AUTH_SECRET=UDFYLD
+JWT_SECRET=UDFYLD
+ENCRYPTION_KEY=UDFYLD
 ADMIN_EMAILS=admin@findgloed.dk
 SUPERADMIN_EMAIL=admin@findgloed.dk
-SUPERADMIN_PASSWORD=<stærkt-password>
-```
-
-### Email (Resend)
-
-```
-RESEND_API_KEY=re_<din-api-nøgle>
+SUPERADMIN_PASSWORD=UDFYLD
+RESEND_API_KEY=UDFYLD
 RESEND_FROM_EMAIL=noreply@findgloed.dk
 SUPPORT_EMAIL=support@findgloed.dk
-```
-
-### Waitlist / Consent
-
-```
 WAITLIST_CONFIRM_PATH=/waitlist/confirm
 PARTNER_CONFIRM_PATH=/partner/confirm
 WAITLIST_CONFIRM_TOKEN_TTL_HOURS=72
 WAITLIST_RESEND_COOLDOWN_MINUTES=15
-```
-
-### Rate limiting
-
-```
 RATE_LIMIT_ENABLED=true
 RATE_LIMIT_WAITLIST_MAX=5
 RATE_LIMIT_WAITLIST_WINDOW_SECONDS=60
 RATE_LIMIT_CONFIRM_MAX=10
 RATE_LIMIT_CONFIRM_WINDOW_SECONDS=60
-```
-
-### Sikkerhed
-
-```
 HSTS_MAX_AGE_SECONDS=31536000
 ```
 
-> **Vigtigt:** Brug kun URL-safe tegn (bogstaver, tal, `_`, `-`) i secrets for at undgå Docker Compose interpolationsproblemer.
+### Preview
+
+```
+APP_URL=$SERVICE_URL_WEB
+API_URL=$SERVICE_URL_API
+BETTER_AUTH_URL=$SERVICE_URL_API
+CORS_ORIGINS=$SERVICE_URL_WEB
+POSTGRES_DB=findgloed
+POSTGRES_USER=findgloed
+POSTGRES_PASSWORD=UDFYLD
+DB_SSL_REJECT_UNAUTHORIZED=false
+BETTER_AUTH_SECRET=UDFYLD
+JWT_SECRET=UDFYLD
+ENCRYPTION_KEY=UDFYLD
+ADMIN_EMAILS=admin@findgloed.dk
+SUPERADMIN_EMAIL=admin@findgloed.dk
+SUPERADMIN_PASSWORD=UDFYLD
+RESEND_API_KEY=UDFYLD
+RESEND_FROM_EMAIL=noreply@findgloed.dk
+SUPPORT_EMAIL=support@findgloed.dk
+WAITLIST_CONFIRM_PATH=/waitlist/confirm
+PARTNER_CONFIRM_PATH=/partner/confirm
+WAITLIST_CONFIRM_TOKEN_TTL_HOURS=72
+WAITLIST_RESEND_COOLDOWN_MINUTES=15
+RATE_LIMIT_ENABLED=true
+RATE_LIMIT_WAITLIST_MAX=5
+RATE_LIMIT_WAITLIST_WINDOW_SECONDS=60
+RATE_LIMIT_CONFIRM_MAX=10
+RATE_LIMIT_CONFIRM_WINDOW_SECONDS=60
+HSTS_MAX_AGE_SECONDS=31536000
+```
 
 ---
 
