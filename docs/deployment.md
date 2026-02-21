@@ -1,6 +1,6 @@
-# Deployment Guide — Hetzner + Traefik
+# Deployment Guide — Hetzner + Caddy
 
-Traefik kører som reverse proxy i samme Docker Compose stack. Let's Encrypt TLS udstedes automatisk.
+Caddy kører som reverse proxy i samme Docker Compose stack. Let's Encrypt TLS udstedes automatisk via en statisk Caddyfile.
 
 ---
 
@@ -12,7 +12,7 @@ Traefik kører som reverse proxy i samme Docker Compose stack. Let's Encrypt TLS
 | Datacenter | HEL1 — Helsinki, Finland | EU/EØS — data forlader ikke EU |
 | Servertype | CPX22 — Regular Performance | 2 vCPU, 4 GB RAM, 80 GB SSD |
 | OS | Ubuntu 24.04 LTS | LTS til august 2029 |
-| Reverse proxy | Traefik v3 | Open source, ingen ekstern databehandling |
+| Reverse proxy | Caddy v2 | Open source, ingen ekstern databehandling |
 | TLS | Let's Encrypt (ACME) | Automatisk certifikatudstedelse |
 | Database | PostgreSQL 16 (Docker) | Kører lokalt på serveren, ingen cloud-DB |
 | Email | Resend | Databehandleraftale tilgængelig — husk DPA |
@@ -146,7 +146,7 @@ cd /opt/findgloed
 docker compose -f docker-compose.prod.yml up -d --build
 ```
 
-Services starter i rækkefølge: `db` → `redis` → `api` (migrationer køres automatisk) → `web`. Traefik henter TLS-certifikat fra Let's Encrypt ved første request.
+Services starter i rækkefølge: `db` → `redis` → `api` (migrationer køres automatisk) → `web`. Caddy henter TLS-certifikater fra Let's Encrypt automatisk ved opstart.
 
 ---
 
@@ -183,8 +183,8 @@ Docker Compose genstarter kun de containers der er ændret.
 
 | Symptom | Løsning |
 |---------|---------|
-| Traefik giver 404/502 | DNS er ikke propageret endnu — tjek med `dig findgloed.dk` |
-| TLS-fejl | Let's Encrypt forsøger challenge — vent 30 sek og prøv igen |
+| Caddy giver 502 | DNS er ikke propageret endnu — tjek med `dig findgloed.dk` |
+| TLS-fejl / certifikat mangler | Caddy prøver automatisk igen hvert minut — tjek logs med `docker compose logs caddy` |
 | `api` starter ikke | Tjek logs: `docker compose -f docker-compose.prod.yml logs api` |
 | Frontend kalder `localhost:4564` | `API_URL` var tom da imagen blev bygget — redeploy efter `.env` er sat |
 | Migrationer fejler | Tjek alle `POSTGRES_*` vars er udfyldt korrekt |
@@ -194,5 +194,5 @@ Docker Compose genstarter kun de containers der er ændret.
 ```sh
 docker compose -f docker-compose.prod.yml logs -f api
 docker compose -f docker-compose.prod.yml logs -f web
-docker compose -f docker-compose.prod.yml logs -f traefik
+docker compose -f docker-compose.prod.yml logs -f caddy
 ```
