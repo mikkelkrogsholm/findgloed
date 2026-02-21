@@ -64,26 +64,30 @@ Coolify's Traefik proxy håndterer routing og TLS automatisk.
 
 ## Trin 3 — Sæt environment variables
 
-Under **Environment Variables** i Coolify, tilføj alle nedenstående variabler. Klik **Bulk Edit** for at indsætte dem samlet.
+Coolify har automatisk oprettet fire magic-variabler baseret på dine domæner:
 
-### Runtime
+| Variabel | Værdi |
+|----------|-------|
+| `SERVICE_URL_API` | `https://api.findgloed.dk` |
+| `SERVICE_URL_WEB` | `https://findgloed.dk` |
+| `SERVICE_FQDN_API` | `api.findgloed.dk` |
+| `SERVICE_FQDN_WEB` | `findgloed.dk` |
+
+Brug disse som værdier i andre variabler (Coolify interpolerer dem automatisk), så URL-konfigurationen også fungerer korrekt i preview deployments.
+
+Udfyld de tomme felter med følgende værdier:
+
+### URLs — brug Coolify magic-variabler
 
 ```
-APP_ENV=production
-APP_NAME=findgloed
+APP_URL=$SERVICE_URL_WEB
+API_URL=$SERVICE_URL_API
+BETTER_AUTH_URL=$SERVICE_URL_API
+CORS_ORIGINS=$SERVICE_URL_WEB
+IDURA_REDIRECT_URI=${SERVICE_URL_API}/auth/callback
 ```
 
-### URLs
-
-```
-APP_URL=https://findgloed.dk
-API_URL=https://api.findgloed.dk
-CORS_ORIGINS=https://findgloed.dk
-BETTER_AUTH_URL=https://api.findgloed.dk
-IDURA_REDIRECT_URI=https://api.findgloed.dk/auth/callback
-```
-
-> `API_URL` bruges to steder: backend bruger den som sin egen offentlige URL, og `docker-compose.prod.yml` sender den som build-arg `VITE_API_URL` til frontend-buildet, hvor Vite bager den ind i JS-bundlet. Sæt den til `https://api.findgloed.dk`.
+> `API_URL` bruges to steder: backend bruger den som sin egen offentlige URL, og compose-filen sender den som build-arg `VITE_API_URL` til frontend-buildet, hvor Vite bager den ind i JS-bundlet.
 
 ### Database
 
@@ -91,10 +95,10 @@ IDURA_REDIRECT_URI=https://api.findgloed.dk/auth/callback
 POSTGRES_DB=findgloed
 POSTGRES_USER=findgloed
 POSTGRES_PASSWORD=<stærkt-random-password>
-DATABASE_URL=postgresql://findgloed:<password>@db:5432/findgloed
-DB_SSL=true
 DB_SSL_REJECT_UNAUTHORIZED=true
 ```
+
+> `DATABASE_URL` behøver du ikke sætte manuelt — den er allerede defineret i `docker-compose.prod.yml` ud fra de tre `POSTGRES_*` variabler.
 
 ### Auth (Better Auth)
 
@@ -145,9 +149,7 @@ WAITLIST_RESEND_COOLDOWN_MINUTES=15
 ### Rate limiting
 
 ```
-REDIS_URL=redis://redis:6379
 RATE_LIMIT_ENABLED=true
-RATE_LIMIT_FAIL_OPEN=false
 RATE_LIMIT_WAITLIST_MAX=5
 RATE_LIMIT_WAITLIST_WINDOW_SECONDS=60
 RATE_LIMIT_CONFIRM_MAX=10
@@ -157,8 +159,6 @@ RATE_LIMIT_CONFIRM_WINDOW_SECONDS=60
 ### Sikkerhed
 
 ```
-TRUST_PROXY=true
-ENABLE_HSTS=true
 HSTS_MAX_AGE_SECONDS=31536000
 ```
 
