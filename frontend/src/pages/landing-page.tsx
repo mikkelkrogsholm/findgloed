@@ -1,5 +1,5 @@
 import { FormEvent, useMemo, useState } from "react";
-import { motion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 
 import { appConfig } from "@/config/app-config";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -8,7 +8,13 @@ import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getMotionMode, hoverLiftVariants, revealVariants, staggerContainerVariants } from "@/lib/motion";
+import {
+  getMotionMode,
+  hoverLiftVariants,
+  revealVariants,
+  staggerContainerVariants,
+  successRevealVariants
+} from "@/lib/motion";
 
 type WaitlistSuccess = {
   ok: true;
@@ -33,6 +39,7 @@ export function LandingPage() {
   const isSuccess = useMemo(() => submitted, [submitted]);
   const motionMode = getMotionMode();
   const pillVariants = hoverLiftVariants(motionMode);
+  const successVariants = successRevealVariants(motionMode);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -126,70 +133,113 @@ export function LandingPage() {
       >
         <Card className="motion-reveal-card p-8 md:p-10">
           <CardContent className="pt-0">
-            {!isSuccess && (
-              <form className="space-y-5" onSubmit={onSubmit}>
-                <div className="space-y-2">
-                  <p className="body-text-muted text-sm leading-relaxed">
-                    Skriv dig på ventelisten. Du får besked om lancering, early access og kommende events. Ingen støj.
-                    Kun relevante opdateringer.
+            <AnimatePresence mode="wait">
+              {!isSuccess && (
+                <motion.div
+                  key="signup-form"
+                  initial="initial"
+                  animate="animate"
+                  exit="exit"
+                  variants={successVariants}
+                >
+                  <form className="space-y-5" onSubmit={onSubmit}>
+                    <div className="space-y-2">
+                      <p className="noxus-kicker kicker-text mb-2 text-[0.65rem]">Kun relevante opdateringer</p>
+                      <p className="body-text-muted text-sm leading-relaxed">
+                        Skriv dig på ventelisten. Du får besked om lancering, early access og kommende events. Ingen
+                        støj.
+                      </p>
+                      <a href={appConfig.routes.privacy} className="link-inline text-sm">
+                        Læs persondatapolitik
+                      </a>
+                    </div>
+
+                    <Label htmlFor="email">Din email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      required
+                      value={email}
+                      onChange={(event) => setEmail(event.target.value)}
+                      placeholder="dig@eksempel.dk"
+                    />
+
+                    <div className="glass-pill space-y-3 rounded-2xl p-4">
+                      <div className="flex items-start gap-3">
+                        <Checkbox
+                          id="terms_privacy"
+                          checked={acceptedTermsPrivacy}
+                          onCheckedChange={(value) => setAcceptedTermsPrivacy(Boolean(value))}
+                        />
+                        <Label htmlFor="terms_privacy" className="body-text text-sm leading-relaxed">
+                          Jeg har læst og accepterer handelsbetingelserne og persondatapolitikken.
+                        </Label>
+                      </div>
+
+                      <div className="flex items-start gap-3">
+                        <Checkbox
+                          id="marketing_opt_in"
+                          checked={marketingOptIn}
+                          onCheckedChange={(value) => setMarketingOptIn(Boolean(value))}
+                        />
+                        <Label htmlFor="marketing_opt_in" className="body-text text-sm leading-relaxed">
+                          Ja tak - send mig eksklusive invites, nyheder og updates fra Glød.
+                        </Label>
+                      </div>
+                    </div>
+
+                    {errorMessage && (
+                      <Alert>
+                        <AlertDescription>{errorMessage}</AlertDescription>
+                      </Alert>
+                    )}
+
+                    <Button disabled={loading || !acceptedTermsPrivacy} type="submit" className="w-full glow-cta">
+                      {loading ? "Sender..." : "Skriv mig op"}
+                    </Button>
+                  </form>
+                </motion.div>
+              )}
+
+              {isSuccess && (
+                <motion.div
+                  key="signup-success"
+                  className="flex min-h-[280px] flex-col items-center justify-center space-y-4 py-8 text-center"
+                  initial="initial"
+                  animate="animate"
+                  exit="exit"
+                  variants={successVariants}
+                >
+                  <motion.div
+                    className="mb-2 flex h-14 w-14 items-center justify-center rounded-full"
+                    style={{ background: "var(--color-overlay-gold)" }}
+                    initial={{ scale: 0, rotate: -15 }}
+                    animate={{
+                      scale: 1,
+                      rotate: 0,
+                      transition: { type: "spring", stiffness: 260, damping: 18, delay: 0.2 }
+                    }}
+                  >
+                    <svg
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="var(--color-accent)"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M20 6 9 17l-5-5" />
+                    </svg>
+                  </motion.div>
+                  <CardTitle>Tak. Du er på listen.</CardTitle>
+                  <p className="success-body max-w-xs text-sm">
+                    Bekræft din e-mail for at aktivere din plads på ventelisten.
                   </p>
-                  <a href={appConfig.routes.privacy} className="link-inline text-sm">
-                    Læs persondatapolitik
-                  </a>
-                </div>
-
-                <Label htmlFor="email">Din email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  placeholder="dig@eksempel.dk"
-                />
-
-                <div className="glass-pill space-y-3 rounded-2xl p-4">
-                  <div className="flex items-start gap-3">
-                    <Checkbox
-                      id="terms_privacy"
-                      checked={acceptedTermsPrivacy}
-                      onCheckedChange={(value) => setAcceptedTermsPrivacy(Boolean(value))}
-                    />
-                    <Label htmlFor="terms_privacy" className="body-text text-sm leading-relaxed">
-                      Jeg har læst og accepterer handelsbetingelserne og persondatapolitikken.
-                    </Label>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <Checkbox
-                      id="marketing_opt_in"
-                      checked={marketingOptIn}
-                      onCheckedChange={(value) => setMarketingOptIn(Boolean(value))}
-                    />
-                    <Label htmlFor="marketing_opt_in" className="body-text text-sm leading-relaxed">
-                      Ja tak - send mig eksklusive invites, nyheder og updates fra Glød.
-                    </Label>
-                  </div>
-                </div>
-
-                {errorMessage && (
-                  <Alert>
-                    <AlertDescription>{errorMessage}</AlertDescription>
-                  </Alert>
-                )}
-
-                <Button disabled={loading || !acceptedTermsPrivacy} type="submit" className="w-full glow-cta">
-                  {loading ? "Sender..." : "Skriv mig op"}
-                </Button>
-              </form>
-            )}
-
-            {isSuccess && (
-              <div className="space-y-3">
-                <CardTitle>Tak. Du er på listen.</CardTitle>
-                <p className="success-body">Bekræft din e-mail for at aktivere din plads på ventelisten.</p>
-              </div>
-            )}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </CardContent>
         </Card>
       </motion.div>

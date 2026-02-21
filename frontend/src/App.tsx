@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 
 import { appConfig, type AppRouteName } from "@/config/app-config";
 import { SiteShell } from "@/components/layout/site-shell";
@@ -11,6 +12,7 @@ import { PartnerConfirmPage } from "@/pages/partner-confirm-page";
 import { WaitlistConfirmPage } from "@/pages/waitlist-confirm-page";
 import { LoginPage } from "@/pages/login-page";
 import { AdminPage } from "@/pages/admin-page";
+import { getMotionMode, pageTransitionVariants } from "@/lib/motion";
 
 function resolveRoute(pathname: string): AppRouteName {
   if (pathname === "/vision" || pathname === appConfig.routes.vision) {
@@ -52,6 +54,8 @@ function resolveRoute(pathname: string): AppRouteName {
 
 export default function App() {
   const [route, setRoute] = useState<AppRouteName>(() => resolveRoute(window.location.pathname));
+  const motionMode = getMotionMode();
+  const pageVariants = pageTransitionVariants(motionMode, "slideUp");
 
   useEffect(() => {
     const onPopState = () => {
@@ -123,15 +127,26 @@ export default function App() {
 
   return (
     <SiteShell showDesignLink={appConfig.features.designPage} themePreset={appConfig.themePreset}>
-      {route === "vision" && <VisionPage />}
-      {route === "privacy" && <PrivacyPage />}
-      {route === "waitlist-confirm" && <WaitlistConfirmPage />}
-      {route === "partner-confirm" && <PartnerConfirmPage />}
-      {route === "login" && <LoginPage />}
-      {route === "admin" && <AdminPage />}
-      {route === "design" && <DesignPage />}
-      {route === "not-found" && <NotFoundPage />}
-      {route === "landing" && <LandingPage />}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={route}
+          variants={pageVariants}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          style={{ willChange: "transform, opacity, filter" }}
+        >
+          {route === "vision" && <VisionPage />}
+          {route === "privacy" && <PrivacyPage />}
+          {route === "waitlist-confirm" && <WaitlistConfirmPage />}
+          {route === "partner-confirm" && <PartnerConfirmPage />}
+          {route === "login" && <LoginPage />}
+          {route === "admin" && <AdminPage />}
+          {route === "design" && <DesignPage />}
+          {route === "not-found" && <NotFoundPage />}
+          {route === "landing" && <LandingPage />}
+        </motion.div>
+      </AnimatePresence>
     </SiteShell>
   );
 }

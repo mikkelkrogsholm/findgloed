@@ -2,6 +2,7 @@ import type { Transition, Variants } from "motion/react";
 
 export type MotionMode = "default" | "reduced";
 export type RevealPreset = "hero" | "section" | "item" | "shell";
+export type PageTransitionPreset = "fade" | "slideUp";
 
 const MOTION_SECONDS = {
   fast: 0.18,
@@ -106,6 +107,116 @@ export function hoverLiftVariants(mode: MotionMode): Variants {
         duration: MOTION_SECONDS.fast,
         ease: EASING.standard
       }
+    }
+  };
+}
+
+export function pageTransitionVariants(mode: MotionMode, preset: PageTransitionPreset = "slideUp"): Variants {
+  if (mode === "reduced") {
+    return {
+      initial: { opacity: 0 },
+      animate: { opacity: 1, transition: { duration: 0.15 } },
+      exit: { opacity: 0, transition: { duration: 0.1 } }
+    };
+  }
+
+  if (preset === "fade") {
+    return {
+      initial: { opacity: 0, filter: "blur(6px)" },
+      animate: {
+        opacity: 1,
+        filter: "blur(0px)",
+        transition: { duration: MOTION_SECONDS.slow, ease: EASING.glod }
+      },
+      exit: {
+        opacity: 0,
+        filter: "blur(4px)",
+        transition: { duration: MOTION_SECONDS.base, ease: EASING.standard }
+      }
+    };
+  }
+
+  // slideUp (default)
+  return {
+    initial: { opacity: 0, y: 18, filter: "blur(5px)" },
+    animate: {
+      opacity: 1,
+      y: 0,
+      filter: "blur(0px)",
+      transition: { duration: MOTION_SECONDS.slow, ease: EASING.glod }
+    },
+    exit: {
+      opacity: 0,
+      y: -10,
+      filter: "blur(3px)",
+      transition: { duration: MOTION_SECONDS.base, ease: EASING.standard }
+    }
+  };
+}
+
+export function dialogOverlayVariants(mode: MotionMode): Variants {
+  if (mode === "reduced") {
+    return {
+      initial: { opacity: 0 },
+      animate: { opacity: 1, transition: { duration: 0 } },
+      exit: { opacity: 0, transition: { duration: 0 } }
+    };
+  }
+  return {
+    initial: { opacity: 0 },
+    animate: { opacity: 1, transition: { duration: MOTION_SECONDS.base, ease: EASING.standard } },
+    exit: { opacity: 0, transition: { duration: MOTION_SECONDS.fast, ease: EASING.standard } }
+  };
+}
+
+export function dialogContentVariants(mode: MotionMode): Variants {
+  if (mode === "reduced") {
+    return {
+      initial: { opacity: 0, scale: 0.98 },
+      animate: { opacity: 1, scale: 1, transition: { duration: 0 } },
+      exit: { opacity: 0, scale: 0.98, transition: { duration: 0 } }
+    };
+  }
+  return {
+    initial: { opacity: 0, scale: 0.96, y: 12, filter: "blur(4px)" },
+    animate: {
+      opacity: 1,
+      scale: 1,
+      y: 0,
+      filter: "blur(0px)",
+      transition: { duration: MOTION_SECONDS.slow, ease: EASING.glod }
+    },
+    exit: {
+      opacity: 0,
+      scale: 0.97,
+      y: 8,
+      filter: "blur(3px)",
+      transition: { duration: MOTION_SECONDS.base, ease: EASING.standard }
+    }
+  };
+}
+
+export function successRevealVariants(mode: MotionMode): Variants {
+  if (mode === "reduced") {
+    return {
+      initial: { opacity: 1 },
+      animate: { opacity: 1, transition: { duration: 0 } },
+      exit: { opacity: 0, transition: { duration: 0 } }
+    };
+  }
+  return {
+    initial: { opacity: 0, scale: 0.96, filter: "blur(6px)" },
+    animate: {
+      opacity: 1,
+      scale: 1,
+      filter: "blur(0px)",
+      transition: { duration: MOTION_SECONDS.sensual, ease: EASING.glod }
+    },
+    exit: {
+      opacity: 0,
+      scale: 0.98,
+      filter: "blur(4px)",
+      transition: { duration: MOTION_SECONDS.base, ease: EASING.standard }
     }
   };
 }

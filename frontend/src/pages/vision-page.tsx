@@ -4,10 +4,26 @@ import { appConfig } from "@/config/app-config";
 import { PartnerInterestModal } from "@/components/partner/partner-interest-modal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
-import { getMotionMode, revealVariants, staggerContainerVariants } from "@/lib/motion";
+import { getMotionMode, hoverLiftVariants, revealVariants, staggerContainerVariants } from "@/lib/motion";
+
+const PRINCIPLE_ITEMS = [
+  {
+    title: "MitID-verificeret adgang",
+    body: "Vi bruger MitID til at sikre, at der står rigtige mennesker bag profilerne. Vi gemmer kun det nødvendige."
+  },
+  {
+    title: "Event-first",
+    body: "Glød er bygget omkring events. Mennesker mødes først i virkeligheden, og det digitale understøtter bagefter."
+  },
+  {
+    title: "Klare rammer",
+    body: "Tydelige regler giver ro. Det gør det lettere at være nysgerrig, social og til stede."
+  }
+];
 
 export function VisionPage() {
   const motionMode = getMotionMode();
+  const pillHover = hoverLiftVariants(motionMode);
 
   return (
     <section className="mx-auto w-full max-w-6xl space-y-8 px-6 py-16 md:py-20">
@@ -34,15 +50,18 @@ export function VisionPage() {
           initial="hidden"
           animate="visible"
         >
-          <motion.span className="glass-pill rounded-full px-4 py-2" variants={revealVariants(motionMode, "item")}>
-            Vi mødes i virkeligheden først
-          </motion.span>
-          <motion.span className="glass-pill rounded-full px-4 py-2" variants={revealVariants(motionMode, "item")}>
-            Fællesskab før algoritmer
-          </motion.span>
-          <motion.span className="glass-pill rounded-full px-4 py-2" variants={revealVariants(motionMode, "item")}>
-            Diskretion, samtykke og respekt
-          </motion.span>
+          {["Vi mødes i virkeligheden først", "Fællesskab før algoritmer", "Diskretion, samtykke og respekt"].map(
+            (label) => (
+              <motion.span
+                key={label}
+                className="glass-pill hover-glow rounded-full px-4 py-2"
+                variants={{ ...revealVariants(motionMode, "item"), ...pillHover }}
+                whileHover="hover"
+              >
+                {label}
+              </motion.span>
+            )
+          )}
         </motion.div>
       </motion.div>
 
@@ -55,14 +74,15 @@ export function VisionPage() {
         <Card className="motion-reveal-card p-8 md:p-10">
           <CardContent className="pt-0">
             <motion.div
-              className="space-y-8"
+              className="space-y-10"
               variants={staggerContainerVariants(motionMode, "section")}
               initial="hidden"
               animate="visible"
             >
+              {/* Intro section */}
               <motion.div variants={revealVariants(motionMode, "item")}>
-                <CardTitle>Vi starter med Dansk Sexologisk Akademi</CardTitle>
-                <p className="body-text mt-3">
+                <CardTitle className="mb-3">Vi starter med Dansk Sexologisk Akademi</CardTitle>
+                <p className="body-text">
                   Glød starter i samarbejde med Dansk Sexologisk Akademi i Sønderjylland. Det gør vi, fordi vi deler
                   samme mål: trygge rammer, tydelige normer og bedre møder mellem mennesker.
                 </p>
@@ -71,56 +91,94 @@ export function VisionPage() {
                 </p>
               </motion.div>
 
-              <motion.div variants={revealVariants(motionMode, "item")}>
-                <h2 className="noxus-title display-text text-2xl">For dig, der deltager</h2>
-                <ul className="body-text mt-3 list-inside list-disc space-y-1">
-                  <li>Mød mennesker gennem events og fælles oplevelser.</li>
-                  <li>Udforsk relationer i rammer med tydelige forventninger.</li>
-                  <li>Vær en del af et miljø, hvor respekt er standard.</li>
-                  <li>Find venskaber, relationer eller dating med mere dybde.</li>
-                </ul>
+              {/* Two column audience grid */}
+              <motion.div
+                className="grid gap-6 md:grid-cols-2"
+                variants={staggerContainerVariants(motionMode, "item")}
+              >
+                <motion.div
+                  className="glass-pill rounded-2xl p-6"
+                  variants={{ ...revealVariants(motionMode, "item"), ...pillHover }}
+                  whileHover="hover"
+                >
+                  <h2 className="noxus-title display-text mb-3 text-xl">For dig, der deltager</h2>
+                  <ul className="body-text space-y-2 text-sm leading-relaxed">
+                    {[
+                      "Mød mennesker gennem events og fælles oplevelser.",
+                      "Udforsk relationer i rammer med tydelige forventninger.",
+                      "Vær en del af et miljø, hvor respekt er standard.",
+                      "Find venskaber, relationer eller dating med mere dybde."
+                    ].map((item) => (
+                      <li key={item} className="flex items-start gap-2">
+                        <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[color:var(--color-accent)]" />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </motion.div>
+
+                <motion.div
+                  className="glass-pill rounded-2xl p-6"
+                  variants={{ ...revealVariants(motionMode, "item"), ...pillHover }}
+                  whileHover="hover"
+                >
+                  <h2 className="noxus-title display-text mb-3 text-xl">For jer, der arrangerer</h2>
+                  <ul className="body-text space-y-2 text-sm leading-relaxed">
+                    {[
+                      "Nå de rigtige deltagere med tydelig målretning.",
+                      "Skab trygge overgange fra interesse til deltagelse.",
+                      "Arbejd med klare normer for samtykke og adfærd.",
+                      "Bliv en del af et stærkere partnernetværk."
+                    ].map((item) => (
+                      <li key={item} className="flex items-start gap-2">
+                        <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[color:var(--color-accent)]" />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </motion.div>
               </motion.div>
 
+              {/* Tre principper */}
               <motion.div variants={revealVariants(motionMode, "item")}>
-                <h2 className="noxus-title display-text text-2xl">For jer, der arrangerer</h2>
-                <ul className="body-text mt-3 list-inside list-disc space-y-1">
-                  <li>Nå de rigtige deltagere med tydelig målretning.</li>
-                  <li>Skab trygge overgange fra interesse til deltagelse.</li>
-                  <li>Arbejd med klare normer for samtykke og adfærd.</li>
-                  <li>Bliv en del af et stærkere partnernetværk.</li>
-                </ul>
+                <h2 className="noxus-title display-text mb-5 text-2xl">Tre principper i praksis</h2>
+                <motion.div
+                  className="space-y-4"
+                  variants={staggerContainerVariants(motionMode, "item")}
+                  initial="hidden"
+                  animate="visible"
+                >
+                  {PRINCIPLE_ITEMS.map((principle, index) => (
+                    <motion.div
+                      key={principle.title}
+                      className="glass-pill hover-glow rounded-2xl p-5"
+                      variants={{ ...revealVariants(motionMode, "item"), ...pillHover }}
+                      whileHover="hover"
+                      custom={index}
+                    >
+                      <div className="flex items-start gap-4">
+                        <div
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold"
+                          style={{
+                            background: "var(--color-overlay-gold)",
+                            color: "var(--color-accent)"
+                          }}
+                        >
+                          {index + 1}
+                        </div>
+                        <div>
+                          <p className="display-text text-base font-semibold">{principle.title}</p>
+                          <p className="body-text mt-1.5 text-sm leading-relaxed">{principle.body}</p>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </motion.div>
               </motion.div>
 
-              <motion.div variants={revealVariants(motionMode, "item")}>
-                <h2 className="noxus-title display-text text-2xl">Tre principper i praksis</h2>
-                <div className="mt-3 space-y-4">
-                  <div className="glass-pill rounded-2xl p-4">
-                    <p className="display-text text-base font-semibold">MitID-verificeret adgang</p>
-                    <p className="body-text mt-2 text-sm">
-                      Vi bruger MitID til at sikre, at der står rigtige mennesker bag profilerne. Vi gemmer kun det
-                      nødvendige.
-                    </p>
-                  </div>
-
-                  <div className="glass-pill rounded-2xl p-4">
-                    <p className="display-text text-base font-semibold">Event-first</p>
-                    <p className="body-text mt-2 text-sm">
-                      Glød er bygget omkring events. Mennesker mødes først i virkeligheden, og det digitale understøtter
-                      bagefter.
-                    </p>
-                  </div>
-
-                  <div className="glass-pill rounded-2xl p-4">
-                    <p className="display-text text-base font-semibold">Klare rammer</p>
-                    <p className="body-text mt-2 text-sm">
-                      Tydelige regler giver ro. Det gør det lettere at være nysgerrig, social og til stede.
-                    </p>
-                  </div>
-                </div>
-              </motion.div>
-
+              {/* CTA */}
               <motion.div className="flex flex-wrap gap-3" variants={revealVariants(motionMode, "item")}>
-                <Button asChild>
+                <Button asChild className="glow-cta">
                   <a href={appConfig.routes.landing}>Til ventelisten</a>
                 </Button>
                 <PartnerInterestModal />
