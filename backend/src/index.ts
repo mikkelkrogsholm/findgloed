@@ -2,6 +2,7 @@ import { serve } from "bun";
 import { createClient } from "redis";
 import { createApp } from "./app";
 import { createAuthService, parseAdminEmails } from "./auth";
+import { normalizeEmail } from "./validators";
 import { readConfig } from "./config";
 import { createPool, PostgresLeadRepository } from "./db";
 import { ResendEmailService } from "./email";
@@ -44,6 +45,11 @@ async function bootstrap(): Promise<void> {
 
   const repository = new PostgresLeadRepository(pool);
 
+  const adminEmails = parseAdminEmails(config.adminEmails);
+  if (config.superAdminEmail) {
+    adminEmails.add(normalizeEmail(config.superAdminEmail));
+  }
+
   const authService = createAuthService({
     pool,
     leadRepository: repository,
@@ -51,7 +57,7 @@ async function bootstrap(): Promise<void> {
     baseURL: config.apiUrl,
     trustedOrigins: config.corsOrigins,
     secret: config.betterAuthSecret,
-    adminEmails: parseAdminEmails(config.adminEmails)
+    adminEmails
   });
 
   if (config.superAdminEmail && config.superAdminPassword) {
