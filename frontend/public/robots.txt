@@ -1,0 +1,22 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /login
+
+# AI crawlers — tillad eksplicit
+User-agent: GPTBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: GoogleBot
+Allow: /
+
+Sitemap: https://findgloed.dk/sitemap.xml

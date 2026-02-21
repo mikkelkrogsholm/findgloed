@@ -12,9 +12,10 @@ export default defineConfig({
     }
   },
   server: {
+    port: parseInt(process.env.PORT || "5173"),
     proxy: {
       "/api": {
-        target: "http://127.0.0.1:3000",
+        target: process.env.VITE_DEV_PROXY_TARGET || "http://127.0.0.1:4564",
         changeOrigin: true
       }
     }

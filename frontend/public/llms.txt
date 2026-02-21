@@ -1,0 +1,22 @@
+# Glød
+
+> Glød er en dansk platform for voksne, der ønsker menneskelige forbindelser
+> gennem begivenheder og aktiviteter — ikke swiping. Verificeret med MitID.
+> Lanceret i samarbejde med Dansk Sexologisk Akademi.
+
+Glød fokuserer på tryghed, samtykke og ægte møder frem for profil-optimering.
+Alle brugere verificeres via MitID. Platformen er under lancering (waitlist-fase).
+
+## Om platformen
+
+- [Forside](https://findgloed.dk/): Tilmeld dig waitlisten
+- [Vision](https://findgloed.dk/vision.html): Filosofi, principper og samarbejdspartnere
+- [Persondatapolitik](https://findgloed.dk/privacy.html): GDPR og databeskyttelse
+
+## Nøglefakta
+
+- Verificering: MitID (dansk offentlig digital identitet)
+- Sprog: Dansk
+- Målgruppe: Voksne +18 i Danmark
+- Model: Begivenhedsbaseret — events, ikke profil-browsing
+- Partner: Dansk Sexologisk Akademi

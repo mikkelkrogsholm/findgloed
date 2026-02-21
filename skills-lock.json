@@ -6,6 +6,11 @@
       "sourceType": "github",
       "computedHash": "7075ab30f588019197a2f1518bb4c9d33d69d33352af079b5f9c60303ad3886e"
     },
+    "seo-geo": {
+      "source": "mikkelkrogsholm/dev-skills",
+      "sourceType": "github",
+      "computedHash": "ae1857f1100dc06ea15a9c0a7ca27f2911333b480aa671479a5a910e42badb31"
+    },
     "shadcn-ui": {
       "source": "google-labs-code/stitch-skills",
       "sourceType": "github",

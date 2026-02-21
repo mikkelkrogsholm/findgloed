@@ -6,6 +6,29 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { getMotionMode, hoverLiftVariants, revealVariants, staggerContainerVariants } from "@/lib/motion";
 
+const FAQ_ITEMS = [
+  {
+    question: "Hvad er Glød?",
+    answer:
+      "Glød er en dansk platform for voksne, der ønsker at møde andre nysgerrige mennesker via begivenheder og aktiviteter — ikke via profil-swiping. Alle brugere verificeres med MitID."
+  },
+  {
+    question: "Hvordan sikrer Glød tryghed?",
+    answer:
+      "Glød bruger MitID-verificering, klare samtykkeregler og et struktureret samtykkesystem. Platformen er udviklet i samarbejde med Dansk Sexologisk Akademi."
+  },
+  {
+    question: "Er Glød et dating-site?",
+    answer:
+      "Nej — Glød er begivenhedsbaseret, ikke profilbaseret. Du møder andre mennesker via aktiviteter og events, ikke ved at browse profiler og swippe."
+  },
+  {
+    question: "Hvem kan bruge Glød?",
+    answer:
+      "Glød er for alle nysgerrige voksne (+18) i Danmark. Du behøver ingen erfaring — blot en åben sind og lyst til at møde ligesindede via events."
+  }
+];
+
 const PRINCIPLE_ITEMS = [
   {
     title: "MitID-verificeret adgang",
@@ -182,6 +205,53 @@ export function VisionPage() {
                   <a href={appConfig.routes.landing}>Til ventelisten</a>
                 </Button>
                 <PartnerInterestModal />
+              </motion.div>
+
+              {/* Nøglefakta — GEO-boost */}
+              <motion.div variants={revealVariants(motionMode, "item")}>
+                <h2 className="noxus-title display-text mb-4 text-2xl">Nøglefakta om Glød</h2>
+                <motion.div
+                  className="grid gap-3 sm:grid-cols-3"
+                  variants={staggerContainerVariants(motionMode, "item")}
+                >
+                  {[
+                    { label: "Verificering", value: "MitID", sub: "Danmarks officielle digitale identitet, brugt af over 5 mio. danskere" },
+                    { label: "Model", value: "Event-first", sub: "Alle møder starter med en fælles oplevelse — ikke profil-browsing" },
+                    { label: "Sikkerhed", value: "100% verificeret", sub: "Ingen anonyme profiler — bekræftet identitet er et krav for adgang" }
+                  ].map((fact) => (
+                    <motion.div
+                      key={fact.label}
+                      className="glass-pill rounded-2xl p-5 text-center"
+                      variants={revealVariants(motionMode, "item")}
+                    >
+                      <p className="noxus-kicker kicker-text mb-1 text-xs">{fact.label}</p>
+                      <p className="display-text text-lg font-bold">{fact.value}</p>
+                      <p className="body-text mt-1 text-xs leading-relaxed opacity-70">{fact.sub}</p>
+                    </motion.div>
+                  ))}
+                </motion.div>
+              </motion.div>
+
+              {/* FAQ — synlig for brugere og crawlere */}
+              <motion.div variants={revealVariants(motionMode, "item")}>
+                <h2 className="noxus-title display-text mb-5 text-2xl">Ofte stillede spørgsmål</h2>
+                <motion.dl
+                  className="space-y-4"
+                  variants={staggerContainerVariants(motionMode, "item")}
+                  initial="hidden"
+                  animate="visible"
+                >
+                  {FAQ_ITEMS.map((faq) => (
+                    <motion.div
+                      key={faq.question}
+                      className="glass-pill rounded-2xl p-5"
+                      variants={revealVariants(motionMode, "item")}
+                    >
+                      <dt className="display-text text-base font-semibold">{faq.question}</dt>
+                      <dd className="body-text mt-2 text-sm leading-relaxed">{faq.answer}</dd>
+                    </motion.div>
+                  ))}
+                </motion.dl>
               </motion.div>
             </motion.div>
           </CardContent>

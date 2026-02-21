@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <!-- Baggrundsgradient der efterligner det varme, bløde lys -->
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F2DFD3" />
+      <stop offset="50%" stop-color="#F1ECE5" />
+      <stop offset="100%" stop-color="#E2E7DF" />
+    </linearGradient>
+
+    <!-- Skygge til kortet for at give dybde -->
+    <filter id="dropShadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="15" stdDeviation="20" flood-color="#7B6D61" flood-opacity="0.15"/>
+    </filter>
+  </defs>
+
+  <!-- Baggrund -->
+  <rect width="1200" height="630" fill="url(#bgGradient)" />
+
+  <!-- Det indre kort -->
+  <rect x="40" y="40" width="1120" height="550" rx="32" fill="#F8F5F1" fill-opacity="0.8" stroke="#ffffff" stroke-width="2" filter="url(#dropShadow)" />
+
+  <!-- Top Header: Logo + Kategori for at udnytte horisontal plads -->
+  <text x="100" y="135" font-family="Georgia, 'Times New Roman', serif" font-size="46" fill="#BA5D46" font-weight="normal">Glød</text>
+  <circle cx="215" cy="120" r="3" fill="#BA5D46" opacity="0.5" />
+  <text x="240" y="126" font-family="system-ui, -apple-system, sans-serif" font-size="16" fill="#BA5D46" font-weight="600" letter-spacing="3.5">MØD MENNESKER I VIRKELIGHEDEN FØRST</text>
+
+  <!-- Hovedoverskrift (Skaleret kraftigt op for at fylde bredden) -->
+  <text x="100" y="260" font-family="Georgia, 'Times New Roman', serif" font-size="105" fill="#2E2825" font-weight="normal" letter-spacing="-1.5">Et trygt sted for</text>
+  <text x="100" y="365" font-family="Georgia, 'Times New Roman', serif" font-size="105" fill="#2E2825" font-weight="normal" letter-spacing="-1.5">nysgerrige voksne.</text>
+
+  <!-- Brødtekst (Lagt på to bredere linjer) -->
+  <text x="100" y="450" font-family="system-ui, -apple-system, sans-serif" font-size="26" fill="#4A4541" font-weight="400">Glød er for dig, der vil møde mennesker gennem oplevelser - ikke swipe-kultur.</text>
+  <text x="100" y="488" font-family="system-ui, -apple-system, sans-serif" font-size="26" fill="#4A4541" font-weight="400">Vi starter med events i samarbejde med Dansk Sexologisk Akademi.</text>
+
+  <!-- Pille-tags (Lagt på række for at trække øjet mod højre) -->
+  
+  <!-- Tag 1: MitID -->
+  <rect x="100" y="530" width="280" height="46" rx="23" fill="none" stroke="#D3CDC6" stroke-width="1.5" />
+  <text x="240" y="561" font-family="system-ui, -apple-system, sans-serif" font-size="20" fill="#2E2825" text-anchor="middle">MitID-verificeret adgang</text>
+
+  <!-- Tag 2: Event-first -->
+  <rect x="400" y="530" width="140" height="46" rx="23" fill="none" stroke="#D3CDC6" stroke-width="1.5" />
+  <text x="470" y="561" font-family="system-ui, -apple-system, sans-serif" font-size="20" fill="#2E2825" text-anchor="middle">Event-first</text>
+
+  <!-- Tag 3: Samtykke (Fylder højre side ud) -->
+  <rect x="560" y="530" width="410" height="46" rx="23" fill="none" stroke="#D3CDC6" stroke-width="1.5" />
+  <text x="765" y="561" font-family="system-ui, -apple-system, sans-serif" font-size="20" fill="#2E2825" text-anchor="middle">Klare rammer for samtykke og respekt</text>
+
+</svg>
