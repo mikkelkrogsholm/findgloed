@@ -1,6 +1,11 @@
 {
   "version": 1,
   "skills": {
+    "coolify": {
+      "source": "mikkelkrogsholm/dev-skills",
+      "sourceType": "github",
+      "computedHash": "846ad8e4a123591b6657bf362009d39842a389d169a9c06049eb98c4c723b627"
+    },
     "playwright-cli": {
       "source": "microsoft/playwright-cli",
       "sourceType": "github",

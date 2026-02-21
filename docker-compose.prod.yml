@@ -53,6 +53,24 @@ services:
       TRUST_PROXY: "true"
       RATE_LIMIT_FAIL_OPEN: "false"
       ENABLE_HSTS: "true"
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
+      IDURA_BASE_URL: ${IDURA_BASE_URL}
+      IDURA_ISSUER_URL: ${IDURA_ISSUER_URL}
+      IDURA_CLIENT_ID: ${IDURA_CLIENT_ID}
+      IDURA_CLIENT_SECRET: ${IDURA_CLIENT_SECRET}
+      IDURA_REDIRECT_URI: ${IDURA_REDIRECT_URI}
+      RATE_LIMIT_ENABLED: ${RATE_LIMIT_ENABLED}
+      RATE_LIMIT_WAITLIST_MAX: ${RATE_LIMIT_WAITLIST_MAX}
+      RATE_LIMIT_WAITLIST_WINDOW_SECONDS: ${RATE_LIMIT_WAITLIST_WINDOW_SECONDS}
+      RATE_LIMIT_CONFIRM_MAX: ${RATE_LIMIT_CONFIRM_MAX}
+      RATE_LIMIT_CONFIRM_WINDOW_SECONDS: ${RATE_LIMIT_CONFIRM_WINDOW_SECONDS}
+      WAITLIST_CONFIRM_PATH: ${WAITLIST_CONFIRM_PATH}
+      PARTNER_CONFIRM_PATH: ${PARTNER_CONFIRM_PATH}
+      WAITLIST_CONFIRM_TOKEN_TTL_HOURS: ${WAITLIST_CONFIRM_TOKEN_TTL_HOURS}
+      WAITLIST_RESEND_COOLDOWN_MINUTES: ${WAITLIST_RESEND_COOLDOWN_MINUTES}
+      DB_SSL_REJECT_UNAUTHORIZED: ${DB_SSL_REJECT_UNAUTHORIZED}
+      HSTS_MAX_AGE_SECONDS: ${HSTS_MAX_AGE_SECONDS}
     depends_on:
       db:
         condition: service_healthy
@@ -70,11 +88,17 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile.prod
-    ports:
-      - "80:80"
+    expose:
+      - "80"
     depends_on:
       api:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:80 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     restart: always
 
 volumes:
