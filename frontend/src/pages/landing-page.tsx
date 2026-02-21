@@ -1,5 +1,5 @@
 import { FormEvent, useMemo, useState } from "react";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 
 import { appConfig } from "@/config/app-config";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -124,74 +124,74 @@ export function LandingPage() {
         animate="visible"
         variants={revealVariants(motionMode, "section")}
       >
-      <Card className="motion-reveal-card p-8 md:p-10">
-        <CardContent className="pt-0">
-          {!isSuccess && (
-            <form className="space-y-5" onSubmit={onSubmit}>
-              <div className="space-y-2">
-                <p className="body-text-muted text-sm leading-relaxed">
-                  Skriv dig på ventelisten. Du får besked om lancering, early access og kommende events. Ingen støj.
-                  Kun relevante opdateringer.
-                </p>
-                <a href={appConfig.routes.privacy} className="link-inline text-sm">
-                  Læs persondatapolitik
-                </a>
-              </div>
-
-              <Label htmlFor="email">Din email</Label>
-              <Input
-                id="email"
-                type="email"
-                required
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="dig@eksempel.dk"
-              />
-
-              <div className="glass-pill space-y-3 rounded-2xl p-4">
-                <div className="flex items-start gap-3">
-                  <Checkbox
-                    id="terms_privacy"
-                    checked={acceptedTermsPrivacy}
-                    onCheckedChange={(value) => setAcceptedTermsPrivacy(Boolean(value))}
-                  />
-                  <Label htmlFor="terms_privacy" className="body-text text-sm leading-relaxed">
-                    Jeg har læst og accepterer handelsbetingelserne og persondatapolitikken.
-                  </Label>
+        <Card className="motion-reveal-card p-8 md:p-10">
+          <CardContent className="pt-0">
+            {!isSuccess && (
+              <form className="space-y-5" onSubmit={onSubmit}>
+                <div className="space-y-2">
+                  <p className="body-text-muted text-sm leading-relaxed">
+                    Skriv dig på ventelisten. Du får besked om lancering, early access og kommende events. Ingen støj.
+                    Kun relevante opdateringer.
+                  </p>
+                  <a href={appConfig.routes.privacy} className="link-inline text-sm">
+                    Læs persondatapolitik
+                  </a>
                 </div>
 
-                <div className="flex items-start gap-3">
-                  <Checkbox
-                    id="marketing_opt_in"
-                    checked={marketingOptIn}
-                    onCheckedChange={(value) => setMarketingOptIn(Boolean(value))}
-                  />
-                  <Label htmlFor="marketing_opt_in" className="body-text text-sm leading-relaxed">
-                    Ja tak - send mig eksklusive invites, nyheder og updates fra Glød.
-                  </Label>
+                <Label htmlFor="email">Din email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="dig@eksempel.dk"
+                />
+
+                <div className="glass-pill space-y-3 rounded-2xl p-4">
+                  <div className="flex items-start gap-3">
+                    <Checkbox
+                      id="terms_privacy"
+                      checked={acceptedTermsPrivacy}
+                      onCheckedChange={(value) => setAcceptedTermsPrivacy(Boolean(value))}
+                    />
+                    <Label htmlFor="terms_privacy" className="body-text text-sm leading-relaxed">
+                      Jeg har læst og accepterer handelsbetingelserne og persondatapolitikken.
+                    </Label>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <Checkbox
+                      id="marketing_opt_in"
+                      checked={marketingOptIn}
+                      onCheckedChange={(value) => setMarketingOptIn(Boolean(value))}
+                    />
+                    <Label htmlFor="marketing_opt_in" className="body-text text-sm leading-relaxed">
+                      Ja tak - send mig eksklusive invites, nyheder og updates fra Glød.
+                    </Label>
+                  </div>
                 </div>
+
+                {errorMessage && (
+                  <Alert>
+                    <AlertDescription>{errorMessage}</AlertDescription>
+                  </Alert>
+                )}
+
+                <Button disabled={loading || !acceptedTermsPrivacy} type="submit" className="w-full glow-cta">
+                  {loading ? "Sender..." : "Skriv mig op"}
+                </Button>
+              </form>
+            )}
+
+            {isSuccess && (
+              <div className="space-y-3">
+                <CardTitle>Tak. Du er på listen.</CardTitle>
+                <p className="success-body">Bekræft din e-mail for at aktivere din plads på ventelisten.</p>
               </div>
-
-              {errorMessage && (
-                <Alert>
-                  <AlertDescription>{errorMessage}</AlertDescription>
-                </Alert>
-              )}
-
-              <Button disabled={loading || !acceptedTermsPrivacy} type="submit" className="w-full glow-cta">
-                {loading ? "Sender..." : "Skriv mig op"}
-              </Button>
-            </form>
-          )}
-
-          {isSuccess && (
-            <div className="space-y-3">
-              <CardTitle>Tak. Du er på listen.</CardTitle>
-              <p className="success-body">Bekræft din e-mail for at aktivere din plads på ventelisten.</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            )}
+          </CardContent>
+        </Card>
       </motion.div>
     </section>
   );

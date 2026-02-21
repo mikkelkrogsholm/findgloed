@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 
 import { appConfig, type ThemePreset } from "@/config/app-config";
 import { getMotionMode, hoverLiftVariants, revealVariants, staggerContainerVariants } from "@/lib/motion";

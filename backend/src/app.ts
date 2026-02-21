@@ -12,6 +12,23 @@ import type {
 } from "./types";
 import { isValidEmail, normalizeEmail } from "./validators";
 
+type AuthSessionData = {
+  user: {
+    id: string;
+    email: string;
+    role?: string | null;
+  };
+  session: {
+    id: string;
+    userId: string;
+    expiresAt: Date | string;
+  };
+};
+
+type AppVariables = {
+  authSession: AuthSessionData;
+};
+
 type AppDeps = {
   leadRepository: WaitlistRepository;
   partnerRepository?: PartnerInterestRepository;
@@ -169,8 +186,8 @@ function rateLimitedResponse(
   );
 }
 
-export function createApp(deps: AppDeps): Hono {
-  const app = new Hono();
+export function createApp(deps: AppDeps): Hono<{ Variables: AppVariables }> {
+  const app = new Hono<{ Variables: AppVariables }>();
   const confirmationTokenTtlHours = deps.confirmationTokenTtlHours ?? DEFAULT_TOKEN_TTL_HOURS;
   const resendCooldownMinutes = deps.resendCooldownMinutes ?? DEFAULT_RESEND_COOLDOWN_MINUTES;
   const corsOrigins = deps.corsOrigins ?? ["http://localhost:4563"];
@@ -277,7 +294,7 @@ export function createApp(deps: AppDeps): Hono {
     return c.json({ ok: true, service: "findgloed-api" });
   });
 
-  app.on(["GET", "POST"], "/api/auth/*", async (c) => {
+  app.all("/api/auth/*", async (c) => {
     if (!authService) {
       return c.json(
         {

@@ -1,4 +1,4 @@
-import type { Transition, Variants } from "framer-motion";
+import type { Transition, Variants } from "motion/react";
 
 export type MotionMode = "default" | "reduced";
 export type RevealPreset = "hero" | "section" | "item" | "shell";
