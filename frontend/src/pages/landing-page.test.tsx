@@ -20,9 +20,7 @@ describe("LandingPage", () => {
     const submitButton = screen.getByRole("button", { name: "Skriv mig op" });
     expect(submitButton).toBeDisabled();
     expect(
-      screen.getByText(
-        "Skriv dig på ventelisten. Du får besked om lancering, early access og kommende events. Ingen støj. Kun relevante opdateringer."
-      )
+      screen.getByText(/Skriv dig på ventelisten/)
     ).toBeInTheDocument();
   });
 

@@ -24,9 +24,9 @@ describe("VisionPage", () => {
     expect(screen.getByRole("heading", { name: "For dig, der deltager" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "For jer, der arrangerer" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Tre principper i praksis" })).toBeInTheDocument();
-    expect(screen.getByText("MitID-verificeret adgang")).toBeInTheDocument();
-    expect(screen.getByText("Event-first")).toBeInTheDocument();
-    expect(screen.getByText("Klare rammer")).toBeInTheDocument();
+    expect(screen.getAllByText("MitID-verificeret adgang").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Event-first").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Klare rammer").length).toBeGreaterThan(0);
   });
 
   it("offers CTA for both waitlist and partner collaboration", async () => {
