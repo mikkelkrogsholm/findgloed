@@ -1,4 +1,4 @@
-import type { Hono } from "hono";
+import type { Hono, MiddlewareHandler } from "hono";
 import type {
   AuthService,
   CoupleProfile,
@@ -120,17 +120,15 @@ export function registerMembershipRoutes(
 ): void {
   const { authService, membershipRepository, uploadStore } = deps;
 
-  const memberAuthMiddleware = async (
-    c: Parameters<Parameters<typeof app.use>[1]>[0],
-    next: Parameters<Parameters<typeof app.use>[1]>[1]
-  ) => {
-    const authSession = await authService.getSession(c.req.raw.headers);
-    if (!authSession) {
-      return c.json({ ok: false, code: "UNAUTHORIZED", message: "Log ind." }, 401);
-    }
-    c.set("authSession", authSession);
-    await next();
-  };
+  const memberAuthMiddleware: MiddlewareHandler<{ Variables: { authSession: AuthSessionData } }> =
+    async (c, next) => {
+      const authSession = await authService.getSession(c.req.raw.headers);
+      if (!authSession) {
+        return c.json({ ok: false, code: "UNAUTHORIZED", message: "Log ind." }, 401);
+      }
+      c.set("authSession", authSession);
+      await next();
+    };
 
   // Hono's "*" path-matcher kræver enten præcis path eller "/path/*" for subpaths.
   // Vi registrerer derfor både eksakt og wildcard for hver gruppe.
@@ -549,10 +547,9 @@ export function registerMembershipRoutes(
   });
 
   // Admin verifications
-  const adminVerificationsMiddleware = async (
-    c: Parameters<Parameters<typeof app.use>[1]>[0],
-    next: Parameters<Parameters<typeof app.use>[1]>[1]
-  ) => {
+  const adminVerificationsMiddleware: MiddlewareHandler<{
+    Variables: { authSession: AuthSessionData };
+  }> = async (c, next) => {
     const session = await authService.getSession(c.req.raw.headers);
     if (!session) {
       return c.json({ ok: false, code: "UNAUTHORIZED" }, 401);

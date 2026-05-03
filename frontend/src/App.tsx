@@ -18,6 +18,10 @@ import { VerificationPage } from "@/pages/verification-page";
 import { ProfilePage } from "@/pages/profile-page";
 import { MembersPage } from "@/pages/members-page";
 import { MemberDetailPage } from "@/pages/member-detail-page";
+import { EventsPage } from "@/pages/events-page";
+import { EventDetailPage } from "@/pages/event-detail-page";
+import { MyEventsPage } from "@/pages/my-events-page";
+import { AdminEventsPage } from "@/pages/admin-events-page";
 import { AdminPage } from "@/pages/admin-page";
 import { getMotionMode, pageTransitionVariants } from "@/lib/motion";
 
@@ -57,6 +61,18 @@ function resolveRoute(pathname: string): AppRouteName {
   }
   if (pathname.startsWith(`${appConfig.routes.members}/`)) {
     return "member-detail";
+  }
+  if (pathname === appConfig.routes.events) {
+    return "events";
+  }
+  if (pathname === appConfig.routes.myEvents) {
+    return "my-events";
+  }
+  if (pathname.startsWith(`${appConfig.routes.events}/`)) {
+    return "event-detail";
+  }
+  if (pathname === appConfig.routes.adminEvents) {
+    return "admin-events";
   }
   if (pathname === appConfig.routes.admin) {
     return "admin";
@@ -119,6 +135,10 @@ export default function App() {
       profile: "Glød - Min profil",
       members: "Glød - Medlemmer",
       "member-detail": "Glød - Medlemsprofil",
+      events: "Glød - Events",
+      "event-detail": "Glød - Event",
+      "my-events": "Glød - Mine tilmeldinger",
+      "admin-events": "Glød - Admin events",
       admin: "Glød - Admin",
       "not-found": "Glød - Side ikke fundet"
     };
@@ -147,6 +167,10 @@ export default function App() {
           {route === "profile" && <ProfilePage />}
           {route === "members" && <MembersPage />}
           {route === "member-detail" && <MemberDetailPage />}
+          {route === "events" && <EventsPage />}
+          {route === "event-detail" && <EventDetailPage />}
+          {route === "my-events" && <MyEventsPage />}
+          {route === "admin-events" && <AdminEventsPage />}
           {route === "admin" && <AdminPage />}
           {route === "design" && <DesignPage />}
           {route === "not-found" && <NotFoundPage />}

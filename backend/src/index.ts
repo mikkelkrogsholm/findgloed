@@ -7,6 +7,7 @@ import { normalizeEmail } from "./validators";
 import { readConfig } from "./config";
 import { createPool, PostgresLeadRepository } from "./db";
 import { ResendEmailService } from "./email";
+import { PostgresEventRepository } from "./events";
 import { PostgresMembershipRepository } from "./membership";
 import { RedisRateLimiter } from "./rate-limit";
 import { createLocalUploadStore } from "./uploads";
@@ -68,6 +69,7 @@ async function bootstrap(): Promise<void> {
   }
 
   const membershipRepository = new PostgresMembershipRepository(pool);
+  const eventRepository = new PostgresEventRepository(pool);
   const uploadsRoot = process.env.UPLOADS_ROOT ?? join(process.cwd(), "uploads");
   const uploadStore = createLocalUploadStore(uploadsRoot);
 
@@ -93,7 +95,8 @@ async function bootstrap(): Promise<void> {
     hstsMaxAgeSeconds: config.hstsMaxAgeSeconds,
     authService,
     membershipRepository,
-    uploadStore
+    uploadStore,
+    eventRepository
   });
 
   const server = serve({

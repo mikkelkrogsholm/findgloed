@@ -22,7 +22,11 @@ export const appConfig = {
     profile: "/profile",
     members: "/members",
     member: "/members/:id",
+    events: "/events",
+    event: "/events/:slug",
+    myEvents: "/me/events",
     admin: "/admin",
+    adminEvents: "/admin/events",
     design: "/design"
   },
   features: {
@@ -44,7 +48,11 @@ export type AppRouteName =
   | "profile"
   | "members"
   | "member-detail"
+  | "events"
+  | "event-detail"
+  | "my-events"
   | "admin"
+  | "admin-events"
   | "design"
   | "not-found";
 

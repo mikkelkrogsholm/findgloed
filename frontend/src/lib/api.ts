@@ -209,5 +209,154 @@ export const api = {
     request<{ ok: true }>(`/api/admin/verifications/${id}/reject`, {
       method: "POST",
       body: JSON.stringify({ reason })
-    })
+    }),
+
+  // ---------- Events ----------
+  listEvents: (filters: {
+    category?: EventCategory;
+    level?: EventLevel;
+    region?: string;
+    beginner_friendly?: boolean;
+  } = {}) => {
+    const params = new URLSearchParams();
+    if (filters.category) params.set("category", filters.category);
+    if (filters.level) params.set("level", filters.level);
+    if (filters.region) params.set("region", filters.region);
+    if (filters.beginner_friendly !== undefined) {
+      params.set("beginner_friendly", String(filters.beginner_friendly));
+    }
+    const qs = params.toString();
+    return request<{ ok: true; events: PublicEvent[] }>(
+      `/api/events${qs ? `?${qs}` : ""}`
+    );
+  },
+
+  getEvent: (slug: string) =>
+    request<{ ok: true; event: PublicEvent }>(`/api/events/${slug}`),
+
+  registerEvent: (slug: string) =>
+    request<{ ok: true }>(`/api/events/${slug}/register`, { method: "POST" }),
+
+  cancelEventRegistration: (slug: string) =>
+    request<{ ok: true }>(`/api/events/${slug}/register`, { method: "DELETE" }),
+
+  myEvents: () =>
+    request<{
+      ok: true;
+      registrations: Array<{
+        id: string;
+        status: string;
+        registered_at: string;
+        event: PublicEvent;
+      }>;
+    }>("/api/me/events"),
+
+  // Admin
+  listAdminEvents: () =>
+    request<{ ok: true; events: AdminEvent[] }>("/api/admin/events"),
+
+  createEvent: (body: AdminEventInput) =>
+    request<{ ok: true; event: AdminEvent }>("/api/admin/events", {
+      method: "POST",
+      body: JSON.stringify(body)
+    }),
+
+  updateEvent: (id: string, body: Partial<AdminEventInput>) =>
+    request<{ ok: true; event: AdminEvent }>(`/api/admin/events/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body)
+    }),
+
+  deleteEvent: (id: string) =>
+    request<{ ok: true }>(`/api/admin/events/${id}`, { method: "DELETE" }),
+
+  listEventRegistrations: (id: string) =>
+    request<{
+      ok: true;
+      registrations: Array<{
+        id: string;
+        user_id: string;
+        couple_id: string | null;
+        status: string;
+        registered_at: string;
+      }>;
+    }>(`/api/admin/events/${id}/registrations`)
+};
+
+export type EventCategory = "single_only" | "couple_only" | "mixed";
+export type EventLevel = "sensual_social" | "sensual" | "explicit";
+
+export type PublicEvent = {
+  id: string;
+  slug: string;
+  title: string;
+  description: string;
+  not_for: string | null;
+  category: EventCategory;
+  level: EventLevel;
+  beginner_friendly: boolean;
+  experience_required: boolean;
+  facilitator_name: string;
+  facilitator_credential: string | null;
+  starts_at: string;
+  ends_at: string;
+  capacity: number;
+  spots_taken: number;
+  spots_left: number;
+  price_cents: number;
+  region: string | null;
+  location_label: string | null;
+  location_address: string | null;
+  dresscode: string | null;
+  exit_strategy: string | null;
+  cover_path: string | null;
+  status: string;
+  is_registered: boolean;
+};
+
+export type AdminEvent = {
+  id: string;
+  slug: string;
+  title: string;
+  description: string;
+  not_for: string | null;
+  category: EventCategory;
+  level: EventLevel;
+  beginner_friendly: boolean;
+  experience_required: boolean;
+  facilitator_name: string;
+  facilitator_credential: string | null;
+  starts_at: string;
+  ends_at: string;
+  capacity: number;
+  price_cents: number;
+  region: string | null;
+  location_label: string | null;
+  location_address: string | null;
+  dresscode: string | null;
+  exit_strategy: string | null;
+  status: string;
+};
+
+export type AdminEventInput = {
+  slug?: string;
+  title?: string;
+  description?: string;
+  not_for?: string | null;
+  category?: EventCategory;
+  level?: EventLevel;
+  beginner_friendly?: boolean;
+  experience_required?: boolean;
+  facilitator_name?: string;
+  facilitator_credential?: string | null;
+  starts_at?: string;
+  ends_at?: string;
+  capacity?: number;
+  price_cents?: number;
+  region?: string | null;
+  location_label?: string | null;
+  location_address?: string | null;
+  dresscode?: string | null;
+  exit_strategy?: string | null;
+  status?: "draft" | "published" | "cancelled" | "completed";
 };
