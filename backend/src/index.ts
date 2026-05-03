@@ -1,12 +1,15 @@
 import { serve } from "bun";
 import { createClient } from "redis";
+import { join } from "node:path";
 import { createApp } from "./app";
 import { createAuthService, parseAdminEmails } from "./auth";
 import { normalizeEmail } from "./validators";
 import { readConfig } from "./config";
 import { createPool, PostgresLeadRepository } from "./db";
 import { ResendEmailService } from "./email";
+import { PostgresMembershipRepository } from "./membership";
 import { RedisRateLimiter } from "./rate-limit";
+import { createLocalUploadStore } from "./uploads";
 import type { RateLimiter } from "./types";
 
 async function bootstrap(): Promise<void> {
@@ -64,6 +67,10 @@ async function bootstrap(): Promise<void> {
     await authService.ensureSuperAdmin(config.superAdminEmail, config.superAdminPassword);
   }
 
+  const membershipRepository = new PostgresMembershipRepository(pool);
+  const uploadsRoot = process.env.UPLOADS_ROOT ?? join(process.cwd(), "uploads");
+  const uploadStore = createLocalUploadStore(uploadsRoot);
+
   const app = createApp({
     leadRepository: repository,
     partnerRepository: repository,
@@ -84,7 +91,9 @@ async function bootstrap(): Promise<void> {
     trustProxy: config.trustProxy,
     enableHsts: config.enableHsts,
     hstsMaxAgeSeconds: config.hstsMaxAgeSeconds,
-    authService
+    authService,
+    membershipRepository,
+    uploadStore
   });
 
   const server = serve({

@@ -1,5 +1,4 @@
 import { betterAuth } from "better-auth";
-import { APIError, createAuthMiddleware } from "better-auth/api";
 import type { Pool } from "pg";
 import { isValidEmail, normalizeEmail } from "./validators";
 import type { AuthService, WaitlistRepository } from "./types";
@@ -46,26 +45,6 @@ export function createAuthService(options: AuthOptions): AuthService {
           input: false
         }
       }
-    },
-    hooks: {
-      before: createAuthMiddleware(async (ctx) => {
-        if (ctx.path !== "/sign-up/email") {
-          return;
-        }
-
-        const emailRaw = typeof ctx.body?.email === "string" ? ctx.body.email : "";
-        const email = normalizeEmail(emailRaw);
-
-        if (!isValidEmail(email)) {
-          return;
-        }
-
-        if (!options.adminEmails.has(email)) {
-          throw new APIError("BAD_REQUEST", {
-            message: "Kun administratorer kan oprette login lige nu."
-          });
-        }
-      })
     },
     databaseHooks: {
       user: {

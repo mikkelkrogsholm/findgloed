@@ -16,6 +16,12 @@ export const appConfig = {
     waitlistConfirm: "/waitlist/confirm",
     partnerConfirm: "/partner/confirm",
     login: "/login",
+    signup: "/signup",
+    onboarding: "/onboarding",
+    verification: "/onboarding/verification",
+    profile: "/profile",
+    members: "/members",
+    member: "/members/:id",
     admin: "/admin",
     design: "/design"
   },
@@ -32,6 +38,12 @@ export type AppRouteName =
   | "waitlist-confirm"
   | "partner-confirm"
   | "login"
+  | "signup"
+  | "onboarding"
+  | "verification"
+  | "profile"
+  | "members"
+  | "member-detail"
   | "admin"
   | "design"
   | "not-found";

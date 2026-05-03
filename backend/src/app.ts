@@ -1,8 +1,10 @@
 import { Hono } from "hono";
 import { createHash, randomBytes } from "node:crypto";
+import { registerMembershipRoutes } from "./membership-routes";
 import type {
   AuthService,
   EmailService,
+  MembershipRepository,
   PartnerInterestOption,
   PartnerInterestRepository,
   PartnerRole,
@@ -10,6 +12,7 @@ import type {
   RateLimiter,
   WaitlistRepository
 } from "./types";
+import type { UploadStore } from "./uploads";
 import { isValidEmail, normalizeEmail } from "./validators";
 
 type AuthSessionData = {
@@ -46,13 +49,15 @@ type AppDeps = {
   enableHsts?: boolean;
   hstsMaxAgeSeconds?: number;
   authService?: AuthService;
+  membershipRepository?: MembershipRepository;
+  uploadStore?: UploadStore;
 };
 
 const DEFAULT_TOKEN_TTL_HOURS = 72;
 const DEFAULT_RESEND_COOLDOWN_MINUTES = 15;
 const DEFAULT_RATE_LIMIT_FAIL_OPEN = false;
 const DEFAULT_HSTS_MAX_AGE_SECONDS = 31_536_000;
-const CORS_METHODS = "GET,POST,OPTIONS";
+const CORS_METHODS = "GET,POST,PATCH,DELETE,OPTIONS";
 const CORS_HEADERS = "Content-Type";
 const PARTNER_ROLES: PartnerRole[] = [
   "Forening/organisation",
@@ -307,6 +312,14 @@ export function createApp(deps: AppDeps): Hono<{ Variables: AppVariables }> {
     }
     return authService.handler(c.req.raw);
   });
+
+  if (authService && deps.membershipRepository && deps.uploadStore) {
+    registerMembershipRoutes(app, {
+      authService,
+      membershipRepository: deps.membershipRepository,
+      uploadStore: deps.uploadStore
+    });
+  }
 
   app.use("/api/admin/*", async (c, next) => {
     if (!authService) {

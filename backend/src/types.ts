@@ -151,3 +151,183 @@ export type AuthService = {
   getSession: (headers: Headers) => Promise<AuthSession | null>;
   ensureSuperAdmin: (email: string, password: string) => Promise<void>;
 };
+
+// ---------- Membership ----------
+
+export type InitiatorRole = "inviting" | "deciding" | "balanced";
+export type FaceVisibility = "after_interest" | "all_verified";
+export type VerificationStatus = "unverified" | "pending" | "verified" | "rejected";
+export type PhotoVisibility = "verified" | "match" | "private";
+export type PhotoKind = "face" | "body" | "ambient" | "private";
+
+export type MembershipProfile = {
+  user_id: string;
+  email: string;
+  display_name: string | null;
+  birth_year: number | null;
+  region: string | null;
+  bio: string | null;
+  initiator_role: InitiatorRole | null;
+  face_visibility: FaceVisibility;
+  verification_status: VerificationStatus;
+  verified_at: Date | null;
+  onboarded_at: Date | null;
+  paused_at: Date | null;
+  role: string | null;
+  created_at: Date;
+};
+
+export type CoupleProfile = {
+  id: string;
+  primary_user_id: string;
+  partner_user_id: string;
+  display_name: string;
+  bio: string | null;
+  region: string | null;
+  open_to_singles: boolean;
+  accepts_mixed_events: boolean;
+  paused_at: Date | null;
+  created_at: Date;
+};
+
+export type ProfilePhoto = {
+  id: string;
+  owner_user_id: string | null;
+  owner_couple_id: string | null;
+  kind: PhotoKind;
+  visibility: PhotoVisibility;
+  storage_path: string;
+  mime_type: string;
+  byte_size: number;
+  position: number;
+  created_at: Date;
+};
+
+export type PrivateAlbumGrant = {
+  id: string;
+  owner_user_id: string | null;
+  owner_couple_id: string | null;
+  recipient_user_id: string;
+  granted_at: Date;
+  revoked_at: Date | null;
+  last_viewed_at: Date | null;
+  view_count: number;
+};
+
+export type VerificationSubmission = {
+  id: string;
+  user_id: string;
+  id_document_path: string;
+  selfie_path: string;
+  status: "pending" | "approved" | "rejected";
+  submitted_at: Date;
+  reviewed_at: Date | null;
+  reviewed_by_admin_id: string | null;
+  notes: string | null;
+  rejection_reason: string | null;
+};
+
+export type MembershipUpdate = {
+  display_name?: string | null;
+  birth_year?: number | null;
+  region?: string | null;
+  bio?: string | null;
+  initiator_role?: InitiatorRole | null;
+  face_visibility?: FaceVisibility;
+  onboarded_at?: Date | null;
+  paused_at?: Date | null;
+};
+
+export type CoupleUpsert = {
+  primary_user_id: string;
+  partner_user_id: string;
+  display_name: string;
+  bio: string | null;
+  region: string | null;
+  open_to_singles: boolean;
+  accepts_mixed_events: boolean;
+};
+
+export type CoupleUpdate = {
+  display_name?: string;
+  bio?: string | null;
+  region?: string | null;
+  open_to_singles?: boolean;
+  accepts_mixed_events?: boolean;
+  paused_at?: Date | null;
+};
+
+export type PhotoInsert = {
+  owner_user_id: string | null;
+  owner_couple_id: string | null;
+  kind: PhotoKind;
+  visibility: PhotoVisibility;
+  storage_path: string;
+  mime_type: string;
+  byte_size: number;
+  position: number;
+};
+
+export type VerificationInsert = {
+  user_id: string;
+  id_document_path: string;
+  selfie_path: string;
+};
+
+export type MembershipRepository = {
+  getProfile: (userId: string) => Promise<MembershipProfile | null>;
+  updateProfile: (userId: string, update: MembershipUpdate) => Promise<MembershipProfile | null>;
+  softDelete: (userId: string) => Promise<void>;
+  hardDelete: (userId: string) => Promise<void>;
+
+  listVerifiedMembers: (excludeUserId: string) => Promise<MembershipProfile[]>;
+  getPublicProfile: (
+    userId: string,
+    viewerId: string
+  ) => Promise<{
+    profile: MembershipProfile;
+    photos: ProfilePhoto[];
+    couple: CoupleProfile | null;
+    relation: "self" | "verified" | "match" | "private_grant";
+  } | null>;
+
+  createCouple: (input: CoupleUpsert) => Promise<CoupleProfile>;
+  updateCouple: (id: string, update: CoupleUpdate) => Promise<CoupleProfile | null>;
+  getCoupleByUser: (userId: string) => Promise<CoupleProfile | null>;
+  deleteCouple: (id: string, requestedBy: string) => Promise<boolean>;
+
+  insertPhoto: (input: PhotoInsert) => Promise<ProfilePhoto>;
+  listPhotos: (ownerUserId: string | null, ownerCoupleId: string | null) => Promise<ProfilePhoto[]>;
+  getPhotoById: (id: string) => Promise<ProfilePhoto | null>;
+  deletePhoto: (id: string, requestedBy: string) => Promise<ProfilePhoto | null>;
+
+  grantPrivateAlbum: (
+    ownerUserId: string | null,
+    ownerCoupleId: string | null,
+    recipientUserId: string
+  ) => Promise<PrivateAlbumGrant>;
+  revokePrivateAlbum: (
+    ownerUserId: string | null,
+    ownerCoupleId: string | null,
+    recipientUserId: string
+  ) => Promise<void>;
+  listPrivateAlbumGrantsForOwner: (
+    ownerUserId: string | null,
+    ownerCoupleId: string | null
+  ) => Promise<PrivateAlbumGrant[]>;
+  recordPrivateAlbumView: (
+    ownerUserId: string | null,
+    ownerCoupleId: string | null,
+    recipientUserId: string
+  ) => Promise<PrivateAlbumGrant | null>;
+
+  submitVerification: (input: VerificationInsert) => Promise<VerificationSubmission>;
+  listPendingVerifications: () => Promise<Array<VerificationSubmission & { email: string }>>;
+  getVerificationById: (id: string) => Promise<VerificationSubmission | null>;
+  approveVerification: (id: string, adminId: string) => Promise<VerificationSubmission | null>;
+  rejectVerification: (
+    id: string,
+    adminId: string,
+    reason: string
+  ) => Promise<VerificationSubmission | null>;
+};
