@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Flag, Heart, MessageCircle, ShieldOff } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -15,29 +15,87 @@ export function MemberDetailPage() {
   const [data, setData] = useState<MemberDetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [actionMessage, setActionMessage] = useState("");
+  const [interestSent, setInterestSent] = useState(false);
+  const [actionPending, setActionPending] = useState(false);
   const motionMode = getMotionMode();
 
   const memberId = window.location.pathname.split("/").pop() ?? "";
 
+  async function reload() {
+    const [result, interests] = await Promise.all([
+      api.getMember(memberId),
+      api.listInterests()
+    ]);
+    if (!result.ok) {
+      setError(
+        result.code === "MATCH_REQUIRED"
+          ? "Kræver gensidig interesse."
+          : "Kunne ikke hente profilen."
+      );
+    } else {
+      setData(result);
+      setError("");
+    }
+    if (interests.ok) {
+      setInterestSent(interests.outgoing.some((s) => s.to_user_id === memberId));
+    }
+    setLoading(false);
+  }
+
   useEffect(() => {
-    let active = true;
-    api.getMember(memberId).then((result) => {
-      if (!active) return;
-      if (!result.ok) {
-        setError(
-          result.code === "MATCH_REQUIRED"
-            ? "Kræver gensidig interesse."
-            : "Kunne ikke hente profilen."
-        );
-      } else {
-        setData(result);
-      }
-      setLoading(false);
-    });
-    return () => {
-      active = false;
-    };
+    void reload();
   }, [memberId]);
+
+  async function handleSignalInterest() {
+    setActionPending(true);
+    setActionMessage("");
+    const result = await api.signalInterest(memberId);
+    setActionPending(false);
+    if (!result.ok) {
+      const messages: Record<string, string> = {
+        COUPLE_NOT_OPEN_TO_SINGLES: "Paret er ikke åbne for kontakt fra singles.",
+        BLOCKED: "Kontakt er ikke mulig.",
+        VERIFICATION_REQUIRED: "Du skal være verificeret."
+      };
+      setActionMessage(messages[result.code] ?? "Kunne ikke sende interesse.");
+      return;
+    }
+    setInterestSent(true);
+    if (result.conversation_opened) {
+      setActionMessage("Gensidig interesse — chat åbnet. Find den under Beskeder.");
+    } else {
+      setActionMessage("Interesse sendt. Du får besked hvis det bliver gensidigt.");
+    }
+  }
+
+  async function handleWithdraw() {
+    setActionPending(true);
+    await api.withdrawInterest(memberId);
+    setActionPending(false);
+    setInterestSent(false);
+    setActionMessage("Interesse trukket tilbage.");
+  }
+
+  async function handleBlock() {
+    if (!window.confirm("Bloker denne person? De kan ikke længere kontakte dig.")) return;
+    const result = await api.blockUser(memberId);
+    if (result.ok) {
+      navigate(appConfig.routes.members);
+    }
+  }
+
+  async function handleReport() {
+    const reason = window.prompt("Hvad er grunden til rapporten?");
+    if (!reason) return;
+    const result = await api.reportUser({
+      reported_user_id: memberId,
+      reason
+    });
+    setActionMessage(
+      result.ok ? "Tak. Rapporten er sendt til moderation." : "Kunne ikke sende rapport."
+    );
+  }
 
   if (loading) {
     return (
@@ -148,12 +206,44 @@ export function MemberDetailPage() {
               </div>
             )}
 
-            <div className="rounded-2xl bg-[color:var(--surface-glass)] p-4 text-sm text-[color:var(--color-text-secondary)]">
-              <p>
-                Beskeder og interesse-signaler kommer i fase 3. Indtil da kan du se profilen og
-                forberede din invitation.
-              </p>
-            </div>
+            {actionMessage && (
+              <Alert>
+                <AlertDescription>{actionMessage}</AlertDescription>
+              </Alert>
+            )}
+
+            {data.relation !== "self" && (
+              <div className="space-y-3 rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--surface-glass)] p-4">
+                <div className="flex flex-wrap gap-2">
+                  {!interestSent ? (
+                    <Button onClick={handleSignalInterest} disabled={actionPending} className="glow-cta">
+                      <Heart className="mr-1 h-4 w-4" />
+                      Vis interesse
+                    </Button>
+                  ) : (
+                    <Button onClick={handleWithdraw} disabled={actionPending} variant="outline">
+                      <Heart className="mr-1 h-4 w-4 fill-current" />
+                      Interesse sendt — fjern
+                    </Button>
+                  )}
+                  <Button variant="ghost" onClick={() => navigate(appConfig.routes.messages)}>
+                    <MessageCircle className="mr-1 h-4 w-4" />
+                    Til beskeder
+                  </Button>
+                  <Button variant="ghost" onClick={handleReport}>
+                    <Flag className="mr-1 h-4 w-4" />
+                    Rapportér
+                  </Button>
+                  <Button variant="ghost" onClick={handleBlock}>
+                    <ShieldOff className="mr-1 h-4 w-4" />
+                    Bloker
+                  </Button>
+                </div>
+                <p className="text-xs text-[color:var(--color-text-tertiary)]">
+                  Beskeder åbner først ved gensidig interesse — eller når I deltager i samme event.
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </motion.div>

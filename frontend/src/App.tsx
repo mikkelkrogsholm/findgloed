@@ -21,6 +21,8 @@ import { MemberDetailPage } from "@/pages/member-detail-page";
 import { EventsPage } from "@/pages/events-page";
 import { EventDetailPage } from "@/pages/event-detail-page";
 import { MyEventsPage } from "@/pages/my-events-page";
+import { MessagesPage } from "@/pages/messages-page";
+import { ConversationPage } from "@/pages/conversation-page";
 import { AdminEventsPage } from "@/pages/admin-events-page";
 import { AdminPage } from "@/pages/admin-page";
 import { getMotionMode, pageTransitionVariants } from "@/lib/motion";
@@ -70,6 +72,12 @@ function resolveRoute(pathname: string): AppRouteName {
   }
   if (pathname.startsWith(`${appConfig.routes.events}/`)) {
     return "event-detail";
+  }
+  if (pathname === appConfig.routes.messages) {
+    return "messages";
+  }
+  if (pathname.startsWith(`${appConfig.routes.messages}/`)) {
+    return "conversation";
   }
   if (pathname === appConfig.routes.adminEvents) {
     return "admin-events";
@@ -138,6 +146,8 @@ export default function App() {
       events: "Glød - Events",
       "event-detail": "Glød - Event",
       "my-events": "Glød - Mine tilmeldinger",
+      messages: "Glød - Beskeder",
+      conversation: "Glød - Samtale",
       "admin-events": "Glød - Admin events",
       admin: "Glød - Admin",
       "not-found": "Glød - Side ikke fundet"
@@ -170,6 +180,8 @@ export default function App() {
           {route === "events" && <EventsPage />}
           {route === "event-detail" && <EventDetailPage />}
           {route === "my-events" && <MyEventsPage />}
+          {route === "messages" && <MessagesPage />}
+          {route === "conversation" && <ConversationPage />}
           {route === "admin-events" && <AdminEventsPage />}
           {route === "admin" && <AdminPage />}
           {route === "design" && <DesignPage />}

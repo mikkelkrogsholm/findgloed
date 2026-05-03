@@ -280,7 +280,117 @@ export const api = {
         status: string;
         registered_at: string;
       }>;
-    }>(`/api/admin/events/${id}/registrations`)
+    }>(`/api/admin/events/${id}/registrations`),
+
+  // ---------- Messaging ----------
+  signalInterest: (userId: string) =>
+    request<{
+      ok: true;
+      signal: { id: string; from_user_id: string; to_user_id: string; created_at: string };
+      conversation_opened: boolean;
+    }>(`/api/me/interests/${userId}`, { method: "POST" }),
+
+  withdrawInterest: (userId: string) =>
+    request<{ ok: true }>(`/api/me/interests/${userId}`, { method: "DELETE" }),
+
+  listInterests: () =>
+    request<{
+      ok: true;
+      incoming: InterestSignal[];
+      outgoing: InterestSignal[];
+      matches: string[];
+    }>("/api/me/interests"),
+
+  listConversations: () =>
+    request<{ ok: true; conversations: ConversationSummary[] }>("/api/conversations"),
+
+  startConversation: (userId: string, eventSlug?: string) =>
+    request<{ ok: true; conversation: { id: string } }>("/api/conversations", {
+      method: "POST",
+      body: JSON.stringify({ user_id: userId, event_slug: eventSlug })
+    }),
+
+  getConversation: (id: string) =>
+    request<{
+      ok: true;
+      conversation: {
+        id: string;
+        origin: "mutual_interest" | "shared_event";
+        other: { user_id: string; display_name: string | null; region: string | null } | null;
+      };
+      messages: Array<{
+        id: string;
+        sender_user_id: string;
+        body: string;
+        sent_at: string;
+        read_at: string | null;
+      }>;
+    }>(`/api/conversations/${id}/messages`),
+
+  sendMessage: (conversationId: string, body: string) =>
+    request<{ ok: true; message: { id: string; sent_at: string } }>(
+      `/api/conversations/${conversationId}/messages`,
+      { method: "POST", body: JSON.stringify({ body }) }
+    ),
+
+  listEventPosts: (slug: string) =>
+    request<{
+      ok: true;
+      posts: Array<{
+        id: string;
+        author: { user_id: string; display_name: string | null };
+        body: string;
+        posted_at: string;
+        can_delete: boolean;
+      }>;
+    }>(`/api/events/${slug}/posts`),
+
+  postEventComment: (slug: string, body: string) =>
+    request<{ ok: true; post: { id: string } }>(`/api/events/${slug}/posts`, {
+      method: "POST",
+      body: JSON.stringify({ body })
+    }),
+
+  deleteEventPost: (slug: string, id: string) =>
+    request<{ ok: true }>(`/api/events/${slug}/posts/${id}`, { method: "DELETE" }),
+
+  blockUser: (userId: string, reason?: string) =>
+    request<{ ok: true }>("/api/me/blocks", {
+      method: "POST",
+      body: JSON.stringify({ user_id: userId, reason })
+    }),
+
+  unblockUser: (userId: string) =>
+    request<{ ok: true }>(`/api/me/blocks/${userId}`, { method: "DELETE" }),
+
+  reportUser: (
+    body: {
+      reported_user_id?: string;
+      reported_message_id?: string;
+      reported_event_post_id?: string;
+      reason: string;
+      details?: string;
+    }
+  ) =>
+    request<{ ok: true }>("/api/reports", {
+      method: "POST",
+      body: JSON.stringify(body)
+    })
+};
+
+export type InterestSignal = {
+  id: string;
+  from_user_id: string;
+  to_user_id: string;
+  created_at: string;
+};
+
+export type ConversationSummary = {
+  id: string;
+  origin: "mutual_interest" | "shared_event";
+  last_message_at: string | null;
+  unread_count: number;
+  other: { user_id: string; display_name: string | null; region: string | null };
 };
 
 export type EventCategory = "single_only" | "couple_only" | "mixed";

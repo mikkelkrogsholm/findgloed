@@ -25,6 +25,8 @@ export const appConfig = {
     events: "/events",
     event: "/events/:slug",
     myEvents: "/me/events",
+    messages: "/messages",
+    conversation: "/messages/:id",
     admin: "/admin",
     adminEvents: "/admin/events",
     design: "/design"
@@ -51,6 +53,8 @@ export type AppRouteName =
   | "events"
   | "event-detail"
   | "my-events"
+  | "messages"
+  | "conversation"
   | "admin"
   | "admin-events"
   | "design"

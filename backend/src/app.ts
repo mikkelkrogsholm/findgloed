@@ -3,6 +3,8 @@ import { createHash, randomBytes } from "node:crypto";
 import { registerEventRoutes } from "./event-routes";
 import type { EventRepository } from "./events";
 import { registerMembershipRoutes } from "./membership-routes";
+import { registerMessagingRoutes } from "./messaging-routes";
+import type { MessagingRepository } from "./messaging";
 import type {
   AuthService,
   EmailService,
@@ -54,6 +56,7 @@ type AppDeps = {
   membershipRepository?: MembershipRepository;
   uploadStore?: UploadStore;
   eventRepository?: EventRepository;
+  messagingRepository?: MessagingRepository;
 };
 
 const DEFAULT_TOKEN_TTL_HOURS = 72;
@@ -329,6 +332,20 @@ export function createApp(deps: AppDeps): Hono<{ Variables: AppVariables }> {
       authService,
       eventRepository: deps.eventRepository,
       membershipRepository: deps.membershipRepository
+    });
+  }
+
+  if (
+    authService &&
+    deps.eventRepository &&
+    deps.membershipRepository &&
+    deps.messagingRepository
+  ) {
+    registerMessagingRoutes(app, {
+      authService,
+      eventRepository: deps.eventRepository,
+      membershipRepository: deps.membershipRepository,
+      messagingRepository: deps.messagingRepository
     });
   }
 

@@ -6,6 +6,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { EventThread } from "@/components/event-thread";
 import { appConfig } from "@/config/app-config";
 import { api, type PublicEvent } from "@/lib/api";
 import {
@@ -239,6 +240,12 @@ export function EventDetailPage() {
             )}
           </CardContent>
         </Card>
+
+        {event.is_registered && (
+          <div className="mt-6">
+            <EventThread slug={event.slug} />
+          </div>
+        )}
       </motion.div>
     </section>
   );
