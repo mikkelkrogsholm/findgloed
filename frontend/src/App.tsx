@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "motion/react";
 
 import { appConfig, type AppRouteName } from "@/config/app-config";
 import { SiteShell } from "@/components/layout/site-shell";
+import { PwaUpdatePrompt } from "@/components/pwa-update-prompt";
 import { DesignPage } from "@/pages/design-page";
 import { LandingPage } from "@/pages/landing-page";
 import { NotFoundPage } from "@/pages/not-found-page";
@@ -137,6 +138,7 @@ export default function App() {
           {route === "landing" && <LandingPage />}
         </motion.div>
       </AnimatePresence>
+      <PwaUpdatePrompt />
     </SiteShell>
   );
 }
