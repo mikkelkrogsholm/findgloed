@@ -352,6 +352,15 @@ export function ProfilePage() {
               <Button variant="outline" onClick={() => navigate(appConfig.routes.members)}>
                 Medlemmer
               </Button>
+              <Button variant="outline" onClick={() => navigate(appConfig.routes.events)}>
+                Events
+              </Button>
+              <Button variant="outline" onClick={() => navigate(appConfig.routes.messages)}>
+                Beskeder
+              </Button>
+              <Button variant="outline" onClick={() => navigate(appConfig.routes.membership)}>
+                Medlemskab
+              </Button>
               <Button variant="ghost" onClick={handleSignOut}>
                 Log ud
               </Button>

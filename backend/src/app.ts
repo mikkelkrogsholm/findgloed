@@ -5,6 +5,8 @@ import type { EventRepository } from "./events";
 import { registerMembershipRoutes } from "./membership-routes";
 import { registerMessagingRoutes } from "./messaging-routes";
 import type { MessagingRepository } from "./messaging";
+import { registerSubscriptionRoutes } from "./subscription-routes";
+import type { SubscriptionRepository } from "./subscriptions";
 import type {
   AuthService,
   EmailService,
@@ -57,6 +59,7 @@ type AppDeps = {
   uploadStore?: UploadStore;
   eventRepository?: EventRepository;
   messagingRepository?: MessagingRepository;
+  subscriptionRepository?: SubscriptionRepository;
 };
 
 const DEFAULT_TOKEN_TTL_HOURS = 72;
@@ -346,6 +349,14 @@ export function createApp(deps: AppDeps): Hono<{ Variables: AppVariables }> {
       eventRepository: deps.eventRepository,
       membershipRepository: deps.membershipRepository,
       messagingRepository: deps.messagingRepository
+    });
+  }
+
+  if (authService && deps.membershipRepository && deps.subscriptionRepository) {
+    registerSubscriptionRoutes(app, {
+      authService,
+      membershipRepository: deps.membershipRepository,
+      subscriptionRepository: deps.subscriptionRepository
     });
   }
 

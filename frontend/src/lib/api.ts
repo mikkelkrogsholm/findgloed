@@ -375,7 +375,66 @@ export const api = {
     request<{ ok: true }>("/api/reports", {
       method: "POST",
       body: JSON.stringify(body)
-    })
+    }),
+
+  // ---------- Subscriptions ----------
+  listPlans: () =>
+    request<{ ok: true; audience: "single" | "couple"; plans: MembershipPlan[] }>(
+      "/api/plans"
+    ),
+
+  getMySubscription: () =>
+    request<{
+      ok: true;
+      subscription: ActiveSubscription | null;
+      plan?: MembershipPlan;
+    }>("/api/me/subscription"),
+
+  startSubscription: (planId: string) =>
+    request<{
+      ok: true;
+      subscription: ActiveSubscription;
+      plan: MembershipPlan;
+      mock_notice?: string;
+    }>("/api/me/subscription", {
+      method: "POST",
+      body: JSON.stringify({ plan_id: planId })
+    }),
+
+  cancelSubscription: (id: string) =>
+    request<{ ok: true; subscription: ActiveSubscription }>(
+      `/api/me/subscription/${id}/cancel`,
+      { method: "POST" }
+    ),
+
+  resumeSubscription: (id: string) =>
+    request<{ ok: true; subscription: ActiveSubscription }>(
+      `/api/me/subscription/${id}/resume`,
+      { method: "POST" }
+    )
+};
+
+export type MembershipPlan = {
+  id: string;
+  name: string;
+  audience: "single" | "couple";
+  monthly_price_cents: number;
+  intro_price_cents: number | null;
+  intro_months: number;
+  trial_days: number;
+};
+
+export type ActiveSubscription = {
+  id: string;
+  user_id: string;
+  plan_id: string;
+  status: "pending" | "active" | "past_due" | "cancelled" | "trialing";
+  current_period_start: string | null;
+  current_period_end: string | null;
+  cancel_at_period_end: boolean;
+  cancelled_at: string | null;
+  trial_ends_at: string | null;
+  invoice_descriptor: string;
 };
 
 export type InterestSignal = {
