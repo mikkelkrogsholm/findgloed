@@ -49,8 +49,13 @@ services:
       DB_PORT: 5432
       DB_SSL: "false"
       REDIS_URL: ${REDIS_URL}
+      UPLOADS_ROOT: /app/uploads
     ports:
       - "${API_PORT:-4564}:${API_PORT:-4564}"
+    volumes:
+      # Brugeruploadede filer (profil-billeder + verifikations-ID/selfie).
+      # Persisterer på tværs af container-genstarter, men ryddes af `scripts/reset.sh`.
+      - api_uploads:/app/uploads
     depends_on:
       db:
         condition: service_healthy
@@ -94,3 +99,4 @@ services:
 volumes:
   postgres_data:
   web_node_modules:
+  api_uploads:

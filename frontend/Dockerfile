@@ -1,14 +1,12 @@
 FROM oven/bun:1.3.8-alpine
 WORKDIR /app
-COPY package.json tsconfig.json vite.config.ts vitest.config.ts tailwind.config.ts postcss.config.js ./
+
+# Vi installerer deps i imaget for at have et udgangspunkt, men bind-mountet
+# fra værten kan have nyere afhængigheder. Derfor kører vi 'bun install'
+# i CMD også — Bun's resolver er hurtig nok til at det er en no-op hvis
+# alt allerede er installeret.
+COPY package.json bun.lock ./
 RUN bun install
-COPY index.html ./index.html
-COPY vision.html ./vision.html
-COPY privacy.html ./privacy.html
-COPY design.html ./design.html
-COPY waitlist ./waitlist
-COPY partner ./partner
-COPY public ./public
-COPY src ./src
+
 EXPOSE 4563
-CMD ["bun", "run", "dev"]
+CMD ["sh", "-c", "bun install && bun run dev"]
