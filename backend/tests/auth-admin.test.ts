@@ -41,8 +41,8 @@ function createAppWithAuth(authService: AuthService | undefined) {
       sendPartnerInterestReceived: async () => undefined
     },
     rateLimitEnabled: false,
-    corsOrigins: ["http://localhost:4563"],
-    appUrl: "http://localhost:4563",
+    corsOrigins: ["http://localhost:39563"],
+    appUrl: "http://localhost:39563",
     waitlistConfirmPath: "/waitlist/confirm",
     authService
   });

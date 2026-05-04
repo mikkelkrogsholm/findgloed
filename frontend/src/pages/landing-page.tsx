@@ -27,7 +27,7 @@ type WaitlistError = {
   message?: string;
 };
 
-const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:4564";
+const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:39564";
 
 export function LandingPage() {
   const [email, setEmail] = useState("");

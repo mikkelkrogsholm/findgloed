@@ -68,7 +68,7 @@ describe("PartnerInterestModal", () => {
     expect(await screen.findByText("Tak. Tjek din e-mail for at bekræfte din henvendelse.")).toBeInTheDocument();
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(
-        "http://localhost:4564/api/partner-interest",
+        "http://localhost:39564/api/partner-interest",
         expect.objectContaining({ method: "POST" })
       );
     });

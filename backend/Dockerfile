@@ -12,8 +12,8 @@ COPY migrations ./migrations
 COPY entrypoint.sh ./entrypoint.sh
 RUN chmod +x entrypoint.sh
 
-# Default-port matcher .env (API_PORT=4564). Runtime kan overrride via PORT env.
-EXPOSE 4564
+# Default-port matcher .env (API_PORT=39564). Runtime kan overrride via PORT env.
+EXPOSE 39564
 HEALTHCHECK --interval=10s --timeout=5s --retries=10 --start-period=15s \
-  CMD wget -qO- "http://localhost:${PORT:-4564}/api/health" || exit 1
+  CMD wget -qO- "http://localhost:${PORT:-39564}/api/health" || exit 1
 ENTRYPOINT ["./entrypoint.sh"]

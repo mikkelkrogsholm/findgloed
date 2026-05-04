@@ -41,12 +41,12 @@ Alt kører i Docker. Brug scripts under `scripts/`:
 
 | Service  | Port  | URL                              |
 |----------|-------|----------------------------------|
-| Web      | 4563  | http://localhost:4563            |
-| API      | 4564  | http://localhost:4564/api/health |
-| Postgres | 4565  | (psql)                           |
-| Redis    | 4566  | (redis-cli)                      |
-| Maildev  | 4567  | http://localhost:4567            |
-| Adminer  | 4568  | http://localhost:4568            |
+| Web      | 39563  | http://localhost:39563            |
+| API      | 39564  | http://localhost:39564/api/health |
+| Postgres | 39565  | (psql)                           |
+| Redis    | 39566  | (redis-cli)                      |
+| Maildev  | 39567  | http://localhost:39567            |
+| Adminer  | 39568  | http://localhost:39568            |
 
 ## Login (lokalt — fra `.env`)
 

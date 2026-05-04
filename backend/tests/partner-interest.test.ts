@@ -41,8 +41,8 @@ function createTestApp(options?: {
     },
     rateLimiter: options?.rateLimiter,
     rateLimitEnabled: options?.rateLimitEnabled,
-    corsOrigins: ["http://localhost:4563"],
-    appUrl: "http://localhost:4563",
+    corsOrigins: ["http://localhost:39563"],
+    appUrl: "http://localhost:39563",
     waitlistConfirmPath: "/waitlist/confirm",
     partnerConfirmPath: "/partner/confirm"
   });
@@ -131,7 +131,7 @@ describe("POST /api/partner-interest", () => {
     expect(response.status).toBe(200);
     expect(confirmPayload).not.toBeNull();
     expect(confirmPayload?.email).toBe("partner@example.com");
-    expect(confirmPayload?.confirmUrl.startsWith("http://localhost:4563/partner/confirm?token=")).toBe(true);
+    expect(confirmPayload?.confirmUrl.startsWith("http://localhost:39563/partner/confirm?token=")).toBe(true);
   });
 
   test("does not send confirmation email during cooldown", async () => {

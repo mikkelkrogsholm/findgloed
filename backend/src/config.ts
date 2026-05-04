@@ -80,7 +80,7 @@ export function readConfig(): Config {
     throw new Error("CORS_ORIGINS must be configured in production");
   }
 
-  const corsOrigins = parsedOrigins.length > 0 ? parsedOrigins : [process.env.APP_URL ?? "http://localhost:4563"];
+  const corsOrigins = parsedOrigins.length > 0 ? parsedOrigins : [process.env.APP_URL ?? "http://localhost:39563"];
   const betterAuthSecret = process.env.BETTER_AUTH_SECRET ?? process.env.JWT_SECRET ?? "";
 
   if (isProduction && betterAuthSecret.length === 0) {
@@ -96,8 +96,8 @@ export function readConfig(): Config {
     trustProxy: parseBoolean(process.env.TRUST_PROXY, false),
     enableHsts: parseBoolean(process.env.ENABLE_HSTS, isProduction),
     hstsMaxAgeSeconds: parseInteger(process.env.HSTS_MAX_AGE_SECONDS, 31_536_000),
-    appUrl: process.env.APP_URL ?? "http://localhost:4563",
-    apiUrl: process.env.API_URL ?? "http://localhost:4564",
+    appUrl: process.env.APP_URL ?? "http://localhost:39563",
+    apiUrl: process.env.API_URL ?? "http://localhost:39564",
     waitlistConfirmPath: process.env.WAITLIST_CONFIRM_PATH ?? "/waitlist/confirm",
     partnerConfirmPath: process.env.PARTNER_CONFIRM_PATH ?? "/partner/confirm",
     waitlistTokenTtlHours: parseInteger(process.env.WAITLIST_CONFIRM_TOKEN_TTL_HOURS, 72),

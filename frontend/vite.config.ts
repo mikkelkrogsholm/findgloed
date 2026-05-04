@@ -109,7 +109,7 @@ export default defineConfig({
     port: parseInt(process.env.PORT || "5173"),
     proxy: {
       "/api": {
-        target: process.env.VITE_DEV_PROXY_TARGET || "http://127.0.0.1:4564",
+        target: process.env.VITE_DEV_PROXY_TARGET || "http://127.0.0.1:39564",
         changeOrigin: true
       }
     }

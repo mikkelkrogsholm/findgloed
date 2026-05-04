@@ -14,7 +14,7 @@ import {
   TableRow
 } from "@/components/ui/table";
 
-const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:4564";
+const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:39564";
 
 type LeadItem = {
   id: string;

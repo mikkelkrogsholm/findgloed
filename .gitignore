@@ -6,3 +6,7 @@ dist
 coverage
 bun.lockb
 .playwright-cli/
+.vite/
+.vscode/
+landing.png
+.claude/launch.json

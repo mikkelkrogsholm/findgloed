@@ -22,7 +22,7 @@ description: Forklarer Findgloeds komplette infrastruktur og deployment-setup. B
 | Domæne | Service | Port |
 |--------|---------|------|
 | `findgloed.dk` | React/Nginx frontend | 80 (intern) |
-| `api.findgloed.dk` | Bun/Hono API | 4564 (intern) |
+| `api.findgloed.dk` | Bun/Hono API | 39564 (intern) |
 | `umami.findgloed.dk` | Umami analytics | 3000 (intern) |
 
 ## Docker Compose Stack
@@ -34,7 +34,7 @@ Repo på server: `/opt/findgloed`
 traefik          → Reverse proxy, Let's Encrypt TLS, port 80+443 eksponeret
 db               → PostgreSQL 16-alpine, volume: postgres_data
 redis            → Redis 7-alpine
-api              → Bun/Hono backend, port 4564
+api              → Bun/Hono backend, port 39564
 web              → React/Vite bygget til Nginx, port 80
 umami            → Umami analytics, port 3000, database: umami (separat i postgres)
 ```

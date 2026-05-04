@@ -11,7 +11,7 @@ type ConfirmResult = {
   message?: string;
 };
 
-const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:4564";
+const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:39564";
 
 type ConfirmState = "loading" | "success" | "already_confirmed" | "invalid" | "expired" | "error";
 

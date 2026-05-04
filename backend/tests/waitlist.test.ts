@@ -29,8 +29,8 @@ function createTestApp(options?: {
     rateLimitEnabled: options?.rateLimitEnabled,
     rateLimitFailOpen: options?.rateLimitFailOpen,
     trustProxy: options?.trustProxy,
-    corsOrigins: ["http://localhost:4563"],
-    appUrl: "http://localhost:4563",
+    corsOrigins: ["http://localhost:39563"],
+    appUrl: "http://localhost:39563",
     waitlistConfirmPath: "/waitlist/confirm"
   });
 }
@@ -77,8 +77,8 @@ describe("POST /api/waitlist", () => {
         sendPartnerInterestReceived: async () => undefined
       },
       rateLimitEnabled: false,
-      corsOrigins: ["http://localhost:4563"],
-      appUrl: "http://localhost:4563",
+      corsOrigins: ["http://localhost:39563"],
+      appUrl: "http://localhost:39563",
       waitlistConfirmPath: "/waitlist/confirm"
     });
 
@@ -96,7 +96,7 @@ describe("POST /api/waitlist", () => {
     expect(response.status).toBe(200);
     expect(confirmPayload).not.toBeNull();
     expect(confirmPayload?.email).toBe("test@example.com");
-    expect(confirmPayload?.confirmUrl.startsWith("http://localhost:4563/waitlist/confirm?token=")).toBe(true);
+    expect(confirmPayload?.confirmUrl.startsWith("http://localhost:39563/waitlist/confirm?token=")).toBe(true);
   });
 
   test("returns 429 with retry-after header when waitlist is rate limited", async () => {
@@ -205,11 +205,11 @@ describe("CORS and proxy utilities", () => {
   test("allows request with configured CORS origin", async () => {
     const app = createTestApp({ rateLimitEnabled: false });
     const response = await app.request("/api/health", {
-      headers: { origin: "http://localhost:4563" }
+      headers: { origin: "http://localhost:39563" }
     });
 
     expect(response.status).toBe(200);
-    expect(response.headers.get("access-control-allow-origin")).toBe("http://localhost:4563");
+    expect(response.headers.get("access-control-allow-origin")).toBe("http://localhost:39563");
   });
 
   test("rejects request with disallowed CORS origin", async () => {

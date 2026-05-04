@@ -8,5 +8,5 @@ WORKDIR /app
 COPY package.json bun.lock ./
 RUN bun install
 
-EXPOSE 4563
+EXPOSE 39563
 CMD ["sh", "-c", "bun install && bun run dev"]

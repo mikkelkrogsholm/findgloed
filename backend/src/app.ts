@@ -204,7 +204,7 @@ export function createApp(deps: AppDeps): Hono<{ Variables: AppVariables }> {
   const app = new Hono<{ Variables: AppVariables }>();
   const confirmationTokenTtlHours = deps.confirmationTokenTtlHours ?? DEFAULT_TOKEN_TTL_HOURS;
   const resendCooldownMinutes = deps.resendCooldownMinutes ?? DEFAULT_RESEND_COOLDOWN_MINUTES;
-  const corsOrigins = deps.corsOrigins ?? ["http://localhost:4563"];
+  const corsOrigins = deps.corsOrigins ?? ["http://localhost:39563"];
   const trustProxy = deps.trustProxy ?? false;
   const rateLimitEnabled = deps.rateLimitEnabled ?? true;
   const rateLimitFailOpen = deps.rateLimitFailOpen ?? DEFAULT_RATE_LIMIT_FAIL_OPEN;

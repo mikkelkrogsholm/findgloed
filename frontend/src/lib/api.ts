@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:4564";
+const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:39564";
 
 export type InitiatorRole = "inviting" | "deciding" | "balanced";
 export type FaceVisibility = "after_interest" | "all_verified";
