@@ -57,6 +57,22 @@ export function createAuthService(options: AuthOptions): AuthService {
                 role: resolveUserRole(userEmail, options.adminEmails)
               }
             };
+          },
+          after: async (user) => {
+            // Mens MitID ikke er klart, sættes nye brugere til 'verified' med
+            // en 'temporary'-markering. Når MitID-flow er på plads, kan vi
+            // kræve at temporary-brugere uploader rigtig ID for at fortsætte.
+            const userId = typeof user.id === "string" ? user.id : null;
+            if (!userId) return;
+            await options.pool.query(
+              `UPDATE "user"
+               SET verification_status = 'verified',
+                   verified_at = COALESCE(verified_at, NOW()),
+                   verified_via = COALESCE(verified_via, 'temporary'),
+                   "updatedAt" = NOW()
+               WHERE id = $1 AND verification_status <> 'verified'`,
+              [userId]
+            );
           }
         }
       }

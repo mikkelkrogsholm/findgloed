@@ -3,6 +3,7 @@ const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:39564";
 export type InitiatorRole = "inviting" | "deciding" | "balanced";
 export type FaceVisibility = "after_interest" | "all_verified";
 export type VerificationStatus = "unverified" | "pending" | "verified" | "rejected";
+export type VerifiedVia = "temporary" | "manual" | "mitid";
 export type PhotoVisibility = "verified" | "match" | "private";
 export type PhotoKind = "face" | "body" | "ambient" | "private";
 
@@ -25,6 +26,8 @@ export type OwnProfile = ProfileSummary & {
   email: string;
   role: string | null;
   verified_at: string | null;
+  verified_via: VerifiedVia | null;
+  future_verification_accepted_at: string | null;
 };
 
 export type CoupleSummary = {

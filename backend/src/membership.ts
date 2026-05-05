@@ -25,6 +25,8 @@ const PROFILE_FIELDS = `
   u.face_visibility,
   u.verification_status,
   u.verified_at,
+  u.verified_via,
+  u.future_verification_accepted_at,
   u.onboarded_at,
   u.paused_at,
   u.role,
@@ -93,6 +95,9 @@ function rowToProfile(row: Record<string, unknown>): MembershipProfile {
     face_visibility: row.face_visibility as MembershipProfile["face_visibility"],
     verification_status: row.verification_status as MembershipProfile["verification_status"],
     verified_at: (row.verified_at as Date | null) ?? null,
+    verified_via: (row.verified_via as MembershipProfile["verified_via"]) ?? null,
+    future_verification_accepted_at:
+      (row.future_verification_accepted_at as Date | null) ?? null,
     onboarded_at: (row.onboarded_at as Date | null) ?? null,
     paused_at: (row.paused_at as Date | null) ?? null,
     role: (row.role as string | null) ?? null,
@@ -480,15 +485,18 @@ export class PostgresMembershipRepository implements MembershipRepository {
   }
 
   async acceptFutureVerificationPolicy(userId: string): Promise<MembershipProfile | null> {
-    // Mens MitID-flow ikke er klart, accepterer brugeren at gennemgå verificering
-    // når det er klart. De får 'verified' status nu og kan bruge platformen,
-    // men markeret med en note så vi senere kan kræve rigtig verificering.
+    // Brugeren erkender at de skal gennemgå rigtig MitID-verificering når
+    // systemet er klart. Selve verifikations-status er allerede sat til
+    // 'verified' med 'temporary' via signup-hook'en (auth.ts), så det her
+    // tracker bare samtykket — så vi senere kan minde dem om kravet.
     await this.pool.query(
       `UPDATE "user"
-       SET verification_status = 'verified',
+       SET future_verification_accepted_at = COALESCE(future_verification_accepted_at, NOW()),
+           verification_status = 'verified',
            verified_at = COALESCE(verified_at, NOW()),
+           verified_via = COALESCE(verified_via, 'temporary'),
            "updatedAt" = NOW()
-       WHERE id = $1 AND verification_status <> 'verified'`,
+       WHERE id = $1`,
       [userId]
     );
     return this.getProfile(userId);

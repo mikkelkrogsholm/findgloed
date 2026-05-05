@@ -58,7 +58,10 @@ function ownProfileToJson(profile: MembershipProfile) {
     ...profileToJson(profile, true),
     email: profile.email,
     role: profile.role,
-    verified_at: profile.verified_at?.toISOString() ?? null
+    verified_at: profile.verified_at?.toISOString() ?? null,
+    verified_via: profile.verified_via,
+    future_verification_accepted_at:
+      profile.future_verification_accepted_at?.toISOString() ?? null
   };
 }
 

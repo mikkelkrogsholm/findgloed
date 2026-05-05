@@ -157,6 +157,7 @@ export type AuthService = {
 export type InitiatorRole = "inviting" | "deciding" | "balanced";
 export type FaceVisibility = "after_interest" | "all_verified";
 export type VerificationStatus = "unverified" | "pending" | "verified" | "rejected";
+export type VerifiedVia = "temporary" | "manual" | "mitid";
 export type PhotoVisibility = "verified" | "match" | "private";
 export type PhotoKind = "face" | "body" | "ambient" | "private";
 
@@ -171,6 +172,8 @@ export type MembershipProfile = {
   face_visibility: FaceVisibility;
   verification_status: VerificationStatus;
   verified_at: Date | null;
+  verified_via: VerifiedVia | null;
+  future_verification_accepted_at: Date | null;
   onboarded_at: Date | null;
   paused_at: Date | null;
   role: string | null;

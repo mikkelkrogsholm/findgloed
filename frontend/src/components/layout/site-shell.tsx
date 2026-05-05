@@ -62,6 +62,10 @@ export function SiteShell({ children, showDesignLink = false, themePreset }: Sit
   const isAuthenticated = session.status === "authenticated";
   const isVerified = isAuthenticated && session.profile.verification_status === "verified";
   const isAdmin = isAuthenticated && session.profile.role === "admin";
+  const hasAcceptedFutureVerification =
+    isAuthenticated && session.profile.future_verification_accepted_at !== null;
+  const isTemporaryVerified =
+    isAuthenticated && session.profile.verified_via === "temporary";
 
   const memberLinks = MEMBER_NAV.filter((link) => !link.verifiedOnly || isVerified);
 
@@ -251,18 +255,19 @@ export function SiteShell({ children, showDesignLink = false, themePreset }: Sit
             </motion.div>
           )}
 
-          {/* Verifikations-banner for logged in men ikke verificerede */}
-          {isAuthenticated && !isVerified && session.profile.verification_status !== "verified" && (
+          {/* Reminder hvis bruger er midlertidigt verificeret men ikke har
+              accepteret at gennemgå rigtig MitID-verificering senere. */}
+          {isAuthenticated && isTemporaryVerified && !hasAcceptedFutureVerification && (
             <div className="rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--surface-glass)] px-4 py-2 text-xs text-[color:var(--color-text-secondary)]">
-              Færdiggør{" "}
+              Du er midlertidigt verificeret. Bekræft{" "}
               <button
                 type="button"
                 className="link-inline"
                 onClick={() => navigate(appConfig.routes.verification)}
               >
-                verificeringen
-              </button>{" "}
-              for at få adgang til medlemmer, events og beskeder.
+                samtykke til fremtidig MitID-verificering
+              </button>
+              .
             </div>
           )}
         </div>

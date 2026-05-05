@@ -37,7 +37,7 @@ export function VerificationPage() {
 
   async function onAccept() {
     if (!accepted) {
-      setErrorMessage("Du skal acceptere at gennemgå verificering senere.");
+      setErrorMessage("Du skal acceptere at gennemgå rigtig verificering senere.");
       return;
     }
     setSubmitting(true);
@@ -61,7 +61,9 @@ export function VerificationPage() {
   }
   if (!profile) return null;
 
-  const isVerified = profile.verification_status === "verified";
+  const hasAccepted = profile.future_verification_accepted_at !== null;
+  const isTemporary = profile.verified_via === "temporary";
+  const isFullyVerified = profile.verified_via === "mitid" || profile.verified_via === "manual";
 
   return (
     <section className="mx-auto w-full max-w-2xl px-6 py-12 md:py-20">
@@ -69,13 +71,19 @@ export function VerificationPage() {
         <Card className="p-8 md:p-10" data-testid="verification-card">
           <CardHeader className="px-0 pt-0">
             <p className="noxus-kicker kicker-text mb-2 text-[0.65rem]">
-              Verificering — sidste trin
+              Verificering
             </p>
-            <CardTitle>Verificering kommer senere</CardTitle>
+            <CardTitle>
+              {isFullyVerified
+                ? "Du er fuldt verificeret"
+                : isTemporary
+                  ? "Du er midlertidigt verificeret"
+                  : "Verificering kommer senere"}
+            </CardTitle>
             <p className="body-text-muted mt-1 text-sm">
-              Vi er ved at sætte MitID-verificering op. Indtil det er klart, kan
-              du komme i gang med Glød med det samme — så længe du er
-              indforstået med at gennemgå verificering når systemet er klart.
+              {isFullyVerified
+                ? "Din identitet er bekræftet via MitID. Tak."
+                : "Vi er ved at sætte MitID-verificering op. Indtil det er klart har du fuld adgang til Glød — så længe du er indforstået med at gennemgå rigtig verificering når systemet er klart."}
             </p>
           </CardHeader>
           <CardContent className="space-y-5 px-0 pb-0">
@@ -85,24 +93,30 @@ export function VerificationPage() {
                 <div className="space-y-2 text-sm">
                   <p>
                     <strong>Sådan vil verificering fungere:</strong> Når
-                    MitID-integrationen er klar, beder vi dig om at verificere
-                    din identitet diskret bag kulisserne — kun et
+                    MitID-integrationen er klar, beder vi dig verificere din
+                    identitet diskret bag kulisserne — kun et
                     "verificeret"-mærke vises udadtil. Hvis du ikke
                     gennemfører det, mister du adgang til Glød.
                   </p>
                   <p className="text-[color:var(--color-text-secondary)]">
-                    Indtil da kan du oprette profil, browse medlemmer, tilmelde
-                    dig events og skrive beskeder.
+                    Indtil da er du midlertidigt verificeret og kan bruge alle
+                    medlems-funktioner: profil, medlemmer, events, beskeder.
                   </p>
                 </div>
               </div>
             </div>
 
-            {isVerified ? (
+            {isFullyVerified ? (
               <Alert>
                 <AlertDescription>
-                  Du er klar. Du har accepteret at gennemgå verificering når
-                  systemet er klart, og kan nu bruge alle medlems-funktioner.
+                  Din profil er fuldt verificeret. Du behøver ikke gøre mere.
+                </AlertDescription>
+              </Alert>
+            ) : hasAccepted ? (
+              <Alert>
+                <AlertDescription>
+                  Tak. Du har accepteret at gennemgå rigtig verificering når
+                  systemet er klart. Vi sender dig en mail når det er din tur.
                 </AlertDescription>
               </Alert>
             ) : (
@@ -116,8 +130,7 @@ export function VerificationPage() {
                   <span>
                     Jeg er indforstået med at jeg skal gennemgå
                     MitID-verificering når systemet er klart for at beholde
-                    min adgang til Glød. Indtil da må jeg bruge platformen
-                    som verificeret medlem.
+                    min adgang til Glød.
                   </span>
                 </label>
 
@@ -132,7 +145,7 @@ export function VerificationPage() {
                   disabled={submitting || !accepted}
                   className="w-full glow-cta"
                 >
-                  {submitting ? "Gemmer…" : "Bekræft og fortsæt"}
+                  {submitting ? "Gemmer…" : "Bekræft samtykke"}
                 </Button>
               </>
             )}
@@ -141,16 +154,12 @@ export function VerificationPage() {
               <Button variant="ghost" onClick={() => navigate(appConfig.routes.profile)}>
                 Til profil
               </Button>
-              {isVerified && (
-                <>
-                  <Button variant="ghost" onClick={() => navigate(appConfig.routes.members)}>
-                    Se medlemmer
-                  </Button>
-                  <Button variant="ghost" onClick={() => navigate(appConfig.routes.events)}>
-                    Se events
-                  </Button>
-                </>
-              )}
+              <Button variant="ghost" onClick={() => navigate(appConfig.routes.members)}>
+                Se medlemmer
+              </Button>
+              <Button variant="ghost" onClick={() => navigate(appConfig.routes.events)}>
+                Se events
+              </Button>
             </div>
           </CardContent>
         </Card>
