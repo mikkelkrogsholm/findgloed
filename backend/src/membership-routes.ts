@@ -320,6 +320,19 @@ export function registerMembershipRoutes(
     return c.json({ ok: true, grants });
   });
 
+  app.post("/api/me/verification/accept-future-policy", async (c) => {
+    const session = c.get("authSession");
+    const body = (await c.req.json().catch(() => null)) as { accepted?: unknown } | null;
+    if (body?.accepted !== true) {
+      return c.json({ ok: false, code: "ACCEPT_REQUIRED" }, 422);
+    }
+    const profile = await membershipRepository.acceptFutureVerificationPolicy(session.user.id);
+    if (!profile) {
+      return c.json({ ok: false, code: "NOT_FOUND" }, 404);
+    }
+    return c.json({ ok: true, profile: ownProfileToJson(profile) });
+  });
+
   app.post("/api/me/verification", async (c) => {
     const session = c.get("authSession");
     let formData: FormData;

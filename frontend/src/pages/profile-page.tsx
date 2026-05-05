@@ -28,6 +28,7 @@ import {
 import { authClient } from "@/lib/auth-client";
 import { getMotionMode, revealVariants } from "@/lib/motion";
 import { navigate } from "@/lib/nav";
+import { clearSession } from "@/lib/use-session";
 
 const FACE_LABEL: Record<FaceVisibility, string> = {
   after_interest: "Først efter gensidig interesse",
@@ -136,6 +137,7 @@ export function ProfilePage() {
 
   async function handleSignOut() {
     await authClient.signOut();
+    clearSession();
     navigate(appConfig.routes.landing);
   }
 

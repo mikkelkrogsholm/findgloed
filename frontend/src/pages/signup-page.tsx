@@ -11,6 +11,7 @@ import { appConfig } from "@/config/app-config";
 import { authClient } from "@/lib/auth-client";
 import { getMotionMode, revealVariants } from "@/lib/motion";
 import { navigate } from "@/lib/nav";
+import { refreshSession } from "@/lib/use-session";
 
 export function SignupPage() {
   const [name, setName] = useState("");
@@ -50,6 +51,7 @@ export function SignupPage() {
         }
         return;
       }
+      await refreshSession();
       navigate(appConfig.routes.onboarding);
     } catch {
       setErrorMessage("Forbindelsesfejl. Prøv igen om lidt.");

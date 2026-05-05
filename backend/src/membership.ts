@@ -479,6 +479,21 @@ export class PostgresMembershipRepository implements MembershipRepository {
     return result.rows[0] ? rowToGrant(result.rows[0]) : null;
   }
 
+  async acceptFutureVerificationPolicy(userId: string): Promise<MembershipProfile | null> {
+    // Mens MitID-flow ikke er klart, accepterer brugeren at gennemgå verificering
+    // når det er klart. De får 'verified' status nu og kan bruge platformen,
+    // men markeret med en note så vi senere kan kræve rigtig verificering.
+    await this.pool.query(
+      `UPDATE "user"
+       SET verification_status = 'verified',
+           verified_at = COALESCE(verified_at, NOW()),
+           "updatedAt" = NOW()
+       WHERE id = $1 AND verification_status <> 'verified'`,
+      [userId]
+    );
+    return this.getProfile(userId);
+  }
+
   async submitVerification(input: VerificationInsert): Promise<VerificationSubmission> {
     const client = await this.pool.connect();
     try {

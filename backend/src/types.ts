@@ -322,6 +322,7 @@ export type MembershipRepository = {
   ) => Promise<PrivateAlbumGrant | null>;
 
   submitVerification: (input: VerificationInsert) => Promise<VerificationSubmission>;
+  acceptFutureVerificationPolicy: (userId: string) => Promise<MembershipProfile | null>;
   listPendingVerifications: () => Promise<Array<VerificationSubmission & { email: string }>>;
   getVerificationById: (id: string) => Promise<VerificationSubmission | null>;
   approveVerification: (id: string, adminId: string) => Promise<VerificationSubmission | null>;

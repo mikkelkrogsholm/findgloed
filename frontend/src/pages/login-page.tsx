@@ -10,11 +10,8 @@ import { Label } from "@/components/ui/label";
 import { appConfig } from "@/config/app-config";
 import { authClient } from "@/lib/auth-client";
 import { getMotionMode, revealVariants, staggerContainerVariants, successRevealVariants } from "@/lib/motion";
-
-function goToAdmin(): void {
-  window.history.pushState({}, "", appConfig.routes.admin);
-  window.dispatchEvent(new PopStateEvent("popstate"));
-}
+import { navigate } from "@/lib/nav";
+import { refreshSession } from "@/lib/use-session";
 
 export function LoginPage() {
   const [email, setEmail] = useState("");
@@ -44,7 +41,8 @@ export function LoginPage() {
       }
 
       setMessage("Du er logget ind.");
-      goToAdmin();
+      await refreshSession();
+      navigate(appConfig.routes.profile);
     } catch {
       setErrorMessage("Forbindelsesfejl. Prøv igen om lidt.");
     } finally {

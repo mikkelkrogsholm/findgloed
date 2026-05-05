@@ -147,6 +147,12 @@ export const api = {
     );
   },
 
+  acceptFutureVerificationPolicy: () =>
+    request<{ ok: true; profile: OwnProfile }>(
+      "/api/me/verification/accept-future-policy",
+      { method: "POST", body: JSON.stringify({ accepted: true }) }
+    ),
+
   createCouple: (body: {
     partner_email: string;
     display_name: string;
