@@ -11,7 +11,8 @@ import type {
   MembershipRepository,
   MembershipUpdate,
   PhotoVisibility,
-  ProfilePhoto
+  ProfilePhoto,
+  RateLimiter
 } from "./types";
 import type { UploadStore } from "./uploads";
 
@@ -26,6 +27,10 @@ type MembershipDeps = {
   authService: AuthService;
   membershipRepository: MembershipRepository;
   uploadStore: UploadStore;
+  // Issue B13: rate-limit på upload-routes (profile photo + verification).
+  rateLimiter?: RateLimiter;
+  rateLimitEnabled?: boolean;
+  rateLimitFailOpen?: boolean;
 };
 
 const INITIATOR_ROLES: InitiatorRole[] = ["inviting", "deciding", "balanced"];
@@ -152,6 +157,45 @@ export function registerMembershipRoutes(
   deps: MembershipDeps
 ): void {
   const { authService, membershipRepository, uploadStore } = deps;
+  const rateLimiter = deps.rateLimiter;
+  const rateLimitEnabled = deps.rateLimitEnabled ?? true;
+  const rateLimitFailOpen = deps.rateLimitFailOpen ?? false;
+
+  // Issue B13: rate-limit på upload-routes for at undgå at en kompromitteret
+  // konto bombarderer disken med store filer. Bucketet på userId.
+  async function checkUploadRateLimit(
+    c: { header: (k: string, v: string) => void; json: (b: unknown, s?: number) => Response },
+    userId: string
+  ): Promise<Response | null> {
+    if (!rateLimitEnabled || !rateLimiter) return null;
+    try {
+      const result = await rateLimiter.check({
+        scope: "upload",
+        fingerprint: userId,
+        email: userId
+      });
+      if (result.limited) {
+        c.header("Retry-After", String(result.retryAfterSeconds));
+        return c.json(
+          {
+            ok: false,
+            code: "RATE_LIMITED",
+            message: "For mange uploads. Prøv igen om lidt."
+          },
+          429
+        );
+      }
+      return null;
+    } catch (error) {
+      console.error("Upload rate limiter failed", error);
+      if (rateLimitFailOpen) return null;
+      c.header("Retry-After", "60");
+      return c.json(
+        { ok: false, code: "RATE_LIMITED", message: "For mange uploads." },
+        429
+      );
+    }
+  }
 
   const memberAuthMiddleware: MiddlewareHandler<{ Variables: { authSession: AuthSessionData } }> =
     async (c, next) => {
@@ -259,6 +303,10 @@ export function registerMembershipRoutes(
 
   app.post("/api/me/photos", async (c) => {
     const session = c.get("authSession");
+
+    const limit = await checkUploadRateLimit(c, session.user.id);
+    if (limit) return limit;
+
     let formData: FormData;
     try {
       formData = await c.req.formData();
@@ -297,6 +345,9 @@ export function registerMembershipRoutes(
       }
       if (message === "FILE_TOO_LARGE") {
         return c.json({ ok: false, code: "FILE_TOO_LARGE" }, 413);
+      }
+      if (message === "MIME_MISMATCH") {
+        return c.json({ ok: false, code: "MIME_MISMATCH" }, 422);
       }
       throw error;
     }
@@ -368,6 +419,10 @@ export function registerMembershipRoutes(
 
   app.post("/api/me/verification", async (c) => {
     const session = c.get("authSession");
+
+    const limit = await checkUploadRateLimit(c, session.user.id);
+    if (limit) return limit;
+
     let formData: FormData;
     try {
       formData = await c.req.formData();
@@ -393,6 +448,9 @@ export function registerMembershipRoutes(
       }
       if (message === "FILE_TOO_LARGE") {
         return c.json({ ok: false, code: "FILE_TOO_LARGE" }, 413);
+      }
+      if (message === "MIME_MISMATCH") {
+        return c.json({ ok: false, code: "MIME_MISMATCH" }, 422);
       }
       throw error;
     }

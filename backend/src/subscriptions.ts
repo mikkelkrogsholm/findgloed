@@ -76,6 +76,13 @@ export type SubscriptionRepository = {
   listPlans: () => Promise<MembershipPlan[]>;
   getPlan: (id: string) => Promise<MembershipPlan | null>;
   getActiveSubscription: (userId: string) => Promise<Subscription | null>;
+  // WARN (issue A18): I production med rigtig Stripe må denne metode KUN
+  // kaldes fra webhook-handleren (typisk på checkout.session.completed eller
+  // customer.subscription.created), aldrig direkte fra en HTTP-route.
+  // Årsag: hvis vi opretter et "active"-abonnement før Stripe har bekræftet
+  // betaling, kan brugeren ende med subscription=active uden faktisk at have
+  // betalt. I dev/mock-mode (STRIPE_SECRET_KEY tomt) kaldes den fra
+  // POST /api/me/subscription som mock-flow.
   startSubscription: (
     userId: string,
     coupleId: string | null,
@@ -84,6 +91,54 @@ export type SubscriptionRepository = {
   cancelAtPeriodEnd: (id: string, userId: string) => Promise<Subscription | null>;
   resume: (id: string, userId: string) => Promise<Subscription | null>;
 };
+
+// Issue A18: webhook-handler skal kunne logge stripe-events idempotent. Vi
+// modellerer det som et eget DI-port for at undgå at koble app.ts direkte
+// til en konkret SQL-repo, og for at gøre det testbart.
+export type SubscriptionEventLog = {
+  // Returnerer true hvis eventen blev indsat, false hvis stripe_event_id
+  // allerede var logget (idempotent no-op).
+  recordEvent: (input: {
+    subscriptionId: string | null;
+    stripeEventId: string;
+    eventType: string;
+    amountCents: number | null;
+    metadata: Record<string, unknown>;
+  }) => Promise<boolean>;
+};
+
+export class PostgresSubscriptionEventLog implements SubscriptionEventLog {
+  constructor(private readonly pool: import("pg").Pool) {}
+
+  async recordEvent(input: {
+    subscriptionId: string | null;
+    stripeEventId: string;
+    eventType: string;
+    amountCents: number | null;
+    metadata: Record<string, unknown>;
+  }): Promise<boolean> {
+    // ON CONFLICT på det partielle UNIQUE-index (stripe_event_id IS NOT NULL)
+    // sikrer at samme webhook-event aldrig logges to gange.
+    // subscription_id må være NULL for webhook-events der ikke kan mappes
+    // til en kendt subscription endnu (fx hvis vi modtager event før init).
+    const result = await this.pool.query(
+      `INSERT INTO subscription_event (
+         subscription_id, stripe_event_id, event_type, amount_cents, metadata_json
+       )
+       VALUES ($1, $2, $3, $4, $5::jsonb)
+       ON CONFLICT (stripe_event_id) WHERE stripe_event_id IS NOT NULL DO NOTHING
+       RETURNING id`,
+      [
+        input.subscriptionId,
+        input.stripeEventId,
+        input.eventType,
+        input.amountCents,
+        JSON.stringify(input.metadata)
+      ]
+    );
+    return (result.rowCount ?? 0) > 0;
+  }
+}
 
 export class PostgresSubscriptionRepository implements SubscriptionRepository {
   constructor(private readonly pool: Pool) {}
@@ -118,6 +173,13 @@ export class PostgresSubscriptionRepository implements SubscriptionRepository {
     return result.rows[0] ? rowToSubscription(result.rows[0]) : null;
   }
 
+  // WARN (issue A18): I production med rigtig Stripe må denne metode KUN
+  // kaldes fra webhook-handleren (checkout.session.completed). I dev/mock-mode
+  // kaldes den direkte fra POST /api/me/subscription. Når STRIPE_SECRET_KEY
+  // sættes skal vi:
+  //   1. Flytte kaldet til Stripe webhook-handler
+  //   2. Returnere checkout-URL fra POST /api/me/subscription
+  //   3. Lade Stripe-event-flowet styre status="active"
   async startSubscription(
     userId: string,
     coupleId: string | null,
