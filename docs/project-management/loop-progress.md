@@ -27,9 +27,73 @@
 | 8 | Skeleton + a11y | `epic/pakke-8-a11y-skeleton` | 🟢 MERGED | done | A20, A22, B23, B25, B27, B29-B31, C47, C48, C58 + Dialog-flows. 74/74 tests |
 | 9 | Admin UX | `epic/pakke-9-admin-ux` | 🟢 MERGED | done | B8 sub-nav, B9 event-edit, B10 deltagerliste, B17 post-moderation, C32 polish. 80/80 tests |
 | 10 | Stripe live-readiness | `epic/pakke-10-stripe` | 🟢 MERGED | done | B37 + C25-C29 — cancel-state polish, dialog, faktura-historik, webhook-idempotency fixed, 84/84 tests |
-| 11 | DB- & query-optimering | `epic/pakke-11-perf` | 🟢 DONE | a2bd… | A11 body-limit, A12 tx, A13 view-count, A24 findByEmail, B15 pagination, B16 N+1 — 84/84 tests grønne |
+| 11 | DB- & query-optimering | `epic/pakke-11-perf` | 🟢 MERGED | done | A11 body-limit, A12 tx, A13 view-count, A24 findByEmail, B15 pagination, B16 N+1 — 84/84 tests grønne |
 
 Legend: ⚪ TODO · 🟡 PENDING (briefed) · 🟠 IN PROGRESS · 🟢 MERGED · 🔴 BLOCKED
+
+---
+
+## 🎉 LOOP AFSLUTTET — slut-rapport
+
+**Færdig:** 5. maj 2026
+**Alle 11 pakker mergede til `feature/platform-fase-1-4`**
+
+### Kvantitative resultater
+
+| Metric | Værdi |
+|--------|-------|
+| Pakker mergede | 11/11 ✓ |
+| Commits på branchen | 56 (excluding merges fra main) |
+| Frontend tests | **84/84 grønne** (var 45 før loopet startede — 39 nye) |
+| Backend tests | **55/55 grønne** (var 33 før — 22 nye) |
+| Nye migrationer | 4 (010 couple_invitations, 011 stripe_idempotency, 012 nullable subscription_id) |
+| Issues lukket fra master-list | ~95 (alle kritiske + alle høj-prioritet + de fleste medium) |
+
+### Issues fixet pr. pakke
+
+1. **Verification** — A6, A7, A8, A21, A23
+2. **Brand-rens** — A15, A16, B12, C33-C43
+3. **Couple as first-class** — A3, A4, C6, C24
+4. **GDPR** — A9, A10, A17, A19, C9
+5. **CoC + terms** — A5, B46
+6. **Match-layer** — A2, B1, B2, B48
+7. **Auth hardening** — A14, A18, B13, B14, B20-B22
+8. **Skeleton + a11y** — A20, A22, B23, B25, B27, B29-B31, C47, C48, C58 + Dialog-migration
+9. **Admin UX** — B8, B9, B10, B17, C30-C32
+10. **Stripe live-readiness** — B37, C25-C29
+11. **DB-perf** — A11, A12, A13, A24, B15, B16
+
+### Klar til release
+
+✅ MitID-flow er placeholder med ærlig copy. Alle brugere er "temporary verified" indtil ægte MitID-integration.
+✅ Par-flow ende-til-ende: invitation → accept → couple-profil → mixed events
+✅ Lag-baseret synlighed (offentlig → match → privat) virker korrekt
+✅ GDPR-konform sletning med anonymisering, navngiven dataansvarlig (Mikkel Freltoft Krogsholm)
+✅ Code of conduct + handelsbetingelser tilgængelig før tilmelding
+✅ Frederiks gradueret beskedmodel (singles↔singles + singles→par opt-in + samme event)
+✅ Auth hærdet (cookies + rate-limits + magic-bytes + HMAC-tokens)
+✅ Stripe-mock klar til skift, webhook-stub idempotent
+✅ Pagination + N+1-elimination på alle vigtige endpoints
+✅ Skeleton-states, a11y-fokus-rings, Dialog-flows, sticky chat-composer
+
+### Hvad mangler (uden for scope eller bevidst udskudt)
+
+- **Email-notifikationer for messaging** (interest, ny besked) — kan tilføjes når Resend er produktions-klar
+- **Modererede grupper** — build-log angav den var udsat, ikke en del af loopet
+- **Stripe-live-integration** — mock virker, webhook-stub er klar. Skal aktiveres ved at sætte env-vars + udskifte mock-flow med Checkout Session
+- **MitID/Criipto-integration** — temporary-flag er på alle brugere, klar til ægte verificering
+- **Frontend pagination-UI på alle lister** — kun MembersPage har "Hent flere"-knap, øvrige bruger server-defaults
+- **C31** — lead-search client-side (markeret som teknisk gæld, kan flyttes til server-side filtrering senere)
+
+### Næste skridt for menneske
+
+1. **Review** branchen `feature/platform-fase-1-4` (56 commits)
+2. **Visuel verifikation** i browser på http://localhost:39563 — alle key flows: signup, onboarding, /profile, par-invitation, events, beskeder, medlemskab
+3. **Beslut merge til main** — eller cherry-pick udvalgte pakker hvis ønsket
+4. **Push til remote** når godkendt
+5. **Aktivér MitID + Stripe** når de eksterne integrationer er klar
+
+| 5. maj 2026 | **🎉 LOOP AFSLUTTET — alle 11 pakker mergede. 56 commits. 84 frontend + 55 backend tests grønne. Klar til menneskelig review og merge til main.** |
 
 ## Beslutningsregler
 
