@@ -12,6 +12,7 @@ import type {
   MembershipUpdate,
   PhotoVisibility,
   ProfilePhoto,
+  PublicMembershipProfile,
   RateLimiter
 } from "./types";
 import type { UploadStore } from "./uploads";
@@ -44,7 +45,30 @@ function asString(value: unknown): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
-function profileToJson(profile: MembershipProfile, viewerCanSeeFace: boolean) {
+// Issue B15: parser limit/offset fra URL-query med fornuftige defaults +
+// maksgrænser. Defaults pr. endpoint vælges af kalderen; her sikrer vi
+// blot at parsing er konsistent og sikker mod fx negative/NaN-værdier.
+function parsePagination(
+  url: URL,
+  defaults: { limit: number; max: number }
+): { limit: number; offset: number } {
+  const limitRaw = Number(url.searchParams.get("limit"));
+  const offsetRaw = Number(url.searchParams.get("offset"));
+  const limit = Number.isFinite(limitRaw) && limitRaw > 0
+    ? Math.min(defaults.max, Math.floor(limitRaw))
+    : defaults.limit;
+  const offset = Number.isFinite(offsetRaw) && offsetRaw >= 0
+    ? Math.floor(offsetRaw)
+    : 0;
+  return { limit, offset };
+}
+
+// Issue A24: accepterer PublicMembershipProfile (uden email) — egen profil
+// håndteres separat via ownProfileToJson som tilføjer email.
+function profileToJson(
+  profile: PublicMembershipProfile,
+  viewerCanSeeFace: boolean
+) {
   return {
     user_id: profile.user_id,
     display_name: profile.display_name,
@@ -397,11 +421,26 @@ export function registerMembershipRoutes(
 
   app.get("/api/me/album-grants", async (c) => {
     const session = c.get("authSession");
-    const grants = await membershipRepository.listPrivateAlbumGrantsForOwner(
-      session.user.id,
-      null
-    );
-    return c.json({ ok: true, grants });
+    // Issue B15: pagination. Default 20, max 100.
+    const { limit, offset } = parsePagination(new URL(c.req.url), {
+      limit: 20,
+      max: 100
+    });
+    const { items: grants, total } =
+      await membershipRepository.listPrivateAlbumGrantsForOwner(session.user.id, null, {
+        limit,
+        offset
+      });
+    return c.json({
+      ok: true,
+      grants,
+      meta: {
+        total,
+        limit,
+        offset,
+        has_more: offset + grants.length < total
+      }
+    });
   });
 
   app.post("/api/me/verification/accept-future-policy", async (c) => {
@@ -493,10 +532,15 @@ export function registerMembershipRoutes(
       return c.json({ ok: false, code: "ALREADY_IN_COUPLE" }, 409);
     }
 
-    const partnerByEmail = await membershipRepository
-      .listVerifiedMembers(session.user.id)
-      .then((members) => members.find((m) => m.email.toLowerCase() === partnerEmailRaw.toLowerCase()));
-    if (!partnerByEmail) {
+    // Issue A24: Direkte verified-by-email-lookup i stedet for at iterere alle
+    // medlemmer (hvilket før eksponerede hele email-listen mod kalderen — selv
+    // om de ikke kendte til mere end én partners email). Vi returnerer
+    // ensartet fejl ved alle ikke-fundne tilfælde for at undgå
+    // email-enumeration via timing.
+    const partnerByEmail = await membershipRepository.findVerifiedByEmail(
+      partnerEmailRaw
+    );
+    if (!partnerByEmail || partnerByEmail.user_id === session.user.id) {
       return c.json({ ok: false, code: "PARTNER_NOT_FOUND_OR_NOT_VERIFIED" }, 404);
     }
 
@@ -658,19 +702,41 @@ export function registerMembershipRoutes(
       );
     }
 
-    const members = await membershipRepository.listVerifiedMembers(session.user.id);
-    const enriched = await Promise.all(
-      members.map(async (member) => {
-        const photos = await membershipRepository.listPhotos(member.user_id, null);
-        const visiblePhotos = filterPhotosForViewer(photos, member.face_visibility, "verified");
-        return {
-          ...profileToJson(member, member.face_visibility === "all_verified"),
-          photos: visiblePhotos.map(photoToJson)
-        };
-      })
+    // Issue B15: pagination. Default 24 (passer til typisk 3-column grid på
+    // 8 rækker), max 100 så vi ikke kan misbruges til at hente hele tabellen.
+    const { limit, offset } = parsePagination(new URL(c.req.url), {
+      limit: 24,
+      max: 100
+    });
+    const { items: members, total } = await membershipRepository.listVerifiedMembers(
+      session.user.id,
+      { limit, offset }
     );
 
-    return c.json({ ok: true, members: enriched });
+    // Issue B16: batch-fetch alle fotos i én query i stedet for N stykker.
+    const photosByOwner = await membershipRepository.listPhotosForUsers(
+      members.map((m) => m.user_id)
+    );
+
+    const enriched = members.map((member) => {
+      const photos = photosByOwner.get(member.user_id) ?? [];
+      const visiblePhotos = filterPhotosForViewer(photos, member.face_visibility, "verified");
+      return {
+        ...profileToJson(member, member.face_visibility === "all_verified"),
+        photos: visiblePhotos.map(photoToJson)
+      };
+    });
+
+    return c.json({
+      ok: true,
+      members: enriched,
+      meta: {
+        total,
+        limit,
+        offset,
+        has_more: offset + enriched.length < total
+      }
+    });
   });
 
   app.get("/api/members/:id", async (c) => {
@@ -699,9 +765,11 @@ export function registerMembershipRoutes(
       result.relation === "private_grant" ||
       result.profile.face_visibility === "all_verified";
 
-    if (result.relation === "private_grant") {
-      await membershipRepository.recordPrivateAlbumView(id, null, session.user.id);
-    }
+    // Issue A13: view_count må KUN inkrementeres når et faktisk privat
+    // billede leveres (i `/api/members/photo/:id`). Tidligere blev tælleren
+    // også øget her hver gang en granted viewer åbnede profilen — hvilket
+    // gav dobbelt-tælling. Profil-visningen kvalificerer ikke som "view"
+    // af det private album; det er kun selve billedet der gør.
 
     return c.json({
       ok: true,
@@ -728,15 +796,23 @@ export function registerMembershipRoutes(
       }
     }
 
+    // Issue A13: Tjek først at viewer HAR adgang (eksistens-check uden side-
+    // effekt), og inkrementér først view_count efter vi har valideret alle
+    // adgangs-betingelser og er klar til at levere bytes. Tidligere blev
+    // view_count øget også når et senere lag returnerede 403 — hvilket fik
+    // ejerens statistik til at se ud som om billedet var set, selv om
+    // viewerens adgang reelt var nægtet.
+    let mustRecordPrivateView = false;
     if (photo.visibility === "private" && photo.owner_user_id !== session.user.id) {
-      const grant = await membershipRepository.recordPrivateAlbumView(
+      const hasGrant = await membershipRepository.existsPrivateAlbumGrant(
         photo.owner_user_id,
         photo.owner_couple_id,
         session.user.id
       );
-      if (!grant) {
+      if (!hasGrant) {
         return c.json({ ok: false, code: "FORBIDDEN" }, 403);
       }
+      mustRecordPrivateView = true;
     }
 
     if (photo.visibility === "match" && photo.owner_user_id !== session.user.id) {
@@ -781,6 +857,22 @@ export function registerMembershipRoutes(
     }
 
     const fs = await uploadStore.read(photo.storage_path);
+
+    // Issue A13: Først nu — efter alle adgangs-checks er passeret og
+    // vi har bytes klar til at sende — øger vi view_count. Fejl i incrementen
+    // er ikke kritisk; vi logger og leverer billedet alligevel.
+    if (mustRecordPrivateView) {
+      try {
+        await membershipRepository.recordPrivateAlbumView(
+          photo.owner_user_id,
+          photo.owner_couple_id,
+          session.user.id
+        );
+      } catch (error) {
+        console.error("Failed to record private album view", error);
+      }
+    }
+
     return new Response(new Uint8Array(fs.data) as unknown as BodyInit, {
       headers: {
         "Content-Type": photo.mime_type,
