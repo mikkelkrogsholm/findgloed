@@ -352,7 +352,7 @@ export function OnboardingPage() {
                 <span />
               )}
               <Button type="button" onClick={handleNext} disabled={saving} className="glow-cta">
-                {saving ? "Gemmer…" : step === "photo" ? "Næste: verificering" : "Fortsæt"}
+                {saving ? "Gemmer…" : step === "photo" ? "Næste: samtykke" : "Fortsæt"}
                 <ChevronRight className="ml-1 h-4 w-4" />
               </Button>
             </div>
