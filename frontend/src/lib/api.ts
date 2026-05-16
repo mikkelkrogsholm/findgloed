@@ -220,6 +220,25 @@ export const api = {
       body: JSON.stringify({ reason })
     }),
 
+  listAdminReports: () =>
+    request<{
+      ok: true;
+      reports: AdminReport[];
+    }>("/api/admin/reports"),
+
+  resolveAdminReport: (
+    id: string,
+    status: "reviewed" | "dismissed" | "actioned",
+    notes?: string
+  ) =>
+    request<{ ok: true; report: AdminReport }>(
+      `/api/admin/reports/${id}/resolve`,
+      {
+        method: "POST",
+        body: JSON.stringify({ status, notes })
+      }
+    ),
+
   // ---------- Events ----------
   listEvents: (filters: {
     category?: EventCategory;
@@ -514,6 +533,21 @@ export type AdminEvent = {
   dresscode: string | null;
   exit_strategy: string | null;
   status: string;
+};
+
+export type AdminReport = {
+  id: string;
+  reporter_user_id: string;
+  reported_user_id: string | null;
+  reported_message_id: string | null;
+  reported_event_post_id: string | null;
+  reason: string;
+  details: string | null;
+  status: "open" | "reviewed" | "dismissed" | "actioned";
+  created_at: string;
+  reviewed_at: string | null;
+  reviewed_by_admin_id: string | null;
+  resolution_notes: string | null;
 };
 
 export type AdminEventInput = {

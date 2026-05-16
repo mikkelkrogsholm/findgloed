@@ -26,6 +26,8 @@ import { ConversationPage } from "@/pages/conversation-page";
 import { MembershipPage } from "@/pages/membership-page";
 import { AdminEventsPage } from "@/pages/admin-events-page";
 import { AdminPage } from "@/pages/admin-page";
+import { AdminReportsPage } from "@/pages/admin-reports-page";
+import { AdminVerificationsPage } from "@/pages/admin-verifications-page";
 import { getMotionMode, pageTransitionVariants } from "@/lib/motion";
 
 function resolveRoute(pathname: string): AppRouteName {
@@ -85,6 +87,12 @@ function resolveRoute(pathname: string): AppRouteName {
   }
   if (pathname === appConfig.routes.adminEvents) {
     return "admin-events";
+  }
+  if (pathname === appConfig.routes.adminVerifications) {
+    return "admin-verifications";
+  }
+  if (pathname === appConfig.routes.adminReports) {
+    return "admin-reports";
   }
   if (pathname === appConfig.routes.admin) {
     return "admin";
@@ -154,6 +162,8 @@ export default function App() {
       conversation: "Glød - Samtale",
       membership: "Glød - Medlemskab",
       "admin-events": "Glød - Admin events",
+      "admin-verifications": "Glød - Admin verifikationer",
+      "admin-reports": "Glød - Admin anmeldelser",
       admin: "Glød - Admin",
       "not-found": "Glød - Side ikke fundet"
     };
@@ -189,6 +199,8 @@ export default function App() {
           {route === "conversation" && <ConversationPage />}
           {route === "membership" && <MembershipPage />}
           {route === "admin-events" && <AdminEventsPage />}
+          {route === "admin-verifications" && <AdminVerificationsPage />}
+          {route === "admin-reports" && <AdminReportsPage />}
           {route === "admin" && <AdminPage />}
           {route === "design" && <DesignPage />}
           {route === "not-found" && <NotFoundPage />}

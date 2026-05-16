@@ -141,9 +141,15 @@ export function AdminEventsPage() {
             <p className="noxus-kicker kicker-text text-[0.65rem]">Admin</p>
             <h1 className="font-display text-3xl">Events</h1>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => navigate(appConfig.routes.admin)}>
               Til lead-oversigt
+            </Button>
+            <Button variant="outline" onClick={() => navigate(appConfig.routes.adminVerifications)}>
+              Til verifikationer
+            </Button>
+            <Button variant="outline" onClick={() => navigate(appConfig.routes.adminReports)}>
+              Til reports
             </Button>
             <Button onClick={() => setShowForm((prev) => !prev)} className="glow-cta">
               {showForm ? "Skjul formular" : "Opret nyt event"}
