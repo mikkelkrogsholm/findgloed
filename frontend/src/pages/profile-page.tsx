@@ -1,6 +1,6 @@
 import { ChangeEvent, useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { Trash2, Upload } from "lucide-react";
+import { Heart, Trash2, Upload } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { appConfig } from "@/config/app-config";
 import {
   api,
+  type CoupleInvitationSummary,
   type FaceVisibility,
   type InitiatorRole,
   type MeResponse,
@@ -50,6 +51,9 @@ const VERIFICATION_LABEL = {
 
 export function ProfilePage() {
   const [data, setData] = useState<MeResponse | null>(null);
+  const [incomingInvitations, setIncomingInvitations] = useState<
+    CoupleInvitationSummary[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -71,6 +75,11 @@ export function ProfilePage() {
       setBio(result.profile.bio ?? "");
       setFaceVisibility(result.profile.face_visibility);
       setInitiatorRole(result.profile.initiator_role ?? "none");
+      // Hent også couple-invitations så vi kan vise banner ved indkommende.
+      const invitations = await api.listCoupleInvitations();
+      if (invitations.ok) {
+        setIncomingInvitations(invitations.incoming);
+      }
     } else {
       navigate(appConfig.routes.login);
     }
@@ -182,6 +191,94 @@ export function ProfilePage() {
             <AlertDescription>{success}</AlertDescription>
           </Alert>
         )}
+
+        {/* C6: Par-invitation-banner — vises tydeligt øverst hvis nogen har inviteret dig */}
+        {incomingInvitations.length > 0 && (
+          <Card
+            className="mb-6 border-[color:var(--color-link)] p-6 md:p-8"
+            data-testid="profile-couple-invitation-banner"
+          >
+            <CardContent className="flex flex-wrap items-center justify-between gap-3 px-0 pb-0">
+              <div className="flex items-start gap-3">
+                <Heart className="mt-1 h-5 w-5 text-[color:var(--color-link)]" />
+                <div>
+                  <p className="text-sm">
+                    <strong>
+                      {incomingInvitations[0].primary_display_name ??
+                        incomingInvitations[0].primary_email}
+                    </strong>{" "}
+                    har inviteret dig til at danne par
+                    {incomingInvitations.length > 1 && (
+                      <span className="text-xs text-[color:var(--color-text-tertiary)]">
+                        {" "}(+{incomingInvitations.length - 1} flere)
+                      </span>
+                    )}
+                    .
+                  </p>
+                  <p className="mt-1 text-xs text-[color:var(--color-text-secondary)]">
+                    Accepter eller afvis under par-profil.
+                  </p>
+                </div>
+              </div>
+              <Button
+                onClick={() => navigate(appConfig.routes.coupleProfile)}
+                className="glow-cta"
+                data-testid="goto-couple-profile-from-banner"
+              >
+                Se invitation
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* C6: Par-section — viser om man er i et par eller ej */}
+        <Card className="mb-6 p-6 md:p-8" data-testid="profile-couple-section">
+          <CardHeader className="px-0 pt-0">
+            <CardTitle className="flex items-center gap-2">
+              <Heart className="h-5 w-5 text-[color:var(--color-link)]" />
+              Par-profil
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-wrap items-center justify-between gap-3 px-0 pb-0">
+            {data.couple ? (
+              <>
+                <div>
+                  <p className="text-sm">
+                    Du er en del af parret <strong>{data.couple.display_name}</strong>.
+                  </p>
+                  <p className="mt-1 text-xs text-[color:var(--color-text-secondary)]">
+                    {data.couple.open_to_singles
+                      ? "Åben for singles. "
+                      : "Lukket for singles. "}
+                    {data.couple.accepts_mixed_events
+                      ? "Deltager i mixed events."
+                      : "Kun par-events."}
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => navigate(appConfig.routes.coupleProfile)}
+                  data-testid="manage-couple"
+                >
+                  Administrer par
+                </Button>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-[color:var(--color-text-secondary)]">
+                  Du er ikke i et par på Glød. Du kan invitere din partner — begge skal acceptere.
+                </p>
+                <Button
+                  variant="outline"
+                  onClick={() => navigate(appConfig.routes.coupleProfile)}
+                  data-testid="create-couple"
+                >
+                  Opret par-profil
+                </Button>
+              </>
+            )}
+          </CardContent>
+        </Card>
 
         <Card className="mb-6 p-6 md:p-8">
           <CardHeader className="px-0 pt-0">

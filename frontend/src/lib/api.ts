@@ -42,6 +42,32 @@ export type CoupleSummary = {
   paused_at: string | null;
 };
 
+export type CoupleInvitationStatus =
+  | "pending"
+  | "accepted"
+  | "declined"
+  | "cancelled"
+  | "expired";
+
+export type CoupleInvitationSummary = {
+  id: string;
+  primary_user_id: string;
+  partner_user_id: string;
+  display_name: string;
+  bio: string | null;
+  region: string | null;
+  open_to_singles: boolean;
+  accepts_mixed_events: boolean;
+  status: CoupleInvitationStatus;
+  expires_at: string;
+  created_at: string;
+  responded_at: string | null;
+  primary_email: string;
+  primary_display_name: string | null;
+  partner_email: string;
+  partner_display_name: string | null;
+};
+
 export type PhotoSummary = {
   id: string;
   kind: PhotoKind;
@@ -156,7 +182,9 @@ export const api = {
       { method: "POST", body: JSON.stringify({ accepted: true }) }
     ),
 
-  createCouple: (body: {
+  // Sender en invitation som partneren skal acceptere før couple_profile
+  // skabes (issue A4).
+  inviteCouple: (body: {
     partner_email: string;
     display_name: string;
     bio?: string | null;
@@ -164,10 +192,36 @@ export const api = {
     open_to_singles?: boolean;
     accepts_mixed_events?: boolean;
   }) =>
-    request<{ ok: true; couple: CoupleSummary }>("/api/couples", {
+    request<{ ok: true; invitation: CoupleInvitationSummary }>("/api/couples", {
       method: "POST",
       body: JSON.stringify(body)
     }),
+
+  listCoupleInvitations: () =>
+    request<{
+      ok: true;
+      incoming: CoupleInvitationSummary[];
+      outgoing: CoupleInvitationSummary[];
+    }>("/api/me/couple-invitations"),
+
+  acceptCoupleInvitation: (id: string) =>
+    request<{
+      ok: true;
+      invitation: CoupleInvitationSummary;
+      couple: CoupleSummary;
+    }>(`/api/couples/invitations/${id}/accept`, { method: "POST" }),
+
+  declineCoupleInvitation: (id: string) =>
+    request<{ ok: true; invitation: CoupleInvitationSummary }>(
+      `/api/couples/invitations/${id}/decline`,
+      { method: "POST" }
+    ),
+
+  cancelCoupleInvitation: (id: string) =>
+    request<{ ok: true; invitation: CoupleInvitationSummary }>(
+      `/api/couples/invitations/${id}/cancel`,
+      { method: "POST" }
+    ),
 
   updateCouple: (
     id: string,
@@ -184,6 +238,9 @@ export const api = {
       method: "PATCH",
       body: JSON.stringify(body)
     }),
+
+  deleteCouple: (id: string) =>
+    request<{ ok: true }>(`/api/couples/${id}`, { method: "DELETE" }),
 
   listMembers: () => request<MembersResponse>("/api/members"),
   getMember: (id: string) => request<MemberDetailResponse>(`/api/members/${id}`),
@@ -407,9 +464,12 @@ export const api = {
 
   // ---------- Subscriptions ----------
   listPlans: () =>
-    request<{ ok: true; audience: "single" | "couple"; plans: MembershipPlan[] }>(
-      "/api/plans"
-    ),
+    request<{
+      ok: true;
+      audience: "single" | "couple";
+      has_couple: boolean;
+      plans: MembershipPlan[];
+    }>("/api/plans"),
 
   getMySubscription: () =>
     request<{

@@ -16,6 +16,7 @@ import { SignupPage } from "@/pages/signup-page";
 import { OnboardingPage } from "@/pages/onboarding-page";
 import { VerificationPage } from "@/pages/verification-page";
 import { ProfilePage } from "@/pages/profile-page";
+import { CoupleProfilePage } from "@/pages/couple-profile-page";
 import { MembersPage } from "@/pages/members-page";
 import { MemberDetailPage } from "@/pages/member-detail-page";
 import { EventsPage } from "@/pages/events-page";
@@ -57,6 +58,9 @@ function resolveRoute(pathname: string): AppRouteName {
   }
   if (pathname === appConfig.routes.verification) {
     return "verification";
+  }
+  if (pathname === appConfig.routes.coupleProfile) {
+    return "couple-profile";
   }
   if (pathname === appConfig.routes.profile) {
     return "profile";
@@ -153,6 +157,7 @@ export default function App() {
       onboarding: "Glød - Profil",
       verification: "Glød - Verificering",
       profile: "Glød - Min profil",
+      "couple-profile": "Glød - Par-profil",
       members: "Glød - Medlemmer",
       "member-detail": "Glød - Medlemsprofil",
       events: "Glød - Events",
@@ -190,6 +195,7 @@ export default function App() {
           {route === "onboarding" && <OnboardingPage />}
           {route === "verification" && <VerificationPage />}
           {route === "profile" && <ProfilePage />}
+          {route === "couple-profile" && <CoupleProfilePage />}
           {route === "members" && <MembersPage />}
           {route === "member-detail" && <MemberDetailPage />}
           {route === "events" && <EventsPage />}

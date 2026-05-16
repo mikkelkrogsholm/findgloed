@@ -1,9 +1,10 @@
 import type { Hono, MiddlewareHandler } from "hono";
 import type {
   AuthService,
+  CoupleInvitation,
+  CoupleInvitationWithUsers,
   CoupleProfile,
   CoupleUpdate,
-  CoupleUpsert,
   FaceVisibility,
   InitiatorRole,
   MembershipProfile,
@@ -13,6 +14,8 @@ import type {
   ProfilePhoto
 } from "./types";
 import type { UploadStore } from "./uploads";
+
+const COUPLE_INVITATION_TTL_DAYS = 7;
 
 type AuthSessionData = {
   user: { id: string; email: string; role?: string | null };
@@ -62,6 +65,33 @@ function ownProfileToJson(profile: MembershipProfile) {
     verified_via: profile.verified_via,
     future_verification_accepted_at:
       profile.future_verification_accepted_at?.toISOString() ?? null
+  };
+}
+
+function coupleInvitationToJson(invitation: CoupleInvitation) {
+  return {
+    id: invitation.id,
+    primary_user_id: invitation.primary_user_id,
+    partner_user_id: invitation.partner_user_id,
+    display_name: invitation.display_name,
+    bio: invitation.bio,
+    region: invitation.region,
+    open_to_singles: invitation.open_to_singles,
+    accepts_mixed_events: invitation.accepts_mixed_events,
+    status: invitation.status,
+    expires_at: invitation.expires_at.toISOString(),
+    created_at: invitation.created_at.toISOString(),
+    responded_at: invitation.responded_at?.toISOString() ?? null
+  };
+}
+
+function coupleInvitationWithUsersToJson(invitation: CoupleInvitationWithUsers) {
+  return {
+    ...coupleInvitationToJson(invitation),
+    primary_email: invitation.primary_email,
+    primary_display_name: invitation.primary_display_name,
+    partner_email: invitation.partner_email,
+    partner_display_name: invitation.partner_display_name
   };
 }
 
@@ -375,6 +405,9 @@ export function registerMembershipRoutes(
     return c.json({ ok: true, submission_id: submission.id, status: submission.status });
   });
 
+  // Issue A4: Par oprettes ikke direkte ved POST /api/couples — i stedet
+  // sendes en invitation som partneren skal acceptere før couple_profile
+  // skabes. Det sikrer at ingen kan "påtvinges" et par.
   app.post("/api/couples", async (c) => {
     const session = c.get("authSession");
     const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
@@ -387,31 +420,134 @@ export function registerMembershipRoutes(
       return c.json({ ok: false, code: "MISSING_FIELDS" }, 422);
     }
 
-    // Find partner via email — kun bekræftede medlemmer kan tilknyttes som partner.
-    const partner = await deps.membershipRepository.getProfile(session.user.id);
-    if (!partner) {
+    const ownProfile = await membershipRepository.getProfile(session.user.id);
+    if (!ownProfile) {
       return c.json({ ok: false, code: "PROFILE_NOT_FOUND" }, 404);
     }
 
-    const partnerByEmail = await deps.membershipRepository
+    if (partnerEmailRaw.toLowerCase() === ownProfile.email.toLowerCase()) {
+      return c.json({ ok: false, code: "CANNOT_INVITE_SELF" }, 422);
+    }
+
+    // Du må ikke have et aktivt couple_profile allerede.
+    const ownCouple = await membershipRepository.getCoupleByUser(session.user.id);
+    if (ownCouple) {
+      return c.json({ ok: false, code: "ALREADY_IN_COUPLE" }, 409);
+    }
+
+    const partnerByEmail = await membershipRepository
       .listVerifiedMembers(session.user.id)
       .then((members) => members.find((m) => m.email.toLowerCase() === partnerEmailRaw.toLowerCase()));
     if (!partnerByEmail) {
       return c.json({ ok: false, code: "PARTNER_NOT_FOUND_OR_NOT_VERIFIED" }, 404);
     }
 
-    const input: CoupleUpsert = {
+    // Hvis partneren allerede er i et par, kan vi ikke invitere.
+    const partnerCouple = await membershipRepository.getCoupleByUser(
+      partnerByEmail.user_id
+    );
+    if (partnerCouple) {
+      return c.json({ ok: false, code: "PARTNER_ALREADY_IN_COUPLE" }, 409);
+    }
+
+    // Hvis en eksisterende pending invitation findes for samme par, brug den
+    // som idempotent svar i stedet for at fejle med UNIQUE-violation.
+    const existingPending =
+      await membershipRepository.hasPendingInvitationBetween(
+        session.user.id,
+        partnerByEmail.user_id
+      );
+    if (existingPending) {
+      return c.json({ ok: false, code: "INVITATION_ALREADY_PENDING" }, 409);
+    }
+
+    const expiresAt = new Date(
+      Date.now() + COUPLE_INVITATION_TTL_DAYS * 24 * 60 * 60 * 1000
+    );
+
+    const invitation = await membershipRepository.createCoupleInvitation({
       primary_user_id: session.user.id,
       partner_user_id: partnerByEmail.user_id,
       display_name: displayName,
       bio: asString(body.bio),
       region: asString(body.region),
       open_to_singles: body.open_to_singles === true,
-      accepts_mixed_events: body.accepts_mixed_events === true
-    };
+      accepts_mixed_events: body.accepts_mixed_events === true,
+      expires_at: expiresAt
+    });
 
-    const couple = await deps.membershipRepository.createCouple(input);
-    return c.json({ ok: true, couple: coupleToJson(couple) });
+    return c.json({ ok: true, invitation: coupleInvitationToJson(invitation) });
+  });
+
+  app.get("/api/me/couple-invitations", async (c) => {
+    const session = c.get("authSession");
+    const [incoming, outgoing] = await Promise.all([
+      membershipRepository.listIncomingCoupleInvitations(session.user.id),
+      membershipRepository.listOutgoingCoupleInvitations(session.user.id)
+    ]);
+    return c.json({
+      ok: true,
+      incoming: incoming.map(coupleInvitationWithUsersToJson),
+      outgoing: outgoing.map(coupleInvitationWithUsersToJson)
+    });
+  });
+
+  app.post("/api/couples/invitations/:id/accept", async (c) => {
+    const session = c.get("authSession");
+    const id = c.req.param("id");
+    const result = await membershipRepository.acceptCoupleInvitation(
+      id,
+      session.user.id
+    );
+    if (!result) {
+      // Gå nærmere på årsagen for klarere fejlmelding.
+      const invitation = await membershipRepository.getCoupleInvitationById(id);
+      if (!invitation) {
+        return c.json({ ok: false, code: "NOT_FOUND" }, 404);
+      }
+      if (invitation.partner_user_id !== session.user.id) {
+        return c.json({ ok: false, code: "FORBIDDEN" }, 403);
+      }
+      if (invitation.status !== "pending") {
+        return c.json({ ok: false, code: "INVITATION_NOT_PENDING" }, 409);
+      }
+      if (invitation.expires_at < new Date()) {
+        return c.json({ ok: false, code: "INVITATION_EXPIRED" }, 410);
+      }
+      // Falder typisk her hvis en af parterne nu er i et par.
+      return c.json({ ok: false, code: "COUPLE_CONFLICT" }, 409);
+    }
+    return c.json({
+      ok: true,
+      invitation: coupleInvitationToJson(result.invitation),
+      couple: coupleToJson(result.couple)
+    });
+  });
+
+  app.post("/api/couples/invitations/:id/decline", async (c) => {
+    const session = c.get("authSession");
+    const id = c.req.param("id");
+    const invitation = await membershipRepository.declineCoupleInvitation(
+      id,
+      session.user.id
+    );
+    if (!invitation) {
+      return c.json({ ok: false, code: "NOT_FOUND" }, 404);
+    }
+    return c.json({ ok: true, invitation: coupleInvitationToJson(invitation) });
+  });
+
+  app.post("/api/couples/invitations/:id/cancel", async (c) => {
+    const session = c.get("authSession");
+    const id = c.req.param("id");
+    const invitation = await membershipRepository.cancelCoupleInvitation(
+      id,
+      session.user.id
+    );
+    if (!invitation) {
+      return c.json({ ok: false, code: "NOT_FOUND" }, 404);
+    }
+    return c.json({ ok: true, invitation: coupleInvitationToJson(invitation) });
   });
 
   app.patch("/api/couples/:id", async (c) => {
