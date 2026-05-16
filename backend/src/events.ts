@@ -40,6 +40,9 @@ export type EventListFilters = {
   region?: string;
   beginnerFriendly?: boolean;
   upcomingOnly?: boolean;
+  // Issue B15: pagination.
+  limit?: number;
+  offset?: number;
 };
 
 export type EventInsert = Omit<EventRecord, "id" | "created_at" | "updated_at">;
@@ -114,25 +117,41 @@ function rowToRegistration(row: Record<string, unknown>): EventRegistration {
 }
 
 export type EventRepository = {
-  list: (filters: EventListFilters) => Promise<EventRecord[]>;
-  listAdmin: () => Promise<EventRecord[]>;
+  list: (filters: EventListFilters) => Promise<{ items: EventRecord[]; total: number }>;
+  listAdmin: (options?: { limit?: number; offset?: number }) => Promise<{
+    items: EventRecord[];
+    total: number;
+  }>;
   getBySlug: (slug: string) => Promise<EventRecord | null>;
   getById: (id: string) => Promise<EventRecord | null>;
   insert: (input: EventInsert) => Promise<EventRecord>;
   update: (id: string, update: EventUpdate) => Promise<EventRecord | null>;
   delete: (id: string) => Promise<boolean>;
   countConfirmed: (eventId: string) => Promise<number>;
+  // Issue B16: batch-fetch counts for flere events i én query.
+  countConfirmedForEvents: (eventIds: string[]) => Promise<Map<string, number>>;
+  // Issue B16: batch-fetch registreringer for flere events.
+  listRegistrationsForUserOnEvents: (
+    userId: string,
+    eventIds: string[]
+  ) => Promise<Map<string, EventRegistration>>;
   register: (eventId: string, userId: string, coupleId: string | null) => Promise<EventRegistration | null>;
   cancelRegistration: (eventId: string, userId: string) => Promise<boolean>;
   getRegistration: (eventId: string, userId: string) => Promise<EventRegistration | null>;
-  listRegistrationsForUser: (userId: string) => Promise<Array<EventRegistration & { event: EventRecord }>>;
+  listRegistrationsForUser: (
+    userId: string,
+    options?: { limit?: number; offset?: number }
+  ) => Promise<{
+    items: Array<EventRegistration & { event: EventRecord }>;
+    total: number;
+  }>;
   listRegistrationsForEvent: (eventId: string) => Promise<EventRegistration[]>;
 };
 
 export class PostgresEventRepository implements EventRepository {
   constructor(private readonly pool: Pool) {}
 
-  async list(filters: EventListFilters): Promise<EventRecord[]> {
+  async list(filters: EventListFilters): Promise<{ items: EventRecord[]; total: number }> {
     const conditions: string[] = ["status = 'published'"];
     const values: unknown[] = [];
     let i = 1;
@@ -157,18 +176,89 @@ export class PostgresEventRepository implements EventRepository {
       conditions.push(`starts_at >= NOW()`);
     }
 
-    const result = await this.pool.query(
-      `SELECT ${EVENT_FIELDS} FROM event WHERE ${conditions.join(" AND ")} ORDER BY starts_at LIMIT 200`,
-      values
-    );
-    return result.rows.map(rowToEvent);
+    // Issue B15: pagination med limit/offset (default 24, max 100).
+    const limit = Math.max(1, Math.min(100, filters.limit ?? 24));
+    const offset = Math.max(0, filters.offset ?? 0);
+    const where = conditions.join(" AND ");
+    const limitParamIndex = i++;
+    const offsetParamIndex = i++;
+    const [itemsResult, countResult] = await Promise.all([
+      this.pool.query(
+        `SELECT ${EVENT_FIELDS} FROM event WHERE ${where} ORDER BY starts_at LIMIT $${limitParamIndex} OFFSET $${offsetParamIndex}`,
+        [...values, limit, offset]
+      ),
+      this.pool.query<{ count: string }>(
+        `SELECT COUNT(*)::text AS count FROM event WHERE ${where}`,
+        values
+      )
+    ]);
+    return {
+      items: itemsResult.rows.map(rowToEvent),
+      total: Number(countResult.rows[0]?.count ?? 0)
+    };
   }
 
-  async listAdmin(): Promise<EventRecord[]> {
-    const result = await this.pool.query(
-      `SELECT ${EVENT_FIELDS} FROM event ORDER BY starts_at DESC LIMIT 500`
+  async listAdmin(options?: { limit?: number; offset?: number }): Promise<{
+    items: EventRecord[];
+    total: number;
+  }> {
+    // Issue B15: pagination. Default 50 til admin (de vil typisk se mere
+    // end almindelige brugere); max 200.
+    const limit = Math.max(1, Math.min(200, options?.limit ?? 50));
+    const offset = Math.max(0, options?.offset ?? 0);
+    const [itemsResult, countResult] = await Promise.all([
+      this.pool.query(
+        `SELECT ${EVENT_FIELDS} FROM event ORDER BY starts_at DESC LIMIT $1 OFFSET $2`,
+        [limit, offset]
+      ),
+      this.pool.query<{ count: string }>(`SELECT COUNT(*)::text AS count FROM event`)
+    ]);
+    return {
+      items: itemsResult.rows.map(rowToEvent),
+      total: Number(countResult.rows[0]?.count ?? 0)
+    };
+  }
+
+  // Issue B16: Batch-fetch confirmed-counts for flere events i én query.
+  // NB: event_id er UUID i schema'et, så vi caster array til uuid[].
+  async countConfirmedForEvents(eventIds: string[]): Promise<Map<string, number>> {
+    const map = new Map<string, number>();
+    if (eventIds.length === 0) return map;
+    const result = await this.pool.query<{ event_id: string; count: string }>(
+      `SELECT event_id, COUNT(*)::text AS count
+       FROM event_registration
+       WHERE event_id = ANY($1::uuid[])
+         AND status IN ('pending', 'confirmed', 'attended')
+       GROUP BY event_id`,
+      [eventIds]
     );
-    return result.rows.map(rowToEvent);
+    for (const row of result.rows) {
+      map.set(String(row.event_id), Number(row.count));
+    }
+    for (const id of eventIds) {
+      if (!map.has(id)) map.set(id, 0);
+    }
+    return map;
+  }
+
+  // Issue B16: Batch-fetch registrations for flere events for én bruger.
+  async listRegistrationsForUserOnEvents(
+    userId: string,
+    eventIds: string[]
+  ): Promise<Map<string, EventRegistration>> {
+    const map = new Map<string, EventRegistration>();
+    if (eventIds.length === 0) return map;
+    const result = await this.pool.query(
+      `SELECT ${REGISTRATION_FIELDS}
+       FROM event_registration
+       WHERE event_id = ANY($1::uuid[]) AND user_id = $2`,
+      [eventIds, userId]
+    );
+    for (const row of result.rows) {
+      const reg = rowToRegistration(row);
+      map.set(reg.event_id, reg);
+    }
+    return map;
   }
 
   async getBySlug(slug: string): Promise<EventRecord | null> {
@@ -325,39 +415,59 @@ export class PostgresEventRepository implements EventRepository {
   }
 
   async listRegistrationsForUser(
-    userId: string
-  ): Promise<Array<EventRegistration & { event: EventRecord }>> {
-    const result = await this.pool.query(
-      `SELECT r.id AS r_id, r.event_id, r.user_id, r.couple_id, r.status AS r_status,
-              r.registered_at, r.cancelled_at, r.notes,
-              e.id AS e_id, e.slug, e.title, e.description, e.not_for, e.category, e.level,
-              e.beginner_friendly, e.experience_required,
-              e.facilitator_user_id, e.facilitator_name, e.facilitator_credential,
-              e.starts_at, e.ends_at, e.capacity, e.price_cents,
-              e.region, e.location_label, e.location_address, e.dresscode, e.exit_strategy, e.cover_path,
-              e.status AS e_status, e.created_by, e.created_at, e.updated_at
-       FROM event_registration r
-       JOIN event e ON e.id = r.event_id
-       WHERE r.user_id = $1 AND r.status IN ('pending','confirmed','attended')
-       ORDER BY e.starts_at DESC`,
-      [userId]
-    );
+    userId: string,
+    options?: { limit?: number; offset?: number }
+  ): Promise<{
+    items: Array<EventRegistration & { event: EventRecord }>;
+    total: number;
+  }> {
+    // Issue B15 + B16: pagination + én JOIN-query der returnerer både
+    // registration og event-felter, så vi undgår N+1 mod event-tabellen.
+    const limit = Math.max(1, Math.min(100, options?.limit ?? 20));
+    const offset = Math.max(0, options?.offset ?? 0);
+    const [itemsResult, countResult] = await Promise.all([
+      this.pool.query(
+        `SELECT r.id AS r_id, r.event_id, r.user_id, r.couple_id, r.status AS r_status,
+                r.registered_at, r.cancelled_at, r.notes,
+                e.id AS e_id, e.slug, e.title, e.description, e.not_for, e.category, e.level,
+                e.beginner_friendly, e.experience_required,
+                e.facilitator_user_id, e.facilitator_name, e.facilitator_credential,
+                e.starts_at, e.ends_at, e.capacity, e.price_cents,
+                e.region, e.location_label, e.location_address, e.dresscode, e.exit_strategy, e.cover_path,
+                e.status AS e_status, e.created_by, e.created_at, e.updated_at
+         FROM event_registration r
+         JOIN event e ON e.id = r.event_id
+         WHERE r.user_id = $1 AND r.status IN ('pending','confirmed','attended')
+         ORDER BY e.starts_at DESC
+         LIMIT $2 OFFSET $3`,
+        [userId, limit, offset]
+      ),
+      this.pool.query<{ count: string }>(
+        `SELECT COUNT(*)::text AS count
+         FROM event_registration r
+         WHERE r.user_id = $1 AND r.status IN ('pending','confirmed','attended')`,
+        [userId]
+      )
+    ]);
 
-    return result.rows.map((row) => ({
-      id: String(row.r_id),
-      event_id: String(row.event_id),
-      user_id: String(row.user_id),
-      couple_id: (row.couple_id as string | null) ?? null,
-      status: row.r_status as RegistrationStatus,
-      registered_at: row.registered_at as Date,
-      cancelled_at: (row.cancelled_at as Date | null) ?? null,
-      notes: (row.notes as string | null) ?? null,
-      event: rowToEvent({
-        ...row,
-        id: row.e_id,
-        status: row.e_status
-      })
-    }));
+    return {
+      items: itemsResult.rows.map((row) => ({
+        id: String(row.r_id),
+        event_id: String(row.event_id),
+        user_id: String(row.user_id),
+        couple_id: (row.couple_id as string | null) ?? null,
+        status: row.r_status as RegistrationStatus,
+        registered_at: row.registered_at as Date,
+        cancelled_at: (row.cancelled_at as Date | null) ?? null,
+        notes: (row.notes as string | null) ?? null,
+        event: rowToEvent({
+          ...row,
+          id: row.e_id,
+          status: row.e_status
+        })
+      })),
+      total: Number(countResult.rows[0]?.count ?? 0)
+    };
   }
 
   async listRegistrationsForEvent(eventId: string): Promise<EventRegistration[]> {
