@@ -72,6 +72,15 @@ function rowToSubscription(row: Record<string, unknown>): Subscription {
   };
 }
 
+export type SubscriptionEvent = {
+  id: string;
+  subscription_id: string;
+  event_type: string;
+  amount_cents: number | null;
+  occurred_at: Date;
+  metadata_json: Record<string, unknown>;
+};
+
 export type SubscriptionRepository = {
   listPlans: () => Promise<MembershipPlan[]>;
   getPlan: (id: string) => Promise<MembershipPlan | null>;
@@ -88,8 +97,19 @@ export type SubscriptionRepository = {
     coupleId: string | null,
     plan: MembershipPlan
   ) => Promise<Subscription>;
-  cancelAtPeriodEnd: (id: string, userId: string) => Promise<Subscription | null>;
+  // C25: Returnerer null hvis subscription er afsluttet (cancelled).
+  // C27: Hvis status='trialing' og forceImmediate=true, sættes status direkte
+  // til 'cancelled' (trial-cancel betyder umiddelbart adgangstab — brugeren
+  // har ikke betalt og prøveperioden afbrydes).
+  cancelAtPeriodEnd: (
+    id: string,
+    userId: string,
+    options?: { forceImmediate?: boolean }
+  ) => Promise<Subscription | null>;
+  // C25: Kun gyldig hvis cancel_at_period_end=true OG status!='cancelled'.
   resume: (id: string, userId: string) => Promise<Subscription | null>;
+  // C29: Liste over events for alle brugerens subscriptions (nyeste først).
+  listEventsForUser: (userId: string, limit?: number) => Promise<SubscriptionEvent[]>;
 };
 
 // Issue A18: webhook-handler skal kunne logge stripe-events idempotent. Vi
@@ -161,12 +181,15 @@ export class PostgresSubscriptionRepository implements SubscriptionRepository {
   }
 
   async getActiveSubscription(userId: string): Promise<Subscription | null> {
+    // C26: Inkludér 'pending' så vi ikke kan ende med to active subscriptions
+    // når en bruger har et abonnement i venter-på-Stripe-checkout-state.
+    // 'cancelled' ekskluderes — det er det eneste terminale state.
     const result = await this.pool.query(
       `SELECT id, user_id, couple_id, plan_id, status, current_period_start, current_period_end,
               cancel_at_period_end, cancelled_at, trial_ends_at, stripe_customer_id, stripe_subscription_id,
               stripe_price_id, invoice_descriptor, created_at, updated_at
        FROM subscription
-       WHERE user_id = $1 AND status IN ('active', 'trialing', 'past_due')
+       WHERE user_id = $1 AND status IN ('pending', 'active', 'trialing', 'past_due')
        ORDER BY created_at DESC LIMIT 1`,
       [userId]
     );
@@ -244,7 +267,55 @@ export class PostgresSubscriptionRepository implements SubscriptionRepository {
     return rowToSubscription(result.rows[0]);
   }
 
-  async cancelAtPeriodEnd(id: string, userId: string): Promise<Subscription | null> {
+  async cancelAtPeriodEnd(
+    id: string,
+    userId: string,
+    options?: { forceImmediate?: boolean }
+  ): Promise<Subscription | null> {
+    // C25: Tjek nuværende status før operation. cancel virker kun på aktive
+    // subscriptions; afsluttede returnerer null (route-handler oversætter til 404).
+    const current = await this.pool.query(
+      `SELECT status FROM subscription WHERE id = $1 AND user_id = $2 LIMIT 1`,
+      [id, userId]
+    );
+    if (!current.rows[0]) return null;
+    const status = current.rows[0].status as SubscriptionStatus;
+    if (!["active", "trialing", "past_due", "pending"].includes(status)) {
+      return null;
+    }
+
+    // C27: Trial-perioder håndteres specielt. Hvis brugeren cancellerer et
+    // trial, går vi direkte til status='cancelled' i stedet for at lade dem
+    // beholde adgang i en periode de aldrig har betalt for. Det matcher
+    // "annullér når som helst — ingen binding" og er den normale håndtering
+    // af trial-cancel hos abonnementstjenester.
+    const goImmediate =
+      options?.forceImmediate === true || status === "trialing";
+
+    if (goImmediate) {
+      const result = await this.pool.query(
+        `UPDATE subscription
+         SET cancel_at_period_end = true,
+             cancelled_at = NOW(),
+             status = 'cancelled',
+             updated_at = NOW()
+         WHERE id = $1 AND user_id = $2
+         RETURNING id, user_id, couple_id, plan_id, status, current_period_start, current_period_end,
+                   cancel_at_period_end, cancelled_at, trial_ends_at, stripe_customer_id,
+                   stripe_subscription_id, stripe_price_id, invoice_descriptor, created_at, updated_at`,
+        [id, userId]
+      );
+      if (!result.rows[0]) return null;
+
+      await this.pool.query(
+        `INSERT INTO subscription_event (subscription_id, event_type, metadata_json)
+         VALUES ($1, 'cancellation_scheduled', $2::jsonb)`,
+        [id, JSON.stringify({ immediate: true, reason: "trial_cancelled" })]
+      );
+
+      return rowToSubscription(result.rows[0]);
+    }
+
     const result = await this.pool.query(
       `UPDATE subscription
        SET cancel_at_period_end = true, cancelled_at = NOW(), updated_at = NOW()
@@ -266,10 +337,16 @@ export class PostgresSubscriptionRepository implements SubscriptionRepository {
   }
 
   async resume(id: string, userId: string): Promise<Subscription | null> {
+    // C25: resume virker kun hvis cancel_at_period_end=true OG status ikke
+    // er 'cancelled'. En afsluttet subscription kan ikke genoptages — brugeren
+    // skal starte et nyt abonnement.
     const result = await this.pool.query(
       `UPDATE subscription
        SET cancel_at_period_end = false, cancelled_at = NULL, updated_at = NOW()
-       WHERE id = $1 AND user_id = $2
+       WHERE id = $1
+         AND user_id = $2
+         AND cancel_at_period_end = true
+         AND status <> 'cancelled'
        RETURNING id, user_id, couple_id, plan_id, status, current_period_start, current_period_end,
                  cancel_at_period_end, cancelled_at, trial_ends_at, stripe_customer_id,
                  stripe_subscription_id, stripe_price_id, invoice_descriptor, created_at, updated_at`,
@@ -277,5 +354,29 @@ export class PostgresSubscriptionRepository implements SubscriptionRepository {
     );
     if (!result.rows[0]) return null;
     return rowToSubscription(result.rows[0]);
+  }
+
+  async listEventsForUser(userId: string, limit = 50): Promise<SubscriptionEvent[]> {
+    // C29: Returnér event-historik for alle brugerens subscriptions, nyeste
+    // først. Joined via subscription.user_id så vi ikke eksponerer events
+    // for andre brugere selv hvis subscription_id skulle lække.
+    const result = await this.pool.query(
+      `SELECT e.id, e.subscription_id, e.event_type, e.amount_cents,
+              e.occurred_at, e.metadata_json
+       FROM subscription_event e
+       JOIN subscription s ON s.id = e.subscription_id
+       WHERE s.user_id = $1
+       ORDER BY e.occurred_at DESC
+       LIMIT $2`,
+      [userId, limit]
+    );
+    return result.rows.map((row) => ({
+      id: String(row.id),
+      subscription_id: String(row.subscription_id),
+      event_type: String(row.event_type),
+      amount_cents: row.amount_cents !== null ? Number(row.amount_cents) : null,
+      occurred_at: row.occurred_at as Date,
+      metadata_json: (row.metadata_json as Record<string, unknown>) ?? {}
+    }));
   }
 }

@@ -17,9 +17,27 @@ import {
 import { PageHeader } from "@/components/layout/page-header";
 import { FormSkeleton } from "@/components/layout/loading-state";
 import { appConfig } from "@/config/app-config";
-import { api, type ActiveSubscription, type MembershipPlan } from "@/lib/api";
+import {
+  api,
+  type ActiveSubscription,
+  type MembershipPlan,
+  type SubscriptionEvent
+} from "@/lib/api";
 import { getMotionMode, revealVariants } from "@/lib/motion";
 import { navigate } from "@/lib/nav";
+
+// C29: Mapping fra DB event_type til brugervenlig dansk label.
+const EVENT_TYPE_LABELS: Record<string, string> = {
+  subscription_started: "Abonnement startet",
+  trial_started: "Prøveperiode startet",
+  cancellation_scheduled: "Annullering planlagt",
+  payment_succeeded: "Betaling gennemført",
+  payment_failed: "Betaling fejlede"
+};
+
+function eventLabel(eventType: string): string {
+  return EVENT_TYPE_LABELS[eventType] ?? eventType.replace(/_/g, " ");
+}
 
 function formatPrice(cents: number): string {
   return `${(cents / 100).toLocaleString("da-DK")} kr.`;
@@ -40,6 +58,7 @@ export function MembershipPage() {
   const [hasCouple, setHasCouple] = useState(false);
   const [subscription, setSubscription] = useState<ActiveSubscription | null>(null);
   const [activePlan, setActivePlan] = useState<MembershipPlan | null>(null);
+  const [events, setEvents] = useState<SubscriptionEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -48,7 +67,11 @@ export function MembershipPage() {
   const motionMode = getMotionMode();
 
   async function reload() {
-    const [plansResult, subResult] = await Promise.all([api.listPlans(), api.getMySubscription()]);
+    const [plansResult, subResult, eventsResult] = await Promise.all([
+      api.listPlans(),
+      api.getMySubscription(),
+      api.listSubscriptionEvents()
+    ]);
     if (!plansResult.ok) {
       setError(
         plansResult.code === "UNAUTHORIZED" ? "Log ind for at se medlemskab." : "Kunne ikke hente planer."
@@ -60,6 +83,9 @@ export function MembershipPage() {
     if (subResult.ok) {
       setSubscription(subResult.subscription);
       setActivePlan(subResult.plan ?? null);
+    }
+    if (eventsResult.ok) {
+      setEvents(eventsResult.events);
     }
     setLoading(false);
   }
@@ -95,7 +121,22 @@ export function MembershipPage() {
     setCancelDialogOpen(false);
     const result = await api.cancelSubscription(subscription.id);
     if (result.ok) {
-      setSuccess("Annullering planlagt — du har adgang indtil periodens udløb.");
+      // C28: Vis dato hvis vi har current_period_end så brugeren ved præcis
+      // hvornår adgangen stopper. For trials der cancelleres immediate (C27)
+      // skifter status til 'cancelled' og adgangen stopper umiddelbart.
+      const sub = result.subscription;
+      if (sub.status === "cancelled") {
+        setSuccess(
+          "Abonnementet er annulleret. Du kan altid starte et nyt medlemskab."
+        );
+      } else if (sub.current_period_end) {
+        const date = new Date(sub.current_period_end).toLocaleDateString("da-DK");
+        setSuccess(
+          `Annullering planlagt. Du har adgang til ${date}. Genoptag når som helst inden da.`
+        );
+      } else {
+        setSuccess("Annullering planlagt — du har adgang indtil periodens udløb.");
+      }
       void reload();
     }
   }
@@ -280,16 +321,50 @@ export function MembershipPage() {
           </>
         )}
 
+        {/* C29: Aktivitetshistorik vises kun hvis brugeren har events. */}
+        {events.length > 0 && (
+          <Card className="mt-6 p-5" data-testid="subscription-events">
+            <CardHeader className="px-0 pt-0">
+              <CardTitle className="text-base">Aktivitetshistorik</CardTitle>
+            </CardHeader>
+            <CardContent className="px-0 pb-0">
+              <ul className="divide-y divide-[color:var(--color-border-subtle,rgba(255,255,255,0.08))]">
+                {events.map((event) => (
+                  <li
+                    key={event.id}
+                    className="flex flex-wrap items-baseline justify-between gap-2 py-2 text-sm"
+                  >
+                    <span className="font-medium">{eventLabel(event.event_type)}</span>
+                    <span className="text-xs text-[color:var(--color-text-tertiary)]">
+                      {new Date(event.occurred_at).toLocaleString("da-DK", {
+                        dateStyle: "short",
+                        timeStyle: "short"
+                      })}
+                      {event.amount_cents !== null && event.amount_cents > 0 && (
+                        <span className="ml-2">
+                          ({(event.amount_cents / 100).toLocaleString("da-DK")} kr.)
+                        </span>
+                      )}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* B37: Brugervenlig disclaimer uden env-var-navne. Detaljerne om
+            Stripe-integration er nu kun synlige i mock_notice-feltet fra API
+            (intern logning), ikke i UI. */}
         <Card className="mt-6 p-5">
           <CardContent className="space-y-2 px-0 pb-0">
             <p className="text-xs uppercase tracking-wider text-[color:var(--color-text-tertiary)]">
               Bemærk
             </p>
             <p className="text-sm text-[color:var(--color-text-secondary)]">
-              Stripe er ikke aktiveret endnu — alle abonnementer i denne version er mock og du
-              faktureres ikke. Når Stripe-nøglerne er sat (env vars{" "}
-              <code>STRIPE_SECRET_KEY</code> og <code>STRIPE_WEBHOOK_SECRET</code>) overtager
-              den rigtige integration.
+              Betaling er endnu ikke aktiveret. Denne version registrerer din
+              intention, men du faktureres ikke. Vi sender besked, når faktura
+              aktiveres.
             </p>
             <Button variant="ghost" onClick={() => navigate(appConfig.routes.profile)}>
               Til profil
@@ -297,14 +372,35 @@ export function MembershipPage() {
           </CardContent>
         </Card>
 
-        {/* Annullér-abonnement Dialog (a11y-fix for native window.confirm). */}
+        {/* C28: 2-trins Dialog-bekræftelse for cancel (a11y-fix for native confirm).
+            Viser dato hvor adgang stopper. For trials forklares at adgang
+            stopper umiddelbart (C27). */}
         <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
           <DialogContent data-testid="cancel-subscription-dialog">
             <DialogHeader>
               <DialogTitle>Annullér abonnementet?</DialogTitle>
               <DialogDescription>
-                Abonnementet stopper ved periodens udløb. Du har stadig fuld
-                adgang indtil da, og kan altid genoptage før udløb.
+                {subscription?.status === "trialing" ? (
+                  <>
+                    Du er i prøveperiode og er endnu ikke faktureret. Annullerer
+                    du nu, stopper adgangen umiddelbart. Du kan altid starte et
+                    nyt medlemskab senere.
+                  </>
+                ) : subscription?.current_period_end ? (
+                  <>
+                    Abonnementet stopper{" "}
+                    <strong>
+                      {new Date(subscription.current_period_end).toLocaleDateString("da-DK")}
+                    </strong>
+                    . Indtil da har du fuld adgang, og du kan altid genoptage før
+                    udløb.
+                  </>
+                ) : (
+                  <>
+                    Abonnementet stopper ved periodens udløb. Du har stadig fuld
+                    adgang indtil da, og kan altid genoptage før udløb.
+                  </>
+                )}
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
@@ -315,7 +411,9 @@ export function MembershipPage() {
                 onClick={performCancel}
                 data-testid="confirm-cancel-subscription"
               >
-                Annullér ved periodens udløb
+                {subscription?.status === "trialing"
+                  ? "Annullér prøveperiode"
+                  : "Annullér ved periodens udløb"}
               </Button>
             </DialogFooter>
           </DialogContent>

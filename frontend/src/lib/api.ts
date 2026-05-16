@@ -529,6 +529,12 @@ export const api = {
     request<{ ok: true; subscription: ActiveSubscription }>(
       `/api/me/subscription/${id}/resume`,
       { method: "POST" }
+    ),
+
+  // C29: Henter aktivitetshistorik for brugerens subscriptions (nyeste først, max 50).
+  listSubscriptionEvents: () =>
+    request<{ ok: true; events: SubscriptionEvent[] }>(
+      "/api/me/subscription/events"
     )
 };
 
@@ -553,6 +559,16 @@ export type ActiveSubscription = {
   cancelled_at: string | null;
   trial_ends_at: string | null;
   invoice_descriptor: string;
+};
+
+// C29: Subscription-event som vist i aktivitetshistorik.
+export type SubscriptionEvent = {
+  id: string;
+  subscription_id: string;
+  event_type: string;
+  amount_cents: number | null;
+  occurred_at: string;
+  metadata_json: Record<string, unknown>;
 };
 
 export type InterestSignal = {

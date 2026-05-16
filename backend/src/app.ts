@@ -358,14 +358,38 @@ export function createApp(deps: AppDeps): Hono<{ Variables: AppVariables }> {
       );
     }
 
-    // TODO: Når Stripe SDK er installeret, valider signatur sådan her:
+    // TODO ved Stripe-live: brug stripe.webhooks.constructEvent for at validere
+    // signatur og parse event. Pseudokode:
+    //
     //   import Stripe from "stripe";
     //   const stripe = new Stripe(stripeSecretKey);
+    //   const rawBody = await c.req.text(); // ikke parsed JSON
     //   const event = stripe.webhooks.constructEvent(
-    //     await c.req.text(),  // raw body, ikke parsed JSON
+    //     rawBody,
     //     signature,
     //     stripeWebhookSecret
     //   );
+    //
+    //   switch (event.type) {
+    //     case "customer.subscription.created":
+    //       // status='active' (eller 'trialing' hvis trial_end er sat)
+    //       // gem stripe_subscription_id + current_period_start/end
+    //       break;
+    //     case "customer.subscription.updated":
+    //       // opdatér felter: status, current_period_end, cancel_at_period_end
+    //       break;
+    //     case "customer.subscription.deleted":
+    //       // status='cancelled', cancelled_at=NOW()
+    //       break;
+    //     case "invoice.payment_succeeded":
+    //       // log subscription_event(event_type='payment_succeeded', amount_cents=invoice.amount_paid)
+    //       break;
+    //     case "invoice.payment_failed":
+    //       // status='past_due'
+    //       // log subscription_event(event_type='payment_failed', amount_cents=invoice.amount_due)
+    //       break;
+    //   }
+    //
     // Bemærk: vi skal læse raw body BEFORE Hono parser den. Det kræver
     // formentlig at vi laver en sub-router der ikke bruger app.use-middleware
     // for at undgå body-konsumering før denne route.
