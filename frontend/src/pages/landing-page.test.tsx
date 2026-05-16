@@ -36,7 +36,7 @@ describe("LandingPage", () => {
 
     await user.type(screen.getByLabelText("Din email"), "gdpr@example.com");
     await user.click(screen.getByLabelText("Jeg har læst og accepterer handelsbetingelserne og persondatapolitikken."));
-    await user.click(screen.getByLabelText("Ja tak - send mig eksklusive invites, nyheder og updates fra Glød."));
+    await user.click(screen.getByLabelText("Ja tak — send mig eksklusive invitationer, nyheder og opdateringer fra Glød."));
     await user.click(screen.getByRole("button", { name: "Skriv mig op" }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
