@@ -10,12 +10,12 @@ const FAQ_ITEMS = [
   {
     question: "Hvad er Glød?",
     answer:
-      "Glød er en dansk platform for voksne, der ønsker at møde andre nysgerrige mennesker via begivenheder og aktiviteter — ikke via profil-swiping. Alle brugere verificeres med MitID."
+      "Glød er en dansk platform for voksne, der ønsker at møde andre nysgerrige mennesker via begivenheder og aktiviteter — ikke via profil-swiping. Vi verificerer alle medlemmer manuelt mens MitID-integrationen er under udarbejdelse."
   },
   {
-    question: "Hvordan sikrer Glød tryghed?",
+    question: "Hvordan verificerer Glød medlemmerne?",
     answer:
-      "Glød bruger MitID-verificering, klare samtykkeregler og et struktureret samtykkesystem. Platformen er udviklet i samarbejde med Dansk Sexologisk Akademi."
+      "Vi verificerer alle medlemmer manuelt mens MitID-integrationen er under udarbejdelse. Hertil kommer klare samtykkeregler, en code of conduct og aftener faciliteret af sexologer fra Dansk Sexologisk Akademi."
   },
   {
     question: "Er Glød et dating-site?",
@@ -31,16 +31,27 @@ const FAQ_ITEMS = [
 
 const PRINCIPLE_ITEMS = [
   {
-    title: "MitID-verificeret adgang",
-    body: "Vi bruger MitID til at sikre, at der står rigtige mennesker bag profilerne. Vi gemmer kun det nødvendige."
+    title: "Manuelt verificeret adgang",
+    body: "Vi verificerer alle medlemmer manuelt mens MitID-integrationen er under udarbejdelse. Vi gemmer kun det nødvendige."
   },
   {
     title: "Event-first",
-    body: "Glød er bygget omkring events. Mennesker mødes først i virkeligheden, og det digitale understøtter bagefter."
+    body: "Glød er bygget omkring events. Voksne mødes først i virkeligheden, og det digitale understøtter bagefter."
   },
   {
     title: "Klare rammer",
-    body: "Tydelige regler giver ro. Det gør det lettere at være nysgerrig, social og til stede."
+    body: "Tydelige normer giver ro. Det gør det lettere at være nysgerrig, sanselig og til stede."
+  }
+];
+
+const ROLE_ITEMS = [
+  {
+    title: "Den der inviterer",
+    body: "Den der finder Glød, læser sig ind og rækker ud. Vi bygger flowet så det er værdigt at være den første."
+  },
+  {
+    title: "Den der bestemmer tempoet",
+    body: "Den der får invitationen og afgør hvornår — eller om — der sker noget. Vi behandler rollen som ligeværdig, ikke som en bremse."
   }
 ];
 
@@ -62,10 +73,10 @@ export function VisionPage() {
           Et voksent fællesskab, bygget omkring oplevelser
         </h1>
         <p className="body-text mt-4 max-w-3xl text-lg leading-relaxed">
-          Glød er for mennesker, der vil mødes i virkeligheden først.
+          Glød er for voksne, der vil mødes i virkeligheden først.
         </p>
         <p className="body-text mt-3 max-w-3xl text-lg leading-relaxed">
-          Vi bygger en platform, hvor nysgerrighed, respekt og samtykke går hånd i hånd.
+          Vi bygger en platform, hvor nysgerrighed, samtykke og lyst hænger sammen.
         </p>
         <motion.div
           className="mt-6 flex flex-wrap gap-3 text-sm"
@@ -73,7 +84,7 @@ export function VisionPage() {
           initial="hidden"
           animate="visible"
         >
-          {["Vi mødes i virkeligheden først", "Fællesskab før algoritmer", "Diskretion, samtykke og respekt"].map(
+          {["Vi mødes i virkeligheden først", "Fællesskab før algoritmer", "Diskret, samtykkebaseret og voksent"].map(
             (label) => (
               <motion.span
                 key={label}
@@ -107,11 +118,38 @@ export function VisionPage() {
                 <CardTitle className="mb-3">Vi starter med Dansk Sexologisk Akademi</CardTitle>
                 <p className="body-text">
                   Glød starter i samarbejde med Dansk Sexologisk Akademi i Sønderjylland. Det gør vi, fordi vi deler
-                  samme mål: trygge rammer, tydelige normer og bedre møder mellem mennesker.
+                  samme mål: klare normer og bedre møder mellem voksne.
                 </p>
                 <p className="body-text mt-3">
                   Samarbejdet er første skridt. Over tid åbner vi for flere relevante partnere.
                 </p>
+              </motion.div>
+
+              {/* To roller — beslutning 2 */}
+              <motion.div variants={revealVariants(motionMode, "item")}>
+                <h2 className="noxus-title display-text mb-3 text-2xl">To roller, ligeværdige</h2>
+                <p className="body-text">
+                  De fleste platforme behandler nysgerrigheden som én rolle. I virkeligheden er der ofte to: den der
+                  rækker ud, og den der bestemmer hvor og hvornår noget sker. Glød er bygget til begge.
+                </p>
+                <motion.div
+                  className="mt-5 grid gap-4 md:grid-cols-2"
+                  variants={staggerContainerVariants(motionMode, "item")}
+                  initial="hidden"
+                  animate="visible"
+                >
+                  {ROLE_ITEMS.map((role) => (
+                    <motion.div
+                      key={role.title}
+                      className="glass-pill hover-glow rounded-2xl p-5"
+                      variants={{ ...revealVariants(motionMode, "item"), ...pillHover }}
+                      whileHover="hover"
+                    >
+                      <p className="display-text text-base font-semibold">{role.title}</p>
+                      <p className="body-text mt-1.5 text-sm leading-relaxed">{role.body}</p>
+                    </motion.div>
+                  ))}
+                </motion.div>
               </motion.div>
 
               {/* Two column audience grid */}
@@ -127,10 +165,10 @@ export function VisionPage() {
                   <h2 className="noxus-title display-text mb-3 text-xl">For dig, der deltager</h2>
                   <ul className="body-text space-y-2 text-sm leading-relaxed">
                     {[
-                      "Mød mennesker gennem events og fælles oplevelser.",
+                      "Mød andre voksne gennem events og fælles oplevelser.",
                       "Udforsk relationer i rammer med tydelige forventninger.",
-                      "Vær en del af et miljø, hvor respekt er standard.",
-                      "Find venskaber, relationer eller dating med mere dybde."
+                      "Vær en del af et miljø, hvor samtykke er standard.",
+                      "Find venskaber, relationer eller dating der starter med en samtale i stedet for en swipe."
                     ].map((item) => (
                       <li key={item} className="flex items-start gap-2">
                         <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[color:var(--color-accent)]" />
@@ -149,9 +187,9 @@ export function VisionPage() {
                   <ul className="body-text space-y-2 text-sm leading-relaxed">
                     {[
                       "Nå de rigtige deltagere med tydelig målretning.",
-                      "Skab trygge overgange fra interesse til deltagelse.",
+                      "Før deltagerne fra interesse til deltagelse med klare rammer.",
                       "Arbejd med klare normer for samtykke og adfærd.",
-                      "Bliv en del af et stærkere partnernetværk."
+                      "Bliv en del af et netværk af partnere der deler vores standard."
                     ].map((item) => (
                       <li key={item} className="flex items-start gap-2">
                         <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[color:var(--color-accent)]" />
@@ -215,9 +253,9 @@ export function VisionPage() {
                   variants={staggerContainerVariants(motionMode, "item")}
                 >
                   {[
-                    { label: "Verificering", value: "MitID", sub: "Danmarks officielle digitale identitet, brugt af over 5 mio. danskere" },
+                    { label: "Verificering", value: "Manuelt i dag", sub: "Vi verificerer alle medlemmer manuelt mens MitID-integrationen er under udarbejdelse" },
                     { label: "Model", value: "Event-first", sub: "Alle møder starter med en fælles oplevelse — ikke profil-browsing" },
-                    { label: "Sikkerhed", value: "100% verificeret", sub: "Ingen anonyme profiler — bekræftet identitet er et krav for adgang" }
+                    { label: "Adgang", value: "Voksne, +18", sub: "Verificeret identitet er et krav. Ingen anonyme profiler." }
                   ].map((fact) => (
                     <motion.div
                       key={fact.label}

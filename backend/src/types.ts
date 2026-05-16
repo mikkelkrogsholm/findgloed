@@ -66,7 +66,7 @@ export type PartnerSource = "vision_modal";
 export type PartnerInterestOption =
   | "Oprette events"
   | "Nå nye deltagere"
-  | "Styrke trygge rammer"
+  | "Styrke rammer for samtykke og respekt"
   | "Samarbejde om platformen";
 
 export type PartnerRole =

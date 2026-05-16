@@ -203,8 +203,8 @@ export function OnboardingPage() {
             {step === "role" && (
               <>
                 <p className="text-sm text-[color:var(--color-text-secondary)]">
-                  Glød er bygget til at adressere både den der inviterer respektfuldt og den der
-                  bestemmer tempoet. Du kan altid ændre det senere.
+                  Glød anerkender både den der inviterer og den der bestemmer tempoet — som
+                  ligeværdige roller. Du kan altid ændre det senere.
                 </p>
                 <div className="space-y-3">
                   {ROLE_OPTIONS.map((option) => (

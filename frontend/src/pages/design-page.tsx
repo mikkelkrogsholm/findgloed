@@ -99,7 +99,7 @@ function ThemeComparisonCard({ preset }: { preset: ThemePreset }) {
 
         <div className="glass-shell space-y-4 rounded-3xl p-4">
           <p className="noxus-title display-text text-2xl">Kurateret event-atmosfære</p>
-          <p className="body-text text-sm">Samme komponenter, nyt token-lag. Fokus på tryghed, læsbarhed og ro.</p>
+          <p className="body-text text-sm">Samme komponenter, nyt token-lag. Fokus på sanselighed, læsbarhed og ro.</p>
           <div className="grid gap-2 sm:grid-cols-2">
             {coreTokens.map((token) => (
               <div key={`${preset}-${token.variable}`} className="glass-pill rounded-xl p-2">
@@ -109,8 +109,8 @@ function ThemeComparisonCard({ preset }: { preset: ThemePreset }) {
             ))}
           </div>
           <div className="flex flex-wrap gap-2">
-            <span className="glass-pill rounded-full px-3 py-1 text-xs">MitID-verificeret</span>
-            <span className="glass-pill rounded-full px-3 py-1 text-xs">Tryg adgang</span>
+            <span className="glass-pill rounded-full px-3 py-1 text-xs">Manuelt verificeret</span>
+            <span className="glass-pill rounded-full px-3 py-1 text-xs">Voksen adgang</span>
           </div>
           <div className="space-y-2">
             <Label htmlFor={`compare-email-${preset}`}>Email</Label>

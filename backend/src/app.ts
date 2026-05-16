@@ -77,7 +77,7 @@ const PARTNER_ROLES: PartnerRole[] = [
 const PARTNER_INTERESTS: PartnerInterestOption[] = [
   "Oprette events",
   "Nå nye deltagere",
-  "Styrke trygge rammer",
+  "Styrke rammer for samtykke og respekt",
   "Samarbejde om platformen"
 ];
 

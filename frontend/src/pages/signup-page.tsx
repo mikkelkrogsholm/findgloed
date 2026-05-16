@@ -72,7 +72,7 @@ export function SignupPage() {
             <p className="noxus-kicker kicker-text mb-2 text-[0.65rem]">Opret medlemskab</p>
             <CardTitle>Bliv medlem af Glød</CardTitle>
             <p className="body-text-muted mt-1 text-sm">
-              Vi verificerer alle medlemmer manuelt — det er det der gør Glød trygt at være på.
+              Vi verificerer alle medlemmer manuelt. Det filtrerer voksent fra resten.
             </p>
           </CardHeader>
           <CardContent className="space-y-5 px-0 pb-0">
