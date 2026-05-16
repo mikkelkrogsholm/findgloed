@@ -682,11 +682,44 @@ export function registerMembershipRoutes(
     }
 
     if (photo.visibility === "match" && photo.owner_user_id !== session.user.id) {
-      // Match-niveau aktiveres af fase 3 (interesse-signal). Indtil da blokeres uden grant.
-      return c.json(
-        { ok: false, code: "MATCH_REQUIRED", message: "Kræver gensidig interesse." },
-        403
-      );
+      // Issue A2 + B48: Match-niveau billeder må ses ved gensidig interesse.
+      // Vi tjekker mutual interest via membership-repo's isMatched (som
+      // delegerer til messaging-laget). Hvis ejeren er et par (owner_couple_id
+      // sat i stedet for owner_user_id), accepterer vi ikke match — det
+      // kræver private grant, da par ikke har én entydig "match"-modpart.
+      const matched = photo.owner_user_id
+        ? await membershipRepository.isMatched(session.user.id, photo.owner_user_id)
+        : false;
+      if (!matched) {
+        return c.json(
+          { ok: false, code: "MATCH_REQUIRED", message: "Kræver gensidig interesse." },
+          403
+        );
+      }
+    }
+
+    // Issue B48: Face-photos hvor ejeren har face_visibility='after_interest'
+    // skal også gates på enkelt-foto-endpoint — ellers kan en ikke-matched
+    // viewer bare gemme URL'en fra en match-tilstand og bypasse fremtidigt.
+    if (
+      photo.kind === "face" &&
+      photo.visibility === "verified" &&
+      photo.owner_user_id &&
+      photo.owner_user_id !== session.user.id
+    ) {
+      const owner = await membershipRepository.getProfile(photo.owner_user_id);
+      if (owner && owner.face_visibility === "after_interest") {
+        const matched = await membershipRepository.isMatched(
+          session.user.id,
+          photo.owner_user_id
+        );
+        if (!matched) {
+          return c.json(
+            { ok: false, code: "FACE_HIDDEN", message: "Ansigtsbillede vises efter gensidig interesse." },
+            403
+          );
+        }
+      }
     }
 
     const fs = await uploadStore.read(photo.storage_path);

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { ArrowLeft, Flag, Heart, MessageCircle, ShieldOff } from "lucide-react";
+import { ArrowLeft, Eye, Flag, Heart, Lock, MessageCircle, ShieldOff } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -18,14 +18,20 @@ export function MemberDetailPage() {
   const [actionMessage, setActionMessage] = useState("");
   const [interestSent, setInterestSent] = useState(false);
   const [actionPending, setActionPending] = useState(false);
+  // B2: Indikerer om JEG har givet denne person adgang til mit private album.
+  const [iGrantedThem, setIGrantedThem] = useState(false);
+  // B48 (beslutning 4): Private fotos må kun indlæses efter aktivt klik fra
+  // modtager — ellers inflateres view_count automatisk hver gang siden åbnes.
+  const [albumRevealed, setAlbumRevealed] = useState(false);
   const motionMode = getMotionMode();
 
   const memberId = window.location.pathname.split("/").pop() ?? "";
 
   async function reload() {
-    const [result, interests] = await Promise.all([
+    const [result, interests, grants] = await Promise.all([
       api.getMember(memberId),
-      api.listInterests()
+      api.listInterests(),
+      api.listAlbumGrants()
     ]);
     if (!result.ok) {
       setError(
@@ -40,6 +46,16 @@ export function MemberDetailPage() {
     if (interests.ok) {
       setInterestSent(interests.outgoing.some((s) => s.to_user_id === memberId));
     }
+    if (grants.ok) {
+      setIGrantedThem(
+        grants.grants.some(
+          (g) => g.recipient_user_id === memberId && g.revoked_at === null
+        )
+      );
+    }
+    // Hvis vi navigerer til ny profil, reset album-revealed-state så
+    // private fotos ikke leakes på tværs af profiler.
+    setAlbumRevealed(false);
     setLoading(false);
   }
 
@@ -97,6 +113,35 @@ export function MemberDetailPage() {
     );
   }
 
+  // B2: Giv denne match adgang til mit private album. Backend validerer at
+  // jeg har private fotos overhovedet — frontend visualiserer hvis jeg
+  // ikke har nogen ved at vise CTA'en med beskeden om at uploade først.
+  async function handleGrantAlbum() {
+    setActionPending(true);
+    setActionMessage("");
+    const result = await api.grantPrivateAlbum(memberId);
+    setActionPending(false);
+    if (!result.ok) {
+      setActionMessage("Kunne ikke give adgang.");
+      return;
+    }
+    setIGrantedThem(true);
+    setActionMessage("Adgang givet. De kan nu se dit private album.");
+  }
+
+  async function handleRevokeAlbum() {
+    if (!window.confirm("Træk adgang til dit private album tilbage?")) return;
+    setActionPending(true);
+    const result = await api.revokePrivateAlbum(memberId);
+    setActionPending(false);
+    if (!result.ok) {
+      setActionMessage("Kunne ikke trække adgang tilbage.");
+      return;
+    }
+    setIGrantedThem(false);
+    setActionMessage("Adgang trukket tilbage.");
+  }
+
   if (loading) {
     return (
       <section className="mx-auto w-full max-w-md px-6 py-20 text-center">
@@ -129,6 +174,14 @@ export function MemberDetailPage() {
     }
     return true;
   });
+  // B48: Adskil offentlige og private fotos. Private fotos må kun rendres
+  // efter aktivt klik fra modtageren — så view_count ikke inflateres af
+  // sidens auto-load. Når relation==='self' ser ejeren selv sine private
+  // billeder fra start (intet overlay).
+  const publicPhotos = visiblePhotos.filter((p) => p.visibility !== "private");
+  const privatePhotos = visiblePhotos.filter((p) => p.visibility === "private");
+  const showPrivateOverlay =
+    data.relation === "private_grant" && privatePhotos.length > 0 && !albumRevealed;
 
   return (
     <section className="mx-auto w-full max-w-3xl px-6 py-10 md:py-16">
@@ -144,12 +197,12 @@ export function MemberDetailPage() {
 
         <Card className="overflow-hidden p-0">
           <div className="grid gap-2 sm:grid-cols-2">
-            {visiblePhotos.length === 0 && (
+            {publicPhotos.length === 0 && privatePhotos.length === 0 && (
               <div className="col-span-full flex h-48 items-center justify-center bg-[color:var(--surface-glass)] text-sm text-[color:var(--color-text-tertiary)]">
                 Ingen synlige billeder
               </div>
             )}
-            {visiblePhotos.map((photo) => (
+            {publicPhotos.map((photo) => (
               <img
                 key={photo.id}
                 src={api.asset(photo.url)}
@@ -158,6 +211,41 @@ export function MemberDetailPage() {
                 className="h-72 w-full object-cover"
               />
             ))}
+            {/* B48: Private album fra anden person — skjult bag overlay indtil klik */}
+            {showPrivateOverlay && (
+              <button
+                type="button"
+                onClick={() => setAlbumRevealed(true)}
+                className="col-span-full flex h-72 cursor-pointer flex-col items-center justify-center gap-3 bg-[color:var(--surface-glass-strong)] p-6 text-center transition hover:bg-[color:var(--surface-glass)]"
+                data-testid="reveal-private-album"
+              >
+                <Lock className="h-8 w-8 text-[color:var(--color-link)]" />
+                <p className="font-display text-base">
+                  Du har adgang til {profile.display_name ?? "denne persons"} private album
+                </p>
+                <p className="text-sm text-[color:var(--color-text-secondary)]">
+                  Klik for at se {privatePhotos.length}{" "}
+                  {privatePhotos.length === 1 ? "billede" : "billeder"}.
+                </p>
+                <p className="text-xs text-[color:var(--color-text-tertiary)]">
+                  <Eye className="-mt-0.5 mr-1 inline h-3 w-3" />
+                  Ejeren kan se at du har set det.
+                </p>
+              </button>
+            )}
+            {/* Privatealbum-fotos vises kun når enten ejer eller modtager
+                har klikket reveal. Self ser sine egne fotos uden overlay. */}
+            {(data.relation === "self" || albumRevealed) &&
+              privatePhotos.map((photo) => (
+                <img
+                  key={photo.id}
+                  src={api.asset(photo.url)}
+                  alt=""
+                  loading="lazy"
+                  className="h-72 w-full object-cover"
+                  data-testid="private-album-photo"
+                />
+              ))}
           </div>
           <CardHeader className="px-6 pt-6">
             <div className="flex flex-wrap items-baseline justify-between gap-3">
@@ -242,6 +330,50 @@ export function MemberDetailPage() {
                 <p className="text-xs text-[color:var(--color-text-tertiary)]">
                   Beskeder åbner først ved gensidig interesse — eller når I deltager i samme event.
                 </p>
+              </div>
+            )}
+
+            {/* B2: Når relation==='match' kan vi (matchet) tilbyde at åbne
+                vores private album for denne person — eller revoke hvis vi
+                allerede har givet adgang. Vises også når relation==='private_grant'
+                (paret er matchet og har allerede grant) så vi kan revoke. */}
+            {(data.relation === "match" || data.relation === "private_grant") && (
+              <div
+                className="space-y-3 rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--surface-glass)] p-4"
+                data-testid="member-private-album-section"
+              >
+                <div className="flex items-start gap-3">
+                  <Lock className="mt-1 h-5 w-5 text-[color:var(--color-link)]" />
+                  <div className="flex-1">
+                    <p className="font-display text-base">Privat album</p>
+                    <p className="mt-1 text-sm text-[color:var(--color-text-secondary)]">
+                      {iGrantedThem
+                        ? `${profile.display_name ?? "De"} har adgang til dit private album. Du kan altid trække det tilbage.`
+                        : `Du kan give ${profile.display_name ?? "denne person"} adgang til dit private album. De kan kun se det så længe du tillader det.`}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {iGrantedThem ? (
+                    <Button
+                      variant="outline"
+                      onClick={handleRevokeAlbum}
+                      disabled={actionPending}
+                      data-testid="revoke-private-album-button"
+                    >
+                      Træk adgang tilbage
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={handleGrantAlbum}
+                      disabled={actionPending}
+                      data-testid="grant-private-album-button"
+                    >
+                      <Lock className="mr-1 h-4 w-4" />
+                      Giv adgang til mit private album
+                    </Button>
+                  )}
+                </div>
               </div>
             )}
           </CardContent>

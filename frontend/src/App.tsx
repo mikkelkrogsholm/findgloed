@@ -21,6 +21,7 @@ import { ProfilePage } from "@/pages/profile-page";
 import { CoupleProfilePage } from "@/pages/couple-profile-page";
 import { MembersPage } from "@/pages/members-page";
 import { MemberDetailPage } from "@/pages/member-detail-page";
+import { IncomingInterestsPage } from "@/pages/incoming-interests-page";
 import { EventsPage } from "@/pages/events-page";
 import { EventDetailPage } from "@/pages/event-detail-page";
 import { MyEventsPage } from "@/pages/my-events-page";
@@ -78,6 +79,9 @@ function resolveRoute(pathname: string): AppRouteName {
   }
   if (pathname.startsWith(`${appConfig.routes.members}/`)) {
     return "member-detail";
+  }
+  if (pathname === appConfig.routes.incomingInterests) {
+    return "incoming-interests";
   }
   if (pathname === appConfig.routes.events) {
     return "events";
@@ -170,6 +174,7 @@ export default function App() {
       "couple-profile": "Glød - Par-profil",
       members: "Glød - Medlemmer",
       "member-detail": "Glød - Medlemsprofil",
+      "incoming-interests": "Glød - Indkomne interesser",
       events: "Glød - Events",
       "event-detail": "Glød - Event",
       "my-events": "Glød - Mine tilmeldinger",
@@ -210,6 +215,7 @@ export default function App() {
           {route === "couple-profile" && <CoupleProfilePage />}
           {route === "members" && <MembersPage />}
           {route === "member-detail" && <MemberDetailPage />}
+          {route === "incoming-interests" && <IncomingInterestsPage />}
           {route === "events" && <EventsPage />}
           {route === "event-detail" && <EventDetailPage />}
           {route === "my-events" && <MyEventsPage />}

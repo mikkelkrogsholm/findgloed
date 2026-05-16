@@ -1,6 +1,6 @@
 import { ChangeEvent, useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { AlertTriangle, Heart, Trash2, Upload } from "lucide-react";
+import { AlertTriangle, Eye, Heart, Lock, Trash2, Upload } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -30,9 +30,11 @@ import {
   type CoupleInvitationSummary,
   type FaceVisibility,
   type InitiatorRole,
+  type InterestSignal,
   type MeResponse,
   type PhotoKind,
-  type PhotoVisibility
+  type PhotoVisibility,
+  type PrivateAlbumGrantSummary
 } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
 import { getMotionMode, revealVariants } from "@/lib/motion";
@@ -62,6 +64,11 @@ export function ProfilePage() {
   const [incomingInvitations, setIncomingInvitations] = useState<
     CoupleInvitationSummary[]
   >([]);
+  // B1: indkomne interesse-signaler vises i banner + giver link til /interests/incoming.
+  const [incomingInterests, setIncomingInterests] = useState<InterestSignal[]>([]);
+  // B2: modtagere af mit private album — vises som liste med revoke-knap.
+  const [albumGrants, setAlbumGrants] = useState<PrivateAlbumGrantSummary[]>([]);
+  const [albumGrantsLoading, setAlbumGrantsLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -95,6 +102,24 @@ export function ProfilePage() {
       const invitations = await api.listCoupleInvitations();
       if (invitations.ok) {
         setIncomingInvitations(invitations.incoming);
+      }
+      // B1: hent indkomne interesse-signaler så vi kan vise banner.
+      // Kun verificerede brugere kan se /api/me/interests (403 ellers) —
+      // det er OK her fordi profil-siden bruges af alle, og banner blot
+      // ikke vises hvis listen er tom eller endpoint fejler.
+      if (result.profile.verification_status === "verified") {
+        const interests = await api.listInterests();
+        if (interests.ok) {
+          setIncomingInterests(interests.incoming);
+        }
+        // B2: indlæs grants — bruges i "Mit private album"-sektion.
+        setAlbumGrantsLoading(true);
+        const grants = await api.listAlbumGrants();
+        if (grants.ok) {
+          // Filtrer revoked ud — vises kun aktive grants.
+          setAlbumGrants(grants.grants.filter((g) => g.revoked_at === null));
+        }
+        setAlbumGrantsLoading(false);
       }
     } else {
       navigate(appConfig.routes.login);
@@ -164,6 +189,20 @@ export function ProfilePage() {
     await authClient.signOut();
     clearSession();
     navigate(appConfig.routes.landing);
+  }
+
+  // B2: Revoke en grant så modtageren mister adgang til mit private album.
+  async function handleRevokeGrant(recipientUserId: string) {
+    if (!window.confirm("Træk adgang til dit private album tilbage?")) {
+      return;
+    }
+    const result = await api.revokePrivateAlbum(recipientUserId);
+    if (!result.ok) {
+      setError("Kunne ikke trække adgang tilbage.");
+      return;
+    }
+    setAlbumGrants((prev) => prev.filter((g) => g.recipient_user_id !== recipientUserId));
+    setSuccess("Adgang trukket tilbage.");
   }
 
   function openDeleteDialog(mode: "soft" | "hard") {
@@ -246,6 +285,38 @@ export function ProfilePage() {
           <Alert className="mb-4">
             <AlertDescription>{success}</AlertDescription>
           </Alert>
+        )}
+
+        {/* B1: Banner med indkomne interesse-signaler. Vises kun til
+            verificerede brugere (de eneste der kan signalere/modtage). */}
+        {incomingInterests.length > 0 && (
+          <Card
+            className="mb-6 border-[color:var(--color-link)] p-6 md:p-8"
+            data-testid="profile-incoming-interests-banner"
+          >
+            <CardContent className="flex flex-wrap items-center justify-between gap-3 px-0 pb-0">
+              <div className="flex items-start gap-3">
+                <Heart className="mt-1 h-5 w-5 text-[color:var(--color-link)]" />
+                <div>
+                  <p className="font-display text-base">
+                    {incomingInterests.length === 1
+                      ? "1 person har vist interesse for dig"
+                      : `${incomingInterests.length} personer har vist interesse for dig`}
+                  </p>
+                  <p className="mt-1 text-sm text-[color:var(--color-text-secondary)]">
+                    Når du viser gensidig interesse, åbnes en samtale.
+                  </p>
+                </div>
+              </div>
+              <Button
+                onClick={() => navigate(appConfig.routes.incomingInterests)}
+                className="glow-cta"
+                data-testid="profile-goto-incoming-interests"
+              >
+                Se hvem
+              </Button>
+            </CardContent>
+          </Card>
         )}
 
         {/* C6: Par-invitation-banner — vises tydeligt øverst hvis nogen har inviteret dig */}
@@ -491,6 +562,87 @@ export function ProfilePage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* B2: Mit private album — viser modtagere af mit private album med
+            view-count, sidste visning, og revoke-knap. Vises kun hvis brugeren
+            har mindst én aktiv grant. */}
+        {data.profile.verification_status === "verified" && (
+          <Card
+            className="mb-6 p-6 md:p-8"
+            data-testid="profile-private-album-section"
+          >
+            <CardHeader className="px-0 pt-0">
+              <CardTitle className="flex items-center gap-2">
+                <Lock className="h-5 w-5" />
+                Mit private album
+              </CardTitle>
+              <p className="body-text-muted text-sm">
+                Personer du har givet adgang til dit private album. Du kan altid
+                trække adgangen tilbage.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-3 px-0 pb-0">
+              {albumGrantsLoading ? (
+                <p className="text-sm text-[color:var(--color-text-tertiary)]">
+                  Indlæser…
+                </p>
+              ) : albumGrants.length === 0 ? (
+                <p
+                  className="text-sm text-[color:var(--color-text-tertiary)]"
+                  data-testid="profile-private-album-empty"
+                >
+                  Ingen aktive grants. Du kan give adgang til en match fra deres
+                  profilside.
+                </p>
+              ) : (
+                <ul className="space-y-3" data-testid="profile-private-album-list">
+                  {albumGrants.map((grant) => (
+                    <li
+                      key={grant.id}
+                      className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--surface-glass)] p-4"
+                      data-testid={`profile-private-album-grant-${grant.recipient_user_id}`}
+                    >
+                      <div className="flex-1">
+                        <p className="font-display text-sm">
+                          Modtager: <span className="font-mono text-xs">{grant.recipient_user_id}</span>
+                        </p>
+                        <p className="mt-1 text-xs text-[color:var(--color-text-secondary)]">
+                          Givet{" "}
+                          {new Date(grant.granted_at).toLocaleDateString("da-DK", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric"
+                          })}
+                          {" · "}
+                          <Eye className="-mt-1 mr-0.5 inline h-3 w-3" />
+                          {grant.view_count}{" "}
+                          {grant.view_count === 1 ? "visning" : "visninger"}
+                          {grant.last_viewed_at && (
+                            <>
+                              {" · sidst set "}
+                              {new Date(grant.last_viewed_at).toLocaleDateString(
+                                "da-DK",
+                                { day: "numeric", month: "short" }
+                              )}
+                            </>
+                          )}
+                        </p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleRevokeGrant(grant.recipient_user_id)}
+                        data-testid={`profile-revoke-grant-${grant.recipient_user_id}`}
+                      >
+                        Træk adgang tilbage
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="mb-6 p-6 md:p-8">
           <CardHeader className="px-0 pt-0">

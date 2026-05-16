@@ -2,9 +2,21 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ProfilePage } from "./profile-page";
 
-const { getMe, listCoupleInvitations, deleteMe, navigate, signOut } = vi.hoisted(() => ({
+const {
+  getMe,
+  listCoupleInvitations,
+  listInterests,
+  listAlbumGrants,
+  revokePrivateAlbum,
+  deleteMe,
+  navigate,
+  signOut
+} = vi.hoisted(() => ({
   getMe: vi.fn(),
   listCoupleInvitations: vi.fn(),
+  listInterests: vi.fn(),
+  listAlbumGrants: vi.fn(),
+  revokePrivateAlbum: vi.fn(),
   deleteMe: vi.fn(),
   navigate: vi.fn(),
   signOut: vi.fn()
@@ -15,6 +27,9 @@ vi.mock("@/lib/api", () => ({
     asset: (path: string) => path,
     getMe,
     listCoupleInvitations,
+    listInterests,
+    listAlbumGrants,
+    revokePrivateAlbum,
     deleteMe,
     updateMe: vi.fn(),
     uploadPhoto: vi.fn(),
@@ -63,12 +78,22 @@ describe("ProfilePage couple section", () => {
       incoming: [],
       outgoing: []
     });
+    listInterests.mockResolvedValue({
+      ok: true,
+      incoming: [],
+      outgoing: [],
+      matches: []
+    });
+    listAlbumGrants.mockResolvedValue({ ok: true, grants: [] });
   });
 
   afterEach(() => {
     cleanup();
     getMe.mockReset();
     listCoupleInvitations.mockReset();
+    listInterests.mockReset();
+    listAlbumGrants.mockReset();
+    revokePrivateAlbum.mockReset();
     deleteMe.mockReset();
     navigate.mockReset();
     signOut.mockReset();
@@ -168,6 +193,13 @@ describe("ProfilePage delete account", () => {
       incoming: [],
       outgoing: []
     });
+    listInterests.mockResolvedValue({
+      ok: true,
+      incoming: [],
+      outgoing: [],
+      matches: []
+    });
+    listAlbumGrants.mockResolvedValue({ ok: true, grants: [] });
     getMe.mockResolvedValue({
       ok: true,
       profile: baseProfile,
