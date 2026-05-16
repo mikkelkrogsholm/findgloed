@@ -30,6 +30,10 @@ export type Config = {
   resendApiKey: string;
   resendFromEmail: string;
   supportEmail: string;
+  // Navngiven dataansvarlig — påkrævet under GDPR-konsensus (issue A19).
+  // Bruges i email-signaturer og kan vises på privacy-page.
+  dataControllerName: string;
+  dataControllerEmail: string;
   betterAuthSecret: string;
   adminEmails: string;
   superAdminEmail: string;
@@ -119,6 +123,8 @@ export function readConfig(): Config {
     resendApiKey: process.env.RESEND_API_KEY ?? "",
     resendFromEmail: process.env.RESEND_FROM_EMAIL ?? "",
     supportEmail: process.env.SUPPORT_EMAIL ?? "",
+    dataControllerName: process.env.DATA_CONTROLLER_NAME ?? "Mikkel Freltoft Krogsholm",
+    dataControllerEmail: process.env.DATA_CONTROLLER_EMAIL ?? "mikkel@findgloed.dk",
     betterAuthSecret,
     adminEmails: process.env.ADMIN_EMAILS ?? "",
     superAdminEmail: process.env.SUPERADMIN_EMAIL ?? "",

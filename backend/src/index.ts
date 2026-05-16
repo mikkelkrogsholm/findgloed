@@ -70,12 +70,14 @@ async function bootstrap(): Promise<void> {
     await authService.ensureSuperAdmin(config.superAdminEmail, config.superAdminPassword);
   }
 
-  const membershipRepository = new PostgresMembershipRepository(pool);
   const eventRepository = new PostgresEventRepository(pool);
   const messagingRepository = new PostgresMessagingRepository(pool);
   const subscriptionRepository = new PostgresSubscriptionRepository(pool);
   const uploadsRoot = process.env.UPLOADS_ROOT ?? join(process.cwd(), "uploads");
   const uploadStore = createLocalUploadStore(uploadsRoot);
+  // membership-repoet får upload-store så hardDelete kan slette fysiske
+  // filer ved konto-anonymisering (issue A10).
+  const membershipRepository = new PostgresMembershipRepository(pool, uploadStore);
 
   const app = createApp({
     leadRepository: repository,
@@ -83,7 +85,9 @@ async function bootstrap(): Promise<void> {
     emailService: new ResendEmailService(
       config.resendApiKey,
       config.resendFromEmail,
-      config.supportEmail
+      config.supportEmail,
+      config.dataControllerName,
+      config.dataControllerEmail
     ),
     rateLimiter,
     corsOrigins: config.corsOrigins,

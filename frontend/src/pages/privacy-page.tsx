@@ -38,6 +38,19 @@ export function PrivacyPage() {
               initial="hidden"
               animate="visible"
             >
+              <motion.div variants={revealVariants(motionMode, "item")} data-testid="privacy-data-controller">
+                <CardTitle>Dataansvarlig</CardTitle>
+                <p className="body-text mt-3 leading-relaxed">
+                  Dataansvarlig for Glød er <strong>Mikkel Freltoft Krogsholm</strong>.
+                  Henvendelser om dine rettigheder under GDPR (indsigt, berigtigelse, sletning,
+                  dataportabilitet, indsigelse) sendes til{" "}
+                  <a className="link-inline" href="mailto:mikkel@findgloed.dk">
+                    mikkel@findgloed.dk
+                  </a>
+                  . Du har desuden ret til at klage til Datatilsynet.
+                </p>
+              </motion.div>
+
               <motion.div variants={revealVariants(motionMode, "item")}>
                 <CardTitle>Hvad vi indsamler</CardTitle>
                 <ul className="body-text mt-3 list-inside list-disc space-y-1">
@@ -84,9 +97,16 @@ export function PrivacyPage() {
               <motion.div variants={revealVariants(motionMode, "item")}>
                 <h2 className="noxus-title display-text text-2xl">Dine rettigheder</h2>
                 <p className="body-text mt-3 leading-relaxed">
-                  Du kan kontakte os for indsigt, rettelse eller sletning på{" "}
-                  <a className="link-inline" href="mailto:support@findgloed.dk">
-                    support@findgloed.dk
+                  Du har ret til indsigt (art. 15), berigtigelse (art. 16), sletning (art. 17),
+                  begrænsning af behandling (art. 18), dataportabilitet (art. 20) og indsigelse
+                  (art. 21) under GDPR. Du kan også slette din konto direkte under
+                  &quot;Kontoadministration&quot; på din profil — vi anonymiserer dine data og fjerner
+                  dine billeder permanent.
+                </p>
+                <p className="body-text mt-3 leading-relaxed">
+                  Henvendelser sendes til{" "}
+                  <a className="link-inline" href="mailto:mikkel@findgloed.dk">
+                    mikkel@findgloed.dk
                   </a>
                   . Du kan altid afmelde markedsføring uden at miste vigtige driftsbeskeder om din tilmelding.
                 </p>
@@ -95,9 +115,11 @@ export function PrivacyPage() {
               <motion.div variants={revealVariants(motionMode, "item")}>
                 <h2 className="noxus-title display-text text-2xl">Kontakt</h2>
                 <p className="body-text mt-3">
+                  Dataansvarlig: <strong>Mikkel Freltoft Krogsholm</strong>
+                  <br />
                   E-mail:{" "}
-                  <a className="link-inline" href="mailto:support@findgloed.dk">
-                    support@findgloed.dk
+                  <a className="link-inline" href="mailto:mikkel@findgloed.dk">
+                    mikkel@findgloed.dk
                   </a>
                 </p>
               </motion.div>

@@ -319,6 +319,11 @@ export type VerificationInsert = {
 
 export type MembershipRepository = {
   getProfile: (userId: string) => Promise<MembershipProfile | null>;
+  // Returnerer en minimal profil-stub for brugere der er soft-deleted
+  // eller anonymiserede via hardDelete. Bruges i messaging/event-threads
+  // hvor afsender skal vises som "[Slettet bruger]" frem for null
+  // (issue A10 — bevar samtale-historik for andre brugere).
+  getProfileIncludingDeleted: (userId: string) => Promise<MembershipProfile | null>;
   updateProfile: (userId: string, update: MembershipUpdate) => Promise<MembershipProfile | null>;
   softDelete: (userId: string) => Promise<void>;
   hardDelete: (userId: string) => Promise<void>;

@@ -116,7 +116,9 @@ export function registerMessagingRoutes(
 
     const enriched = await Promise.all(
       conversations.map(async (conv) => {
-        const other = await membershipRepository.getProfile(conv.other_user_id);
+        // Brug getProfileIncludingDeleted så slettede brugere stadig
+        // vises som "[Slettet bruger]" i samtale-listen (issue A10).
+        const other = await membershipRepository.getProfileIncludingDeleted(conv.other_user_id);
         return {
           id: conv.id,
           origin: conv.origin,
@@ -199,7 +201,9 @@ export function registerMessagingRoutes(
       conversation.user_a_id === session.user.id
         ? conversation.user_b_id
         : conversation.user_a_id;
-    const other = await membershipRepository.getProfile(otherId);
+    // getProfileIncludingDeleted: bevarer samtale-historik for slettede
+    // brugere ved at vise dem som "[Slettet bruger]" frem for null.
+    const other = await membershipRepository.getProfileIncludingDeleted(otherId);
 
     return c.json({
       ok: true,
@@ -262,10 +266,13 @@ export function registerMessagingRoutes(
 
     const posts = await messagingRepository.listEventPosts(event.id);
 
-    // Berig med poster-display-name
+    // Berig med poster-display-name. Bruger getProfileIncludingDeleted
+    // så slettede brugere vises som "[Slettet bruger]" (issue A10).
     const enriched = await Promise.all(
       posts.map(async (post) => {
-        const author = await membershipRepository.getProfile(post.author_user_id);
+        const author = await membershipRepository.getProfileIncludingDeleted(
+          post.author_user_id
+        );
         return {
           id: post.id,
           author: {

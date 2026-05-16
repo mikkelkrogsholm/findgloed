@@ -322,6 +322,56 @@ export function createApp(deps: AppDeps): Hono<{ Variables: AppVariables }> {
     return authService.handler(c.req.raw);
   });
 
+  // Issue A17: Globalt ghost-protection-værn.
+  // Hvis en bruger er soft-deleted (deleted_at != NULL), må de IKKE
+  // kunne kalde authenticated endpoints — selv ikke hvis deres
+  // session-cookie stadig er gyldig. Vi tjekker profilen direkte i DB
+  // og afviser med 401.
+  //
+  // Vi springer eksplicit `/api/auth/*` over så log-ud stadig virker
+  // (vigtigt: en deleted bruger skal kunne logge ud så cookien ryddes).
+  // Public endpoints (/api/health, /api/waitlist osv) påvirkes ikke
+  // fordi middleware'en kun gør noget hvis der allerede er en gyldig
+  // session.
+  //
+  // Paused_at alene blokeres IKKE her — brugeren skal kunne ophæve sin
+  // egen pause via PATCH /api/me. Verifikations-status og pause håndteres
+  // i de enkelte ruter (fx /api/members kræver 'verified' og ikke-paused).
+  if (authService && deps.membershipRepository) {
+    const membershipRepository = deps.membershipRepository;
+    app.use("/api/*", async (c, next) => {
+      const path = new URL(c.req.url).pathname;
+      // Lad auth-handlers passere (login, logout, signup).
+      if (path.startsWith("/api/auth")) {
+        await next();
+        return;
+      }
+
+      const session = await authService.getSession(c.req.raw.headers);
+      if (!session) {
+        // Ingen session = ikke vores problem her — lad de individuelle
+        // ruters middleware afvise med 401 hvor relevant.
+        await next();
+        return;
+      }
+
+      const profile = await membershipRepository.getProfile(session.user.id);
+      // getProfile returnerer null hvis deleted_at IS NOT NULL.
+      if (!profile) {
+        return c.json(
+          {
+            ok: false,
+            code: "ACCOUNT_DELETED",
+            message: "Kontoen findes ikke længere."
+          },
+          401
+        );
+      }
+
+      await next();
+    });
+  }
+
   if (authService && deps.membershipRepository && deps.uploadStore) {
     registerMembershipRoutes(app, {
       authService,

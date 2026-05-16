@@ -1,11 +1,13 @@
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ProfilePage } from "./profile-page";
 
-const { getMe, listCoupleInvitations, navigate } = vi.hoisted(() => ({
+const { getMe, listCoupleInvitations, deleteMe, navigate, signOut } = vi.hoisted(() => ({
   getMe: vi.fn(),
   listCoupleInvitations: vi.fn(),
-  navigate: vi.fn()
+  deleteMe: vi.fn(),
+  navigate: vi.fn(),
+  signOut: vi.fn()
 }));
 
 vi.mock("@/lib/api", () => ({
@@ -13,6 +15,7 @@ vi.mock("@/lib/api", () => ({
     asset: (path: string) => path,
     getMe,
     listCoupleInvitations,
+    deleteMe,
     updateMe: vi.fn(),
     uploadPhoto: vi.fn(),
     deletePhoto: vi.fn()
@@ -21,7 +24,7 @@ vi.mock("@/lib/api", () => ({
 
 vi.mock("@/lib/auth-client", () => ({
   authClient: {
-    signOut: vi.fn()
+    signOut
   }
 }));
 
@@ -66,7 +69,9 @@ describe("ProfilePage couple section", () => {
     cleanup();
     getMe.mockReset();
     listCoupleInvitations.mockReset();
+    deleteMe.mockReset();
     navigate.mockReset();
+    signOut.mockReset();
   });
 
   it("renders couple section with create-button when user has no couple", async () => {
@@ -153,5 +158,64 @@ describe("ProfilePage couple section", () => {
     );
     expect(screen.getByText(/Anden Bruger/)).toBeInTheDocument();
     expect(screen.getByTestId("goto-couple-profile-from-banner")).toBeInTheDocument();
+  });
+});
+
+describe("ProfilePage delete account", () => {
+  beforeEach(() => {
+    listCoupleInvitations.mockResolvedValue({
+      ok: true,
+      incoming: [],
+      outgoing: []
+    });
+    getMe.mockResolvedValue({
+      ok: true,
+      profile: baseProfile,
+      couple: null,
+      photos: []
+    });
+  });
+
+  afterEach(() => {
+    cleanup();
+    getMe.mockReset();
+    listCoupleInvitations.mockReset();
+    deleteMe.mockReset();
+    navigate.mockReset();
+    signOut.mockReset();
+  });
+
+  it("opens the slet konto-dialog and calls api.deleteMe with hard=true when email matches", async () => {
+    deleteMe.mockResolvedValue({ ok: true });
+    signOut.mockResolvedValue(undefined);
+
+    render(<ProfilePage />);
+
+    await waitFor(() =>
+      expect(screen.getByTestId("profile-delete-account-section")).toBeInTheDocument()
+    );
+
+    // Hard-delete-flow
+    fireEvent.click(screen.getByTestId("open-hard-delete-dialog"));
+    await waitFor(() =>
+      expect(screen.getByTestId("delete-account-dialog")).toBeInTheDocument()
+    );
+    expect(screen.getByText(/Slet konto permanent/)).toBeInTheDocument();
+
+    // Tast email forkert først — der må ikke kaldes deleteMe.
+    fireEvent.change(screen.getByTestId("delete-confirm-email-input"), {
+      target: { value: "forkert@example.com" }
+    });
+    fireEvent.click(screen.getByTestId("confirm-delete-account"));
+    expect(deleteMe).not.toHaveBeenCalled();
+
+    // Tast email korrekt — nu kaldes deleteMe(true).
+    fireEvent.change(screen.getByTestId("delete-confirm-email-input"), {
+      target: { value: baseProfile.email }
+    });
+    fireEvent.click(screen.getByTestId("confirm-delete-account"));
+
+    await waitFor(() => expect(deleteMe).toHaveBeenCalledTimes(1));
+    expect(deleteMe).toHaveBeenCalledWith(true);
   });
 });
