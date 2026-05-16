@@ -6,6 +6,16 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from "@/components/ui/dialog";
+import { PageHeader } from "@/components/layout/page-header";
+import { FormSkeleton } from "@/components/layout/loading-state";
 import { appConfig } from "@/config/app-config";
 import { api, type ActiveSubscription, type MembershipPlan } from "@/lib/api";
 import { getMotionMode, revealVariants } from "@/lib/motion";
@@ -34,6 +44,7 @@ export function MembershipPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const motionMode = getMotionMode();
 
   async function reload() {
@@ -79,9 +90,9 @@ export function MembershipPage() {
     void reload();
   }
 
-  async function handleCancel() {
+  async function performCancel() {
     if (!subscription) return;
-    if (!window.confirm("Annuller abonnementet ved næste fornyelse?")) return;
+    setCancelDialogOpen(false);
     const result = await api.cancelSubscription(subscription.id);
     if (result.ok) {
       setSuccess("Annullering planlagt — du har adgang indtil periodens udløb.");
@@ -99,9 +110,14 @@ export function MembershipPage() {
   }
 
   if (loading) {
+    // A22: Form-skeleton matcher plan-card-layoutet.
     return (
-      <section className="mx-auto w-full max-w-md px-6 py-20 text-center">
-        <p className="body-text-muted">Indlæser…</p>
+      <section className="mx-auto w-full max-w-4xl px-6 py-10 md:py-16">
+        <PageHeader kicker="Medlemskab" title="Glød er kun for medlemmer" />
+        <div className="grid gap-5 md:grid-cols-2">
+          <FormSkeleton rows={3} data-testid="membership-loading" />
+          <FormSkeleton rows={3} />
+        </div>
       </section>
     );
   }
@@ -164,7 +180,12 @@ export function MembershipPage() {
                     Genoptag abonnement
                   </Button>
                 ) : (
-                  <Button variant="outline" size="sm" onClick={handleCancel}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCancelDialogOpen(true)}
+                    data-testid="open-cancel-subscription"
+                  >
                     Annullér ved periodens udløb
                   </Button>
                 )}
@@ -275,6 +296,30 @@ export function MembershipPage() {
             </Button>
           </CardContent>
         </Card>
+
+        {/* Annullér-abonnement Dialog (a11y-fix for native window.confirm). */}
+        <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+          <DialogContent data-testid="cancel-subscription-dialog">
+            <DialogHeader>
+              <DialogTitle>Annullér abonnementet?</DialogTitle>
+              <DialogDescription>
+                Abonnementet stopper ved periodens udløb. Du har stadig fuld
+                adgang indtil da, og kan altid genoptage før udløb.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setCancelDialogOpen(false)}>
+                Fortsæt abonnement
+              </Button>
+              <Button
+                onClick={performCancel}
+                data-testid="confirm-cancel-subscription"
+              >
+                Annullér ved periodens udløb
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </motion.div>
     </section>
   );

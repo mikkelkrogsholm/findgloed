@@ -6,6 +6,24 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { FormSkeleton } from "@/components/layout/loading-state";
 import { appConfig } from "@/config/app-config";
 import { api, type MemberDetailResponse } from "@/lib/api";
 import { getMotionMode, revealVariants } from "@/lib/motion";
@@ -23,6 +41,14 @@ export function MemberDetailPage() {
   // B48 (beslutning 4): Private fotos må kun indlæses efter aktivt klik fra
   // modtager — ellers inflateres view_count automatisk hver gang siden åbnes.
   const [albumRevealed, setAlbumRevealed] = useState(false);
+  // Dialog-state — native window.confirm/prompt erstattet for a11y.
+  const [blockDialogOpen, setBlockDialogOpen] = useState(false);
+  const [reportDialogOpen, setReportDialogOpen] = useState(false);
+  const [reportCategory, setReportCategory] = useState<
+    "harassment" | "spam" | "fake_profile" | "other"
+  >("other");
+  const [reportDetails, setReportDetails] = useState("");
+  const [revokeAlbumDialogOpen, setRevokeAlbumDialogOpen] = useState(false);
   const motionMode = getMotionMode();
 
   const memberId = window.location.pathname.split("/").pop() ?? "";
@@ -93,17 +119,24 @@ export function MemberDetailPage() {
     setActionMessage("Interesse trukket tilbage.");
   }
 
-  async function handleBlock() {
-    if (!window.confirm("Bloker denne person? De kan ikke længere kontakte dig.")) return;
+  async function performBlock() {
     const result = await api.blockUser(memberId);
     if (result.ok) {
       navigate(appConfig.routes.members);
     }
   }
 
-  async function handleReport() {
-    const reason = window.prompt("Hvad er grunden til rapporten?");
-    if (!reason) return;
+  // Native prompt erstattet med Dialog (kategorier + free-text details).
+  async function performReport() {
+    const categoryLabel: Record<typeof reportCategory, string> = {
+      harassment: "Chikane/trusler",
+      spam: "Spam",
+      fake_profile: "Falsk profil",
+      other: "Andet"
+    };
+    const reason = `${categoryLabel[reportCategory]}${
+      reportDetails.trim() ? `: ${reportDetails.trim()}` : ""
+    }`;
     const result = await api.reportUser({
       reported_user_id: memberId,
       reason
@@ -111,6 +144,9 @@ export function MemberDetailPage() {
     setActionMessage(
       result.ok ? "Tak. Rapporten er sendt til moderation." : "Kunne ikke sende rapport."
     );
+    setReportDialogOpen(false);
+    setReportCategory("other");
+    setReportDetails("");
   }
 
   // B2: Giv denne match adgang til mit private album. Backend validerer at
@@ -129,11 +165,11 @@ export function MemberDetailPage() {
     setActionMessage("Adgang givet. De kan nu se dit private album.");
   }
 
-  async function handleRevokeAlbum() {
-    if (!window.confirm("Træk adgang til dit private album tilbage?")) return;
+  async function performRevokeAlbum() {
     setActionPending(true);
     const result = await api.revokePrivateAlbum(memberId);
     setActionPending(false);
+    setRevokeAlbumDialogOpen(false);
     if (!result.ok) {
       setActionMessage("Kunne ikke trække adgang tilbage.");
       return;
@@ -143,9 +179,10 @@ export function MemberDetailPage() {
   }
 
   if (loading) {
+    // A22: Skeleton matcher member-detail-layoutet (image + bio + actions).
     return (
-      <section className="mx-auto w-full max-w-md px-6 py-20 text-center">
-        <p className="body-text-muted">Indlæser…</p>
+      <section className="mx-auto w-full max-w-3xl px-6 py-10 md:py-16">
+        <FormSkeleton rows={5} data-testid="member-detail-loading" />
       </section>
     );
   }
@@ -202,15 +239,22 @@ export function MemberDetailPage() {
                 Ingen synlige billeder
               </div>
             )}
-            {publicPhotos.map((photo) => (
-              <img
-                key={photo.id}
-                src={api.asset(photo.url)}
-                alt=""
-                loading="lazy"
-                className="h-72 w-full object-cover"
-              />
-            ))}
+            {publicPhotos.map((photo) => {
+              // B23: Meningsfuld alt-tekst — face viser navn, andet er stemningsbillede.
+              const alt =
+                photo.kind === "face"
+                  ? profile.display_name ?? "Medlem"
+                  : "Stemningsbillede";
+              return (
+                <img
+                  key={photo.id}
+                  src={api.asset(photo.url)}
+                  alt={alt}
+                  loading="lazy"
+                  className="h-72 w-full object-cover"
+                />
+              );
+            })}
             {/* B48: Private album fra anden person — skjult bag overlay indtil klik */}
             {showPrivateOverlay && (
               <button
@@ -240,7 +284,7 @@ export function MemberDetailPage() {
                 <img
                   key={photo.id}
                   src={api.asset(photo.url)}
-                  alt=""
+                  alt="Privat billede"
                   loading="lazy"
                   className="h-72 w-full object-cover"
                   data-testid="private-album-photo"
@@ -318,11 +362,19 @@ export function MemberDetailPage() {
                     <MessageCircle className="mr-1 h-4 w-4" />
                     Til beskeder
                   </Button>
-                  <Button variant="ghost" onClick={handleReport}>
+                  <Button
+                    variant="ghost"
+                    onClick={() => setReportDialogOpen(true)}
+                    data-testid="open-report-dialog"
+                  >
                     <Flag className="mr-1 h-4 w-4" />
                     Rapportér
                   </Button>
-                  <Button variant="ghost" onClick={handleBlock}>
+                  <Button
+                    variant="ghost"
+                    onClick={() => setBlockDialogOpen(true)}
+                    data-testid="open-block-dialog"
+                  >
                     <ShieldOff className="mr-1 h-4 w-4" />
                     Bloker
                   </Button>
@@ -357,7 +409,7 @@ export function MemberDetailPage() {
                   {iGrantedThem ? (
                     <Button
                       variant="outline"
-                      onClick={handleRevokeAlbum}
+                      onClick={() => setRevokeAlbumDialogOpen(true)}
                       disabled={actionPending}
                       data-testid="revoke-private-album-button"
                     >
@@ -378,6 +430,120 @@ export function MemberDetailPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Block-Dialog (a11y-fix for native window.confirm). */}
+        <Dialog open={blockDialogOpen} onOpenChange={setBlockDialogOpen}>
+          <DialogContent data-testid="block-dialog">
+            <DialogHeader>
+              <DialogTitle>Bloker denne person?</DialogTitle>
+              <DialogDescription>
+                {profile.display_name ?? "Personen"} kan ikke længere kontakte dig,
+                se din profil eller dukke op i din liste. Du kan ophæve det fra dine
+                indstillinger.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setBlockDialogOpen(false)}>
+                Annullér
+              </Button>
+              <Button
+                onClick={async () => {
+                  setBlockDialogOpen(false);
+                  await performBlock();
+                }}
+                data-testid="confirm-block"
+              >
+                Bloker
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Report-Dialog (erstatter native window.prompt). Kategorier kræves
+            for at moderationen kan triagere effektivt. */}
+        <Dialog open={reportDialogOpen} onOpenChange={setReportDialogOpen}>
+          <DialogContent data-testid="report-dialog">
+            <DialogHeader>
+              <DialogTitle>Rapportér til moderation</DialogTitle>
+              <DialogDescription>
+                Vi tager hver rapport alvorligt. Vælg en kategori og tilføj evt.
+                detaljer — vi kontakter dig hvis vi har brug for mere.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <Label htmlFor="report-category">Kategori</Label>
+                <Select
+                  value={reportCategory}
+                  onValueChange={(v) =>
+                    setReportCategory(v as typeof reportCategory)
+                  }
+                >
+                  <SelectTrigger id="report-category">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="harassment">Chikane/trusler</SelectItem>
+                    <SelectItem value="spam">Spam</SelectItem>
+                    <SelectItem value="fake_profile">Falsk profil</SelectItem>
+                    <SelectItem value="other">Andet</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="report-details">Detaljer (valgfrit)</Label>
+                <Textarea
+                  id="report-details"
+                  value={reportDetails}
+                  onChange={(e) => setReportDetails(e.target.value)}
+                  rows={4}
+                  maxLength={1000}
+                  placeholder="Beskriv hvad der er sket — fakta, ingen vurderinger."
+                  data-testid="report-details"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setReportDialogOpen(false)}>
+                Annullér
+              </Button>
+              <Button onClick={performReport} data-testid="confirm-report">
+                Send rapport
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Revoke-album Dialog. */}
+        <Dialog
+          open={revokeAlbumDialogOpen}
+          onOpenChange={setRevokeAlbumDialogOpen}
+        >
+          <DialogContent data-testid="revoke-album-dialog">
+            <DialogHeader>
+              <DialogTitle>Træk adgang til privat album tilbage?</DialogTitle>
+              <DialogDescription>
+                {profile.display_name ?? "Modtageren"} mister øjeblikkeligt
+                adgang. Du kan altid give adgang igen senere.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="ghost"
+                onClick={() => setRevokeAlbumDialogOpen(false)}
+              >
+                Annullér
+              </Button>
+              <Button
+                onClick={performRevokeAlbum}
+                disabled={actionPending}
+                data-testid="confirm-revoke-album"
+              >
+                Træk adgang tilbage
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </motion.div>
     </section>
   );

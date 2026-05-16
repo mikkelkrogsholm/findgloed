@@ -3,6 +3,14 @@ import { FormEvent, useEffect, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
 
@@ -21,6 +29,8 @@ export function EventThread({ slug }: { slug: string }) {
   const [draft, setDraft] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [allowed, setAllowed] = useState(true);
+  // Dialog erstatter window.confirm (a11y-fix).
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   async function reload() {
     const result = await api.listEventPosts(slug);
@@ -59,8 +69,10 @@ export function EventThread({ slug }: { slug: string }) {
     void reload();
   }
 
-  async function handleDelete(id: string) {
-    if (!window.confirm("Slet din kommentar?")) return;
+  async function performDelete() {
+    if (!pendingDeleteId) return;
+    const id = pendingDeleteId;
+    setPendingDeleteId(null);
     const result = await api.deleteEventPost(slug, id);
     if (result.ok) void reload();
   }
@@ -99,6 +111,7 @@ export function EventThread({ slug }: { slug: string }) {
             rows={3}
             placeholder="Stil et spørgsmål eller del en tanke…"
             maxLength={1500}
+            aria-label="Skriv kommentar"
           />
           <Button type="submit" disabled={submitting || !draft.trim()} size="sm">
             {submitting ? "Sender…" : "Send"}
@@ -136,8 +149,9 @@ export function EventThread({ slug }: { slug: string }) {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => handleDelete(post.id)}
+                    onClick={() => setPendingDeleteId(post.id)}
                     className="mt-2"
+                    data-testid={`delete-post-${post.id}`}
                   >
                     Slet
                   </Button>
@@ -147,6 +161,31 @@ export function EventThread({ slug }: { slug: string }) {
           </div>
         )}
       </CardContent>
+
+      {/* Slet-kommentar Dialog (erstatter native window.confirm). */}
+      <Dialog
+        open={pendingDeleteId !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingDeleteId(null);
+        }}
+      >
+        <DialogContent data-testid="delete-comment-dialog">
+          <DialogHeader>
+            <DialogTitle>Slet din kommentar?</DialogTitle>
+            <DialogDescription>
+              Kommentaren fjernes fra tråden. Det kan ikke fortrydes.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setPendingDeleteId(null)}>
+              Annullér
+            </Button>
+            <Button onClick={performDelete} data-testid="confirm-delete-comment">
+              Slet
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

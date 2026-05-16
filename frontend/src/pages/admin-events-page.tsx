@@ -6,6 +6,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -59,6 +67,7 @@ export function AdminEventsPage() {
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState<AdminEventInput>(EMPTY_FORM);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const motionMode = getMotionMode();
 
   async function reload() {
@@ -123,9 +132,11 @@ export function AdminEventsPage() {
     void reload();
   }
 
-  async function handleDelete(eventId: string) {
-    if (!window.confirm("Slet event helt? Tilmeldinger fjernes også.")) return;
-    const result = await api.deleteEvent(eventId);
+  async function performDelete() {
+    if (!deleteTargetId) return;
+    const id = deleteTargetId;
+    setDeleteTargetId(null);
+    const result = await api.deleteEvent(id);
     if (!result.ok) {
       setError("Kunne ikke slette.");
       return;
@@ -439,7 +450,8 @@ export function AdminEventsPage() {
                     <Button
                       size="sm"
                       variant="ghost"
-                      onClick={() => handleDelete(event.id)}
+                      onClick={() => setDeleteTargetId(event.id)}
+                      data-testid={`open-delete-event-${event.id}`}
                     >
                       Slet
                     </Button>
@@ -449,6 +461,32 @@ export function AdminEventsPage() {
             ))}
           </div>
         )}
+
+        {/* Slet-event Dialog (erstatter native window.confirm). */}
+        <Dialog
+          open={deleteTargetId !== null}
+          onOpenChange={(open) => {
+            if (!open) setDeleteTargetId(null);
+          }}
+        >
+          <DialogContent data-testid="delete-event-dialog">
+            <DialogHeader>
+              <DialogTitle>Slet event?</DialogTitle>
+              <DialogDescription>
+                Eventet fjernes permanent, og alle tilmeldinger annulleres. Det
+                kan ikke fortrydes.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setDeleteTargetId(null)}>
+                Annullér
+              </Button>
+              <Button onClick={performDelete} data-testid="confirm-delete-event">
+                Slet event
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </motion.div>
     </section>
   );
