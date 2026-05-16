@@ -79,9 +79,20 @@ export function registerSubscriptionRoutes(
       );
     }
 
+    // C26: ALREADY_ACTIVE inkluderer nu også 'pending' (jf. getActiveSubscription).
+    // Vi returnerer plan-data sammen så frontend kan vise korrekt UI uden ekstra roundtrip.
     const existing = await subscriptionRepository.getActiveSubscription(session.user.id);
     if (existing) {
-      return c.json({ ok: false, code: "ALREADY_ACTIVE", subscription: existing }, 409);
+      const existingPlan = await subscriptionRepository.getPlan(existing.plan_id);
+      return c.json(
+        {
+          ok: false,
+          code: "ALREADY_ACTIVE",
+          subscription: existing,
+          plan: existingPlan
+        },
+        409
+      );
     }
 
     // STRIPE-MOCK: I rigtig integration ville flowet være:
@@ -106,6 +117,9 @@ export function registerSubscriptionRoutes(
 
   app.post("/api/me/subscription/:id/cancel", async (c) => {
     const session = c.get("authSession");
+    // C25: cancelAtPeriodEnd returnerer null hvis subscription er afsluttet
+    // (status='cancelled') eller ikke tilhører brugeren. C27: Trial-subscriptions
+    // går direkte til 'cancelled' status (umiddelbart adgangstab).
     const subscription = await subscriptionRepository.cancelAtPeriodEnd(
       c.req.param("id"),
       session.user.id
@@ -116,8 +130,17 @@ export function registerSubscriptionRoutes(
 
   app.post("/api/me/subscription/:id/resume", async (c) => {
     const session = c.get("authSession");
+    // C25: resume virker kun hvis cancel_at_period_end=true OG status!='cancelled'.
+    // Ellers returnerer repo'et null → 404.
     const subscription = await subscriptionRepository.resume(c.req.param("id"), session.user.id);
     if (!subscription) return c.json({ ok: false, code: "NOT_FOUND" }, 404);
     return c.json({ ok: true, subscription });
+  });
+
+  // C29: Aktivitetshistorik — events fra alle brugerens subscriptions, nyeste først.
+  app.get("/api/me/subscription/events", async (c) => {
+    const session = c.get("authSession");
+    const events = await subscriptionRepository.listEventsForUser(session.user.id, 50);
+    return c.json({ ok: true, events });
   });
 }
