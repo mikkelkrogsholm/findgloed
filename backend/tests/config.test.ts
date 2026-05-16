@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { readConfig } from "../src/config";
+import { readConfig, validateProductionOrigins } from "../src/config";
 
 const originalEnv = { ...process.env };
 
@@ -62,5 +62,63 @@ describe("readConfig", () => {
     const config = readConfig();
     expect(config.dbSsl).toBe(true);
     expect(config.dbSslRejectUnauthorized).toBe(false);
+  });
+
+  // Issue B14: Production CORS-validation.
+  test("rejects localhost origin in production", () => {
+    resetEnv({
+      NODE_ENV: "production",
+      CORS_ORIGINS: "https://findgloed.dk,http://localhost:39563",
+      BETTER_AUTH_SECRET: "test_secret_123456789012345678901234567890"
+    });
+
+    expect(() => readConfig()).toThrow(/localhost/);
+  });
+
+  test("rejects loopback IP in production", () => {
+    resetEnv({
+      NODE_ENV: "production",
+      CORS_ORIGINS: "https://findgloed.dk,http://127.0.0.1:8080",
+      BETTER_AUTH_SECRET: "test_secret_123456789012345678901234567890"
+    });
+
+    expect(() => readConfig()).toThrow(/127\.0\.0\.1/);
+  });
+
+  test("rejects wildcard origin in production", () => {
+    resetEnv({
+      NODE_ENV: "production",
+      CORS_ORIGINS: "*",
+      BETTER_AUTH_SECRET: "test_secret_123456789012345678901234567890"
+    });
+
+    expect(() => readConfig()).toThrow(/wildcard/);
+  });
+
+  test("allows valid production origins", () => {
+    resetEnv({
+      NODE_ENV: "production",
+      CORS_ORIGINS: "https://findgloed.dk,https://www.findgloed.dk",
+      BETTER_AUTH_SECRET: "test_secret_123456789012345678901234567890"
+    });
+
+    const config = readConfig();
+    expect(config.corsOrigins).toEqual(["https://findgloed.dk", "https://www.findgloed.dk"]);
+  });
+});
+
+describe("validateProductionOrigins", () => {
+  test("accepts proper https origins", () => {
+    expect(() =>
+      validateProductionOrigins(["https://findgloed.dk", "https://app.findgloed.dk"])
+    ).not.toThrow();
+  });
+
+  test("rejects 0.0.0.0", () => {
+    expect(() => validateProductionOrigins(["http://0.0.0.0:80"])).toThrow();
+  });
+
+  test("rejects wildcard", () => {
+    expect(() => validateProductionOrigins(["*"])).toThrow();
   });
 });

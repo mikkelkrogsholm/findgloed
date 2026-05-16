@@ -1,6 +1,6 @@
 import type { Hono, MiddlewareHandler } from "hono";
 import type { EventRepository } from "./events";
-import type { AuthService, MembershipRepository } from "./types";
+import type { AuthService, MembershipRepository, RateLimiter } from "./types";
 import type { MessagingRepository } from "./messaging";
 
 type AuthSessionData = {
@@ -13,6 +13,14 @@ type MessagingDeps = {
   membershipRepository: MembershipRepository;
   eventRepository: EventRepository;
   messagingRepository: MessagingRepository;
+  // Issue B13: per-user rate-limit på message_send + interest_signal.
+  // Hvis undefined: ingen rate-limit (fx i tests). Vi bucketes på userId
+  // i stedet for fingerprint så samme bruger ikke kan undgå limiten ved
+  // at skifte enhed.
+  rateLimiter?: RateLimiter;
+  rateLimitEnabled?: boolean;
+  rateLimitFailOpen?: boolean;
+  trustProxy?: boolean;
 };
 
 function asString(value: unknown): string | null {
@@ -28,6 +36,51 @@ export function registerMessagingRoutes(
   deps: MessagingDeps
 ): void {
   const { authService, membershipRepository, eventRepository, messagingRepository } = deps;
+  const rateLimiter = deps.rateLimiter;
+  const rateLimitEnabled = deps.rateLimitEnabled ?? true;
+  const rateLimitFailOpen = deps.rateLimitFailOpen ?? false;
+
+  // Issue B13: helper der returnerer 429-response hvis rate-limit overskrides.
+  // Vi bucketes på userId (smuglet ind via email-feltet) så samme bruger har
+  // én konto-bucket uanset enhed.
+  async function checkUserRateLimit(
+    c: Parameters<MiddlewareHandler>[0],
+    scope: "message_send" | "interest_signal",
+    userId: string
+  ): Promise<Response | null> {
+    if (!rateLimitEnabled || !rateLimiter) {
+      return null;
+    }
+    try {
+      const result = await rateLimiter.check({
+        scope,
+        fingerprint: userId,
+        email: userId
+      });
+      if (result.limited) {
+        c.header("Retry-After", String(result.retryAfterSeconds));
+        return c.json(
+          {
+            ok: false,
+            code: "RATE_LIMITED",
+            message: "For mange forsøg. Prøv igen om lidt."
+          },
+          429
+        );
+      }
+      return null;
+    } catch (error) {
+      console.error("Rate limiter check failed", error);
+      if (rateLimitFailOpen) {
+        return null;
+      }
+      c.header("Retry-After", "60");
+      return c.json(
+        { ok: false, code: "RATE_LIMITED", message: "For mange forsøg. Prøv igen om lidt." },
+        429
+      );
+    }
+  }
 
   const verifiedMemberOnly: MiddlewareHandler<{ Variables: { authSession: AuthSessionData } }> =
     async (c, next) => {
@@ -57,6 +110,9 @@ export function registerMessagingRoutes(
     if (targetId === session.user.id) {
       return c.json({ ok: false, code: "SELF_INTEREST" }, 422);
     }
+
+    const limit = await checkUserRateLimit(c, "interest_signal", session.user.id);
+    if (limit) return limit;
 
     const target = await membershipRepository.getProfile(targetId);
     if (!target || target.verification_status !== "verified") {
@@ -225,6 +281,10 @@ export function registerMessagingRoutes(
   app.post("/api/conversations/:id/messages", async (c) => {
     const session = c.get("authSession");
     const id = c.req.param("id");
+
+    const limit = await checkUserRateLimit(c, "message_send", session.user.id);
+    if (limit) return limit;
+
     const body = (await c.req.json().catch(() => null)) as { body?: unknown } | null;
     const content = asString(body?.body);
     if (!content) return c.json({ ok: false, code: "EMPTY_BODY" }, 422);

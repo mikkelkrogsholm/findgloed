@@ -24,6 +24,10 @@ type AuthOptions = {
   trustedOrigins: string[];
   secret: string;
   adminEmails: Set<string>;
+  // Eksplicit cookie-hærdning (issue A14). I production sættes secure=true så
+  // session-cookien kun sendes over HTTPS. I dev tillades plain HTTP fordi vi
+  // kører på localhost.
+  isProduction: boolean;
 };
 
 export function createAuthService(options: AuthOptions): AuthService {
@@ -33,6 +37,25 @@ export function createAuthService(options: AuthOptions): AuthService {
     trustedOrigins: options.trustedOrigins,
     secret: options.secret,
     database: options.pool,
+    // Issue A14: Eksplicit cookie-hærdning mod CSRF + MITM.
+    //
+    // - httpOnly: JS i browseren må aldrig læse session-cookien (XSS-mitigation).
+    // - secure: i production sendes cookien kun over HTTPS. I dev tillader vi
+    //   plain HTTP fordi vi kører bag localhost uden TLS-terminator.
+    // - sameSite="lax": blokerer cross-site form-POST, men tillader top-level
+    //   navigation (fx OAuth-callback). "strict" ville bryde OAuth-flows hvis vi
+    //   senere tilføjer dem, så vi vælger lax bevidst.
+    //
+    // useSecureCookies gør det samme som secure-flag på defaults, men vi sætter
+    // det eksplicit på defaultCookieAttributes for at gøre intentionen synlig.
+    advanced: {
+      useSecureCookies: options.isProduction,
+      defaultCookieAttributes: {
+        httpOnly: true,
+        secure: options.isProduction,
+        sameSite: "lax"
+      }
+    },
     emailAndPassword: {
       enabled: true
     },

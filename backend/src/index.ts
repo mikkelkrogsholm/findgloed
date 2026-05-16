@@ -11,7 +11,7 @@ import { PostgresEventRepository } from "./events";
 import { PostgresMembershipRepository } from "./membership";
 import { PostgresMessagingRepository } from "./messaging";
 import { RedisRateLimiter } from "./rate-limit";
-import { PostgresSubscriptionRepository } from "./subscriptions";
+import { PostgresSubscriptionEventLog, PostgresSubscriptionRepository } from "./subscriptions";
 import { createLocalUploadStore } from "./uploads";
 import type { RateLimiter } from "./types";
 
@@ -38,7 +38,17 @@ async function bootstrap(): Promise<void> {
         waitlistMax: config.rateLimitWaitlistMax,
         waitlistWindowSeconds: config.rateLimitWaitlistWindowSeconds,
         confirmMax: config.rateLimitConfirmMax,
-        confirmWindowSeconds: config.rateLimitConfirmWindowSeconds
+        confirmWindowSeconds: config.rateLimitConfirmWindowSeconds,
+        loginMax: config.rateLimitLoginMax,
+        loginWindowSeconds: config.rateLimitLoginWindowSeconds,
+        signupMax: config.rateLimitSignupMax,
+        signupWindowSeconds: config.rateLimitSignupWindowSeconds,
+        messageMax: config.rateLimitMessageMax,
+        messageWindowSeconds: config.rateLimitMessageWindowSeconds,
+        interestMax: config.rateLimitInterestMax,
+        interestWindowSeconds: config.rateLimitInterestWindowSeconds,
+        uploadMax: config.rateLimitUploadMax,
+        uploadWindowSeconds: config.rateLimitUploadWindowSeconds
       });
     } catch {
       if (config.rateLimitFailOpen) {
@@ -63,7 +73,8 @@ async function bootstrap(): Promise<void> {
     baseURL: config.apiUrl,
     trustedOrigins: config.corsOrigins,
     secret: config.betterAuthSecret,
-    adminEmails
+    adminEmails,
+    isProduction: config.isProduction
   });
 
   if (config.superAdminEmail && config.superAdminPassword) {
@@ -111,7 +122,10 @@ async function bootstrap(): Promise<void> {
     uploadStore,
     eventRepository,
     messagingRepository,
-    subscriptionRepository
+    subscriptionRepository,
+    tokenHashSecret: config.betterAuthSecret,
+    stripeWebhookSecret: config.stripeWebhookSecret,
+    subscriptionEventLog: new PostgresSubscriptionEventLog(pool)
   });
 
   const server = serve({

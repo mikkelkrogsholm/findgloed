@@ -113,11 +113,29 @@ export type EmailService = {
   sendPartnerInterestReceived: (email: string) => Promise<void>;
 };
 
-export type RateLimitScope = "waitlist" | "confirm" | "partner_interest" | "partner_confirm";
+// Issue B13: Per-scope rate-limit. Hver scope har sit eget bucket-mønster:
+// - "waitlist"/"partner_interest": fingerprint + email
+// - "confirm"/"partner_confirm": fingerprint
+// - "login_attempt": fingerprint + email (forhindrer brute-force pr. konto)
+// - "signup_attempt": fingerprint (forhindrer mass-signup pr. enhed)
+// - "message_send"/"interest_signal"/"upload": userId (sat ind via email-feltet
+//   af kalderen, fordi vi allerede har en autentificeret bruger).
+export type RateLimitScope =
+  | "waitlist"
+  | "confirm"
+  | "partner_interest"
+  | "partner_confirm"
+  | "login_attempt"
+  | "signup_attempt"
+  | "message_send"
+  | "interest_signal"
+  | "upload";
 
 export type RateLimitCheckInput = {
   scope: RateLimitScope;
   fingerprint: string;
+  // For waitlist/partner/login: brugerens email. For authenticated scopes
+  // bruges samme felt til at smugle userId ind (det er bare en bucket-discriminator).
   email?: string;
 };
 
