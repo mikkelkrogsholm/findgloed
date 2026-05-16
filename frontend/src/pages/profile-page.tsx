@@ -1,11 +1,19 @@
 import { ChangeEvent, useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { Heart, Trash2, Upload } from "lucide-react";
+import { AlertTriangle, Heart, Trash2, Upload } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -64,6 +72,14 @@ export function ProfilePage() {
   const [bio, setBio] = useState("");
   const [faceVisibility, setFaceVisibility] = useState<FaceVisibility>("after_interest");
   const [initiatorRole, setInitiatorRole] = useState<InitiatorRole | "none">("none");
+  // Slet-konto-dialog (issue A9). To-trins bekræftelse:
+  //  1) brugeren vælger soft/hard-delete + læser konsekvenser
+  //  2) skriver sin email for at bekræfte
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteMode, setDeleteMode] = useState<"soft" | "hard">("soft");
+  const [deleteConfirmEmail, setDeleteConfirmEmail] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
   const motionMode = getMotionMode();
 
   async function reload() {
@@ -147,6 +163,46 @@ export function ProfilePage() {
   async function handleSignOut() {
     await authClient.signOut();
     clearSession();
+    navigate(appConfig.routes.landing);
+  }
+
+  function openDeleteDialog(mode: "soft" | "hard") {
+    setDeleteMode(mode);
+    setDeleteConfirmEmail("");
+    setDeleteError("");
+    setDeleteDialogOpen(true);
+  }
+
+  async function handleConfirmDelete() {
+    if (!data) return;
+    // Bekræftelses-værn: brugeren skal indtaste sin email præcis så vi
+    // forhindrer ved-et-uheld-klik. Sammenligning er case-insensitive.
+    if (
+      deleteConfirmEmail.trim().toLowerCase() !==
+      data.profile.email.trim().toLowerCase()
+    ) {
+      setDeleteError("Email matcher ikke. Indtast din email præcis som vist.");
+      return;
+    }
+
+    setDeleting(true);
+    setDeleteError("");
+    const result = await api.deleteMe(deleteMode === "hard");
+    setDeleting(false);
+
+    if (!result.ok) {
+      setDeleteError("Kunne ikke slette kontoen. Prøv igen, eller skriv til mikkel@findgloed.dk.");
+      return;
+    }
+
+    // Sletning lykkedes — log brugeren ud lokalt + redirect til landing.
+    try {
+      await authClient.signOut();
+    } catch {
+      // ignoreres: serverens session er allerede ugyldig
+    }
+    clearSession();
+    setDeleteDialogOpen(false);
     navigate(appConfig.routes.landing);
   }
 
@@ -436,7 +492,7 @@ export function ProfilePage() {
           </CardContent>
         </Card>
 
-        <Card className="p-6 md:p-8">
+        <Card className="mb-6 p-6 md:p-8">
           <CardHeader className="px-0 pt-0">
             <CardTitle>Kontoadministration</CardTitle>
           </CardHeader>
@@ -466,6 +522,129 @@ export function ProfilePage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* A9: Slet konto-sektion. To-trins bekræftelse via Dialog. */}
+        <Card
+          className="border-[color:var(--danger)] p-6 md:p-8"
+          data-testid="profile-delete-account-section"
+        >
+          <CardHeader className="px-0 pt-0">
+            <CardTitle className="flex items-center gap-2 text-[color:var(--danger)]">
+              <AlertTriangle className="h-5 w-5" />
+              Slet konto
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 px-0 pb-0">
+            <p className="body-text text-sm">
+              Du kan til enhver tid slette din konto. Vi anonymiserer dine beskeder så andre
+              samtaler stadig giver mening — og fjerner dine billeder og ID-dokumenter permanent.
+              Aktive abonnementer afsluttes. Læs mere i vores{" "}
+              <a className="link-inline" href={appConfig.routes.privacy}>
+                persondatapolitik
+              </a>
+              .
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                onClick={() => openDeleteDialog("soft")}
+                data-testid="open-soft-delete-dialog"
+              >
+                Pause + skjul profil
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => openDeleteDialog("hard")}
+                className="border-[color:var(--danger)] text-[color:var(--danger)] hover:bg-[color:var(--danger)]/10"
+                data-testid="open-hard-delete-dialog"
+              >
+                Slet og anonymisér permanent
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Dialog
+          open={deleteDialogOpen}
+          onOpenChange={(open) => {
+            setDeleteDialogOpen(open);
+            if (!open) {
+              setDeleteConfirmEmail("");
+              setDeleteError("");
+            }
+          }}
+        >
+          <DialogContent data-testid="delete-account-dialog">
+            <DialogHeader>
+              <DialogTitle>
+                {deleteMode === "hard"
+                  ? "Slet konto permanent"
+                  : "Pause og skjul profil"}
+              </DialogTitle>
+              <DialogDescription>
+                {deleteMode === "hard"
+                  ? "Din profil bliver anonymiseret: display name bliver til \"[Slettet bruger]\", dine billeder og ID-dokumenter slettes fysisk, og dine par-koblinger opløses. Beskeder bevares for samtale-partnere, men fra dig vises som \"[Slettet bruger]\". Dette kan ikke fortrydes."
+                  : "Din profil bliver skjult fra andre brugere, og du logges ud. Du kan kontakte mikkel@findgloed.dk for at få den gendannet. Aktive abonnementer afsluttes ved periodens udløb."}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-3">
+              <p className="body-text text-sm">
+                Dine rettigheder under GDPR (indsigt, berigtigelse, dataportabilitet) kan altid
+                håndteres manuelt — skriv til{" "}
+                <a className="link-inline" href="mailto:mikkel@findgloed.dk">
+                  mikkel@findgloed.dk
+                </a>
+                . Læs mere i{" "}
+                <a className="link-inline" href={appConfig.routes.privacy}>
+                  persondatapolitikken
+                </a>
+                .
+              </p>
+              <div className="space-y-2">
+                <Label htmlFor="delete-confirm-email">
+                  Skriv din email <strong>{data.profile.email}</strong> for at bekræfte:
+                </Label>
+                <Input
+                  id="delete-confirm-email"
+                  type="email"
+                  autoComplete="off"
+                  value={deleteConfirmEmail}
+                  onChange={(event) => setDeleteConfirmEmail(event.target.value)}
+                  placeholder={data.profile.email}
+                  data-testid="delete-confirm-email-input"
+                />
+              </div>
+              {deleteError && (
+                <Alert>
+                  <AlertDescription>{deleteError}</AlertDescription>
+                </Alert>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="ghost"
+                onClick={() => setDeleteDialogOpen(false)}
+                disabled={deleting}
+              >
+                Annullér
+              </Button>
+              <Button
+                onClick={handleConfirmDelete}
+                disabled={deleting}
+                className="bg-[color:var(--danger)] text-white hover:bg-[color:var(--danger)]/90"
+                data-testid="confirm-delete-account"
+              >
+                {deleting
+                  ? "Sletter…"
+                  : deleteMode === "hard"
+                    ? "Slet permanent"
+                    : "Pause + skjul"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </motion.div>
     </section>
   );
