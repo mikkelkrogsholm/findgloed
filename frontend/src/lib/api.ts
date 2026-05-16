@@ -253,6 +253,14 @@ export const api = {
     request<{ ok: true }>(`/api/me/album-grants/${recipient_user_id}`, {
       method: "DELETE"
     }),
+  // B2: Liste over modtagere af mit private album så ejeren kan se hvem
+  // der har adgang, hvornår de fik den, hvor mange gange de har set, og
+  // revoke individuelt.
+  listAlbumGrants: () =>
+    request<{
+      ok: true;
+      grants: PrivateAlbumGrantSummary[];
+    }>("/api/me/album-grants"),
 
   listPendingVerifications: () =>
     request<{
@@ -530,6 +538,17 @@ export type InterestSignal = {
   from_user_id: string;
   to_user_id: string;
   created_at: string;
+};
+
+export type PrivateAlbumGrantSummary = {
+  id: string;
+  owner_user_id: string | null;
+  owner_couple_id: string | null;
+  recipient_user_id: string;
+  granted_at: string;
+  revoked_at: string | null;
+  last_viewed_at: string | null;
+  view_count: number;
 };
 
 export type ConversationSummary = {

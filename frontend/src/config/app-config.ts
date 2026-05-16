@@ -25,6 +25,7 @@ export const appConfig = {
     coupleProfile: "/profile/couple",
     members: "/members",
     member: "/members/:id",
+    incomingInterests: "/interests/incoming",
     events: "/events",
     event: "/events/:slug",
     myEvents: "/me/events",
@@ -59,6 +60,7 @@ export type AppRouteName =
   | "couple-profile"
   | "members"
   | "member-detail"
+  | "incoming-interests"
   | "events"
   | "event-detail"
   | "my-events"
