@@ -304,6 +304,26 @@ export const api = {
       }
     ),
 
+  // B17: admin event-post moderation. GET henter post-body for preview
+  // før moderation, DELETE markerer den som hidden_by_admin_at så den
+  // forsvinder fra event-tråden.
+  getAdminEventPost: (id: string) =>
+    request<{
+      ok: true;
+      post: {
+        id: string;
+        event_id: string;
+        author_user_id: string;
+        body: string;
+        posted_at: string;
+        hidden_by_admin_at: string | null;
+        deleted_at: string | null;
+      };
+    }>(`/api/admin/event-posts/${id}`),
+
+  hideAdminEventPost: (id: string) =>
+    request<{ ok: true }>(`/api/admin/event-posts/${id}`, { method: "DELETE" }),
+
   // ---------- Events ----------
   listEvents: (filters: {
     category?: EventCategory;
@@ -372,6 +392,8 @@ export const api = {
         couple_id: string | null;
         status: string;
         registered_at: string;
+        display_name: string | null;
+        email: string | null;
       }>;
     }>(`/api/admin/events/${id}/registrations`),
 

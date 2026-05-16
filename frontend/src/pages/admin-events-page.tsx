@@ -1,11 +1,13 @@
-import { FormEvent, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 
+import { AdminEventForm } from "@/components/admin/admin-event-form";
+import { AdminSubnav } from "@/components/admin/admin-subnav";
+import { PageHeader } from "@/components/layout/page-header";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Card } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -14,27 +16,10 @@ import {
   DialogHeader,
   DialogTitle
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { appConfig } from "@/config/app-config";
-import {
-  api,
-  type AdminEvent,
-  type AdminEventInput,
-  type EventCategory,
-  type EventLevel
-} from "@/lib/api";
+import { Skeleton } from "@/components/ui/skeleton";
+import { api, type AdminEvent, type AdminEventInput } from "@/lib/api";
 import { CATEGORY_LABEL, LEVEL_LABEL, formatDateTime } from "@/lib/event-display";
 import { getMotionMode, revealVariants } from "@/lib/motion";
-import { navigate } from "@/lib/nav";
 
 const EMPTY_FORM: AdminEventInput = {
   slug: "",
@@ -59,6 +44,62 @@ const EMPTY_FORM: AdminEventInput = {
   status: "draft"
 };
 
+// B10: dansk-vendt status-label til registrations så admin kan læse uden
+// at huske enum-værdier.
+const REGISTRATION_STATUS_LABEL: Record<string, string> = {
+  pending: "Afventer",
+  confirmed: "Tilmeldt",
+  cancelled: "Afmeldt",
+  attended: "Deltaget"
+};
+
+type Registration = {
+  id: string;
+  user_id: string;
+  couple_id: string | null;
+  status: string;
+  registered_at: string;
+  display_name: string | null;
+  email: string | null;
+};
+
+function formatRegistrationStatus(status: string): string {
+  return REGISTRATION_STATUS_LABEL[status] ?? status;
+}
+
+function adminEventToFormValues(event: AdminEvent): AdminEventInput {
+  return {
+    slug: event.slug,
+    title: event.title,
+    description: event.description,
+    not_for: event.not_for ?? "",
+    category: event.category,
+    level: event.level,
+    beginner_friendly: event.beginner_friendly,
+    experience_required: event.experience_required,
+    facilitator_name: event.facilitator_name,
+    facilitator_credential: event.facilitator_credential ?? "",
+    starts_at: event.starts_at,
+    ends_at: event.ends_at,
+    capacity: event.capacity,
+    price_cents: event.price_cents,
+    region: event.region ?? "",
+    location_label: event.location_label ?? "",
+    location_address: event.location_address ?? "",
+    dresscode: event.dresscode ?? "",
+    exit_strategy: event.exit_strategy ?? "",
+    status: event.status as AdminEventInput["status"]
+  };
+}
+
+// B10: extract update-fields for edit submit — slug ekskluderes så vi
+// ikke sender et felt der ville fejle som immutable. Vi sender også
+// kun feltvariabler der må mutere.
+function buildUpdatePayload(values: AdminEventInput): Partial<AdminEventInput> {
+  const { slug: _ignored, ...rest } = values;
+  return rest;
+}
+
 export function AdminEventsPage() {
   const [events, setEvents] = useState<AdminEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,8 +107,18 @@ export function AdminEventsPage() {
   const [success, setSuccess] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [form, setForm] = useState<AdminEventInput>(EMPTY_FORM);
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+
+  // B10: deltagerliste pr. event. Vi caching pr. event-id så toggle ikke
+  // refetcher hver gang, men reload() rydder den så fersk data hentes.
+  const [expandedRegistrationsId, setExpandedRegistrationsId] = useState<string | null>(
+    null
+  );
+  const [registrationsByEvent, setRegistrationsByEvent] = useState<
+    Record<string, Registration[] | "loading" | "error">
+  >({});
+
   const motionMode = getMotionMode();
 
   async function reload() {
@@ -79,6 +130,7 @@ export function AdminEventsPage() {
       setEvents(result.events);
       setError("");
     }
+    setRegistrationsByEvent({});
     setLoading(false);
   }
 
@@ -86,40 +138,33 @@ export function AdminEventsPage() {
     void reload();
   }, []);
 
-  function setField<K extends keyof AdminEventInput>(key: K, value: AdminEventInput[K]) {
-    setForm((prev) => ({ ...prev, [key]: value }));
-  }
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function handleCreate(values: AdminEventInput) {
     setSubmitting(true);
     setError("");
     setSuccess("");
-
-    const startsIso = form.starts_at ? new Date(form.starts_at).toISOString() : "";
-    const endsIso = form.ends_at ? new Date(form.ends_at).toISOString() : "";
-
-    const result = await api.createEvent({
-      ...form,
-      starts_at: startsIso,
-      ends_at: endsIso,
-      not_for: form.not_for || null,
-      facilitator_credential: form.facilitator_credential || null,
-      region: form.region || null,
-      location_label: form.location_label || null,
-      location_address: form.location_address || null,
-      dresscode: form.dresscode || null,
-      exit_strategy: form.exit_strategy || null
-    });
+    const result = await api.createEvent(values);
     setSubmitting(false);
-
     if (!result.ok) {
       setError(`Kunne ikke oprette: ${result.code}`);
       return;
     }
     setSuccess("Event oprettet.");
-    setForm(EMPTY_FORM);
     setShowForm(false);
+    void reload();
+  }
+
+  async function handleEdit(eventId: string, values: AdminEventInput) {
+    setSubmitting(true);
+    setError("");
+    setSuccess("");
+    const result = await api.updateEvent(eventId, buildUpdatePayload(values));
+    setSubmitting(false);
+    if (!result.ok) {
+      setError(`Kunne ikke gemme: ${result.code}`);
+      return;
+    }
+    setSuccess("Event opdateret.");
+    setEditingEventId(null);
     void reload();
   }
 
@@ -144,29 +189,59 @@ export function AdminEventsPage() {
     void reload();
   }
 
+  async function toggleRegistrations(eventId: string) {
+    if (expandedRegistrationsId === eventId) {
+      setExpandedRegistrationsId(null);
+      return;
+    }
+    setExpandedRegistrationsId(eventId);
+    if (registrationsByEvent[eventId]) {
+      return;
+    }
+    setRegistrationsByEvent((prev) => ({ ...prev, [eventId]: "loading" }));
+    const result = await api.listEventRegistrations(eventId);
+    if (!result.ok) {
+      setRegistrationsByEvent((prev) => ({ ...prev, [eventId]: "error" }));
+      return;
+    }
+    setRegistrationsByEvent((prev) => ({
+      ...prev,
+      [eventId]: result.registrations
+    }));
+  }
+
+  function registrationCounts(eventId: string): { confirmed: number; total: number } {
+    const cached = registrationsByEvent[eventId];
+    if (!Array.isArray(cached)) {
+      return { confirmed: 0, total: 0 };
+    }
+    return {
+      confirmed: cached.filter((r) => r.status === "confirmed" || r.status === "attended")
+        .length,
+      total: cached.length
+    };
+  }
+
   return (
     <section className="mx-auto w-full max-w-5xl px-6 py-10 md:py-16">
       <motion.div initial="hidden" animate="visible" variants={revealVariants(motionMode, "hero")}>
-        <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <p className="noxus-kicker kicker-text text-[0.65rem]">Admin</p>
-            <h1 className="font-display text-3xl">Events</h1>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" onClick={() => navigate(appConfig.routes.admin)}>
-              Til lead-oversigt
-            </Button>
-            <Button variant="outline" onClick={() => navigate(appConfig.routes.adminVerifications)}>
-              Til verifikationer
-            </Button>
-            <Button variant="outline" onClick={() => navigate(appConfig.routes.adminReports)}>
-              Til reports
-            </Button>
-            <Button onClick={() => setShowForm((prev) => !prev)} className="glow-cta">
+        <AdminSubnav />
+
+        <PageHeader
+          kicker="Admin"
+          title="Events"
+          description="Opret, redigér og publicér events. Klik på et event for at se deltagerlisten."
+          data-testid="admin-events-header"
+          actions={
+            <Button
+              onClick={() => setShowForm((prev) => !prev)}
+              className="glow-cta"
+              data-testid="toggle-create-event-form"
+            >
               {showForm ? "Skjul formular" : "Opret nyt event"}
             </Button>
-          </div>
-        </div>
+          }
+        />
 
         {error && (
           <Alert className="mb-4">
@@ -180,285 +255,161 @@ export function AdminEventsPage() {
         )}
 
         {showForm && (
-          <Card className="mb-6 p-6">
-            <CardHeader className="px-0 pt-0">
-              <CardTitle>Nyt event</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4 px-0 pb-0">
-              <form className="space-y-4" onSubmit={handleSubmit}>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="space-y-1">
-                    <Label htmlFor="slug">Slug</Label>
-                    <Input
-                      id="slug"
-                      value={form.slug}
-                      onChange={(e) => setField("slug", e.target.value)}
-                      placeholder="aabent-nakkeparti-aften"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="title">Titel</Label>
-                    <Input
-                      id="title"
-                      value={form.title}
-                      onChange={(e) => setField("title", e.target.value)}
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <Label htmlFor="description">Beskrivelse</Label>
-                  <Textarea
-                    id="description"
-                    value={form.description}
-                    onChange={(e) => setField("description", e.target.value)}
-                    rows={5}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <Label htmlFor="not_for">Hvem eventet IKKE er for</Label>
-                  <Textarea
-                    id="not_for"
-                    value={form.not_for ?? ""}
-                    onChange={(e) => setField("not_for", e.target.value)}
-                    rows={2}
-                  />
-                </div>
-
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="space-y-1">
-                    <Label>Kategori</Label>
-                    <Select
-                      value={form.category}
-                      onValueChange={(v) => setField("category", v as EventCategory)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="single_only">{CATEGORY_LABEL.single_only}</SelectItem>
-                        <SelectItem value="couple_only">{CATEGORY_LABEL.couple_only}</SelectItem>
-                        <SelectItem value="mixed">{CATEGORY_LABEL.mixed}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1">
-                    <Label>Niveau</Label>
-                    <Select value={form.level} onValueChange={(v) => setField("level", v as EventLevel)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="sensual_social">{LEVEL_LABEL.sensual_social}</SelectItem>
-                        <SelectItem value="sensual">{LEVEL_LABEL.sensual}</SelectItem>
-                        <SelectItem value="explicit">{LEVEL_LABEL.explicit}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <label className="flex items-center gap-2 text-sm">
-                    <Checkbox
-                      checked={form.beginner_friendly}
-                      onCheckedChange={(c) => setField("beginner_friendly", c === true)}
-                    />
-                    Også for første gang
-                  </label>
-                  <label className="flex items-center gap-2 text-sm">
-                    <Checkbox
-                      checked={form.experience_required}
-                      onCheckedChange={(c) => setField("experience_required", c === true)}
-                    />
-                    Kræver erfaring
-                  </label>
-                </div>
-
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="space-y-1">
-                    <Label htmlFor="facilitator_name">Vært (navn)</Label>
-                    <Input
-                      id="facilitator_name"
-                      value={form.facilitator_name}
-                      onChange={(e) => setField("facilitator_name", e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="facilitator_credential">Vært (titel)</Label>
-                    <Input
-                      id="facilitator_credential"
-                      value={form.facilitator_credential ?? ""}
-                      onChange={(e) => setField("facilitator_credential", e.target.value)}
-                      placeholder="Sexolog, Sexologisk Akademi"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="space-y-1">
-                    <Label htmlFor="starts_at">Start</Label>
-                    <Input
-                      id="starts_at"
-                      type="datetime-local"
-                      value={form.starts_at}
-                      onChange={(e) => setField("starts_at", e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="ends_at">Slut</Label>
-                    <Input
-                      id="ends_at"
-                      type="datetime-local"
-                      value={form.ends_at}
-                      onChange={(e) => setField("ends_at", e.target.value)}
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <div className="space-y-1">
-                    <Label htmlFor="capacity">Kapacitet</Label>
-                    <Input
-                      id="capacity"
-                      type="number"
-                      min={1}
-                      value={form.capacity}
-                      onChange={(e) => setField("capacity", Number(e.target.value))}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="price_cents">Pris (øre)</Label>
-                    <Input
-                      id="price_cents"
-                      type="number"
-                      min={0}
-                      value={form.price_cents}
-                      onChange={(e) => setField("price_cents", Number(e.target.value))}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="region">Region</Label>
-                    <Input
-                      id="region"
-                      value={form.region ?? ""}
-                      onChange={(e) => setField("region", e.target.value)}
-                      placeholder="København"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="space-y-1">
-                    <Label htmlFor="location_label">Lokation (offentlig)</Label>
-                    <Input
-                      id="location_label"
-                      value={form.location_label ?? ""}
-                      onChange={(e) => setField("location_label", e.target.value)}
-                      placeholder="Indre by, København"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="location_address">Adresse (skjult før tilmelding)</Label>
-                    <Input
-                      id="location_address"
-                      value={form.location_address ?? ""}
-                      onChange={(e) => setField("location_address", e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="space-y-1">
-                    <Label htmlFor="dresscode">Dresscode</Label>
-                    <Input
-                      id="dresscode"
-                      value={form.dresscode ?? ""}
-                      onChange={(e) => setField("dresscode", e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="exit_strategy">Exit-strategi</Label>
-                    <Input
-                      id="exit_strategy"
-                      value={form.exit_strategy ?? ""}
-                      onChange={(e) => setField("exit_strategy", e.target.value)}
-                      placeholder="Kan rejse sig stille når som helst."
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <Label>Status</Label>
-                  <Select
-                    value={form.status}
-                    onValueChange={(v) => setField("status", v as AdminEventInput["status"])}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="draft">Kladde</SelectItem>
-                      <SelectItem value="published">Publiceret</SelectItem>
-                      <SelectItem value="cancelled">Aflyst</SelectItem>
-                      <SelectItem value="completed">Afholdt</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <Button type="submit" disabled={submitting} className="glow-cta">
-                  {submitting ? "Opretter…" : "Opret event"}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
+          <AdminEventForm
+            mode="create"
+            title="Nyt event"
+            initialValues={EMPTY_FORM}
+            submitting={submitting}
+            onSubmit={handleCreate}
+            onCancel={() => setShowForm(false)}
+          />
         )}
 
         {loading ? (
-          <p className="body-text-muted text-center">Henter…</p>
+          <div className="space-y-3" aria-busy="true">
+            {[0, 1, 2].map((i) => (
+              <Card key={i} className="p-5">
+                <Skeleton className="mb-2 h-5 w-2/3" />
+                <Skeleton className="h-4 w-1/3" />
+              </Card>
+            ))}
+          </div>
         ) : events.length === 0 ? (
           <p className="body-text-muted text-center">Ingen events oprettet endnu.</p>
         ) : (
           <div className="space-y-3">
-            {events.map((event) => (
-              <Card key={event.id} className="p-5">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="flex-1 space-y-1">
-                    <div className="flex flex-wrap gap-1.5">
-                      <Badge variant="secondary">{CATEGORY_LABEL[event.category]}</Badge>
-                      <Badge variant="outline">{LEVEL_LABEL[event.level]}</Badge>
-                      <Badge variant="outline">{event.status}</Badge>
+            {events.map((event) => {
+              const isEditing = editingEventId === event.id;
+              const isExpanded = expandedRegistrationsId === event.id;
+              const regs = registrationsByEvent[event.id];
+
+              return (
+                <div key={event.id} className="space-y-3">
+                  <Card className="p-5">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="flex-1 space-y-1">
+                        <div className="flex flex-wrap gap-1.5">
+                          <Badge variant="secondary">{CATEGORY_LABEL[event.category]}</Badge>
+                          <Badge variant="outline">{LEVEL_LABEL[event.level]}</Badge>
+                          <Badge variant="outline">{event.status}</Badge>
+                          {Array.isArray(regs) && (
+                            <Badge variant="outline" data-testid={`registration-count-${event.id}`}>
+                              {registrationCounts(event.id).confirmed}/{event.capacity}{" "}
+                              tilmeldt
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="font-display text-lg">{event.title}</p>
+                        <p className="text-sm text-[color:var(--color-text-secondary)]">
+                          {formatDateTime(event.starts_at)}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {event.status === "draft" && (
+                          <Button
+                            size="sm"
+                            onClick={() => handlePublish(event.id)}
+                            data-testid={`publish-event-${event.id}`}
+                          >
+                            Publicer
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            setEditingEventId(isEditing ? null : event.id)
+                          }
+                          data-testid={`edit-event-${event.id}`}
+                        >
+                          {isEditing ? "Skjul redigering" : "Redigér"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => toggleRegistrations(event.id)}
+                          data-testid={`toggle-registrations-${event.id}`}
+                          aria-expanded={isExpanded}
+                        >
+                          {isExpanded ? "Skjul deltagere" : "Deltagere"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setDeleteTargetId(event.id)}
+                          data-testid={`open-delete-event-${event.id}`}
+                        >
+                          Slet
+                        </Button>
+                      </div>
                     </div>
-                    <p className="font-display text-lg">{event.title}</p>
-                    <p className="text-sm text-[color:var(--color-text-secondary)]">
-                      {formatDateTime(event.starts_at)}
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {event.status === "draft" && (
-                      <Button size="sm" onClick={() => handlePublish(event.id)}>
-                        Publicer
-                      </Button>
+
+                    {isExpanded && (
+                      <div
+                        className="mt-4 border-t border-[color:var(--border-subtle)] pt-4"
+                        data-testid={`registrations-${event.id}`}
+                      >
+                        {regs === "loading" ? (
+                          <div className="space-y-2" aria-busy="true">
+                            <Skeleton className="h-4 w-3/4" />
+                            <Skeleton className="h-4 w-2/3" />
+                            <Skeleton className="h-4 w-1/2" />
+                          </div>
+                        ) : regs === "error" ? (
+                          <Alert>
+                            <AlertDescription>
+                              Kunne ikke hente deltagerlisten.
+                            </AlertDescription>
+                          </Alert>
+                        ) : !regs || regs.length === 0 ? (
+                          <p className="body-text-muted text-sm">
+                            Ingen tilmeldte endnu.
+                          </p>
+                        ) : (
+                          <ul className="space-y-2">
+                            {regs.map((reg) => (
+                              <li
+                                key={reg.id}
+                                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[color:var(--border-subtle)] bg-[color:var(--surface-glass)] px-3 py-2 text-sm"
+                                data-testid={`registration-row-${reg.id}`}
+                              >
+                                <div className="space-y-0.5">
+                                  <p className="font-medium">
+                                    {reg.display_name ?? "(uden navn)"}
+                                  </p>
+                                  <p className="body-text-muted text-xs">
+                                    {reg.email ?? "(slettet bruger)"}
+                                  </p>
+                                </div>
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <Badge variant="outline">
+                                    {formatRegistrationStatus(reg.status)}
+                                  </Badge>
+                                  <span className="body-text-muted text-xs">
+                                    {new Date(reg.registered_at).toLocaleString("da-DK")}
+                                  </span>
+                                </div>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
                     )}
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setDeleteTargetId(event.id)}
-                      data-testid={`open-delete-event-${event.id}`}
-                    >
-                      Slet
-                    </Button>
-                  </div>
+                  </Card>
+
+                  {isEditing && (
+                    <AdminEventForm
+                      mode="edit"
+                      title={`Redigér: ${event.title}`}
+                      initialValues={adminEventToFormValues(event)}
+                      submitting={submitting}
+                      onSubmit={(values) => handleEdit(event.id, values)}
+                      onCancel={() => setEditingEventId(null)}
+                    />
+                  )}
                 </div>
-              </Card>
-            ))}
+              );
+            })}
           </div>
         )}
 
