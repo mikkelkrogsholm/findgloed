@@ -82,6 +82,9 @@ export function LoginPage() {
                   onChange={(event) => setEmail(event.target.value)}
                   placeholder="dig@eksempel.dk"
                   required
+                  autoComplete="email"
+                  aria-invalid={errorMessage ? "true" : undefined}
+                  aria-describedby={errorMessage ? "login-form-error" : undefined}
                 />
               </motion.div>
 
@@ -96,6 +99,9 @@ export function LoginPage() {
                     placeholder="Mindst 8 tegn"
                     required
                     className="pr-10"
+                    autoComplete="current-password"
+                    aria-invalid={errorMessage ? "true" : undefined}
+                    aria-describedby={errorMessage ? "login-form-error" : undefined}
                   />
                   <Button
                     type="button"
@@ -141,7 +147,7 @@ export function LoginPage() {
                     animate="animate"
                     exit="exit"
                   >
-                    <Alert>
+                    <Alert id="login-form-error" role="alert">
                       <AlertDescription>{errorMessage}</AlertDescription>
                     </Alert>
                   </motion.div>

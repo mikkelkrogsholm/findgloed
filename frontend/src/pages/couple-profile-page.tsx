@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { FormSkeleton } from "@/components/layout/loading-state";
 import { appConfig } from "@/config/app-config";
 import {
   api,
@@ -234,9 +235,10 @@ export function CoupleProfilePage() {
   }
 
   if (loading) {
+    // A22: Form-skeleton matcher par-profil-formularen.
     return (
-      <section className="mx-auto w-full max-w-md px-6 py-20 text-center">
-        <p className="body-text-muted">Indlæser…</p>
+      <section className="mx-auto w-full max-w-2xl px-6 py-12 md:py-20">
+        <FormSkeleton rows={4} data-testid="couple-profile-loading" />
       </section>
     );
   }

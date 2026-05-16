@@ -6,6 +6,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { FormSkeleton } from "@/components/layout/loading-state";
 import { appConfig } from "@/config/app-config";
 import { api, type OwnProfile } from "@/lib/api";
 import { getMotionMode, revealVariants } from "@/lib/motion";
@@ -53,9 +54,10 @@ export function VerificationPage() {
   }
 
   if (loading) {
+    // A22: Skeleton matcher final-state med single card + 2-3 felter.
     return (
-      <section className="mx-auto w-full max-w-md px-6 py-20 text-center">
-        <p className="body-text-muted">Indlæser…</p>
+      <section className="mx-auto w-full max-w-2xl px-6 py-12 md:py-20">
+        <FormSkeleton rows={3} data-testid="verification-loading" />
       </section>
     );
   }
