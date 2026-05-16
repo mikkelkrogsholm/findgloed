@@ -16,6 +16,7 @@ import type {
   VerificationInsert,
   VerificationSubmission
 } from "./types";
+import type { UploadStore } from "./uploads";
 
 const PROFILE_FIELDS = `
   u.id AS user_id,
@@ -226,11 +227,28 @@ function rowToVerification(row: Record<string, unknown>): VerificationSubmission
 }
 
 export class PostgresMembershipRepository implements MembershipRepository {
-  constructor(private readonly pool: Pool) {}
+  // uploadStore er optional så test-doubles og legacy-kald uden upload-store
+  // stadig kan instantiere repoet. Når den er sat, bruges den til at fjerne
+  // billeder fra disk ved hardDelete (issue A10 — GDPR-konform anonymisering).
+  constructor(
+    private readonly pool: Pool,
+    private readonly uploadStore?: UploadStore
+  ) {}
 
   async getProfile(userId: string): Promise<MembershipProfile | null> {
     const result = await this.pool.query(
       `SELECT ${PROFILE_FIELDS} FROM "user" u WHERE u.id = $1 AND u.deleted_at IS NULL LIMIT 1`,
+      [userId]
+    );
+    return result.rows[0] ? rowToProfile(result.rows[0]) : null;
+  }
+
+  async getProfileIncludingDeleted(userId: string): Promise<MembershipProfile | null> {
+    // Bypasser deleted_at-filteret. Bruges når vi har brug for at vise
+    // afsenderens anonymiserede display_name ("[Slettet bruger]") i en
+    // samtale eller event-tråd uden at lække andre detaljer (issue A10).
+    const result = await this.pool.query(
+      `SELECT ${PROFILE_FIELDS} FROM "user" u WHERE u.id = $1 LIMIT 1`,
       [userId]
     );
     return result.rows[0] ? rowToProfile(result.rows[0]) : null;
@@ -270,14 +288,243 @@ export class PostgresMembershipRepository implements MembershipRepository {
   }
 
   async softDelete(userId: string): Promise<void> {
-    await this.pool.query(
-      `UPDATE "user" SET deleted_at = NOW(), paused_at = NOW(), "updatedAt" = NOW() WHERE id = $1`,
-      [userId]
-    );
+    // Soft delete = skjul profil, men bevar data så brugeren teoretisk kan
+    // gendannes manuelt. Vi rydder dog op i ting der har bivirkninger for
+    // andre brugere (issue C9 + bonus: subscriptions, interest_signal,
+    // couple_profile).
+    const client = await this.pool.connect();
+    try {
+      await client.query("BEGIN");
+
+      // 1) Markér user som slettet + sat på pause.
+      await client.query(
+        `UPDATE "user"
+           SET deleted_at = NOW(),
+               paused_at = COALESCE(paused_at, NOW()),
+               "updatedAt" = NOW()
+         WHERE id = $1`,
+        [userId]
+      );
+
+      // 2) Annullér aktive subscriptions ved periodens slut, så brugeren
+      //    ikke bliver opkrævet igen efter sletning.
+      await client.query(
+        `UPDATE subscription
+           SET cancel_at_period_end = true,
+               cancelled_at = COALESCE(cancelled_at, NOW()),
+               updated_at = NOW()
+         WHERE user_id = $1
+           AND status IN ('active', 'trialing', 'past_due')`,
+        [userId]
+      );
+
+      // 3) Sæt couple_profile på pause hvor brugeren er medlem — partneren
+      //    skal selv beslutte om paret skal opløses helt.
+      await client.query(
+        `UPDATE couple_profile
+           SET paused_at = COALESCE(paused_at, NOW()),
+               updated_at = NOW()
+         WHERE (primary_user_id = $1 OR partner_user_id = $1)
+           AND deleted_at IS NULL`,
+        [userId]
+      );
+
+      // 4) Træk alle aktive interest-signaler tilbage.
+      await client.query(
+        `UPDATE interest_signal SET withdrawn_at = NOW()
+         WHERE from_user_id = $1 AND withdrawn_at IS NULL`,
+        [userId]
+      );
+
+      // 5) Annullér pending par-invitationer udsendt af brugeren.
+      await client.query(
+        `UPDATE couple_invitation
+           SET status = 'cancelled', responded_at = NOW()
+         WHERE primary_user_id = $1 AND status = 'pending'`,
+        [userId]
+      );
+
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 
   async hardDelete(userId: string): Promise<void> {
-    await this.pool.query(`DELETE FROM "user" WHERE id = $1`, [userId]);
+    // GDPR-konform anonymisering (issue A10):
+    // - Vi sletter IKKE user-rækken, fordi messages/event_post/conversation
+    //   har FK'er til "user".id med ON DELETE CASCADE. Det ville fjerne
+    //   beskeder hos andre brugere og ødelægge deres chat-historik.
+    // - I stedet anonymiserer vi user-rækken, fjerner persondata, sletter
+    //   fysiske filer (billeder + ID-dokumenter), opløser par, og rydder
+    //   pending invitations.
+    // - Alt sker i én transaktion. Hvis noget fejler, rulles tilbage så
+    //   brugeren ikke ender i en halv-slettet tilstand.
+
+    // Hent storage_paths for billeder + verification-uploads INDEN
+    // transaktionen, så vi kun fjerner filer hvis DB-arbejdet lykkes.
+    const photoPaths = await this.pool.query<{ storage_path: string }>(
+      `SELECT storage_path FROM profile_photo WHERE owner_user_id = $1`,
+      [userId]
+    );
+    const verificationPaths = await this.pool.query<{
+      id_document_path: string;
+      selfie_path: string;
+    }>(
+      `SELECT id_document_path, selfie_path FROM verification_submission WHERE user_id = $1`,
+      [userId]
+    );
+
+    const client = await this.pool.connect();
+    try {
+      await client.query("BEGIN");
+
+      // 1) Annullér aktive subscriptions.
+      await client.query(
+        `UPDATE subscription
+           SET cancel_at_period_end = true,
+               cancelled_at = COALESCE(cancelled_at, NOW()),
+               status = CASE WHEN status IN ('active', 'trialing', 'past_due') THEN 'cancelled' ELSE status END,
+               updated_at = NOW()
+         WHERE user_id = $1`,
+        [userId]
+      );
+
+      // 2) Træk alle aktive interest-signaler tilbage (issue C9-bonus).
+      await client.query(
+        `UPDATE interest_signal SET withdrawn_at = NOW()
+         WHERE from_user_id = $1 AND withdrawn_at IS NULL`,
+        [userId]
+      );
+
+      // 3) Opløs aktive par hvor user er primary eller partner (issue C9).
+      //    Vi soft-deleter couple_profile-rækker så partneren stadig kan se
+      //    "[Slettet bruger]"-historikken hvis ønsket.
+      await client.query(
+        `UPDATE couple_profile
+           SET deleted_at = NOW(), updated_at = NOW()
+         WHERE (primary_user_id = $1 OR partner_user_id = $1)
+           AND deleted_at IS NULL`,
+        [userId]
+      );
+
+      // 4) Ryd pending par-invitationer involverende user (begge retninger).
+      await client.query(
+        `UPDATE couple_invitation
+           SET status = 'cancelled', responded_at = NOW()
+         WHERE (primary_user_id = $1 OR partner_user_id = $1)
+           AND status = 'pending'`,
+        [userId]
+      );
+
+      // 5) Revoke alle private album grants givet af brugeren.
+      await client.query(
+        `UPDATE private_album_grant SET revoked_at = NOW()
+         WHERE owner_user_id = $1 AND revoked_at IS NULL`,
+        [userId]
+      );
+
+      // 6) Slet alle profile_photo-rækker for brugeren (filer slettes
+      //    bagefter når transaktionen er committet).
+      await client.query(
+        `DELETE FROM profile_photo WHERE owner_user_id = $1`,
+        [userId]
+      );
+
+      // 7) Markér eksisterende verification-submissions som rejected og
+      //    nulstil persondata-felter (path til ID + selfie ryddes; filerne
+      //    slettes bagefter).
+      await client.query(
+        `UPDATE verification_submission
+           SET status = 'rejected',
+               reviewed_at = COALESCE(reviewed_at, NOW()),
+               rejection_reason = COALESCE(rejection_reason, 'Konto slettet af bruger'),
+               notes = NULL,
+               id_document_path = '',
+               selfie_path = ''
+         WHERE user_id = $1`,
+        [userId]
+      );
+
+      // 8) Anonymisér user-rækken. Email får en unik dummy-værdi for at
+      //    undgå UNIQUE-constraint-konflikter ved eventuel ny oprettelse.
+      //    name-feltet er Better Auth's krav (NOT NULL) — vi sætter dummy.
+      await client.query(
+        `UPDATE "user"
+           SET email = 'deleted-' || id || '@deleted.findgloed.dk',
+               name = '[Slettet bruger]',
+               display_name = '[Slettet bruger]',
+               birth_year = NULL,
+               region = NULL,
+               bio = NULL,
+               initiator_role = NULL,
+               verification_status = 'unverified',
+               verified_at = NULL,
+               verified_via = NULL,
+               future_verification_accepted_at = NULL,
+               image = NULL,
+               "emailVerified" = false,
+               deleted_at = NOW(),
+               paused_at = COALESCE(paused_at, NOW()),
+               "updatedAt" = NOW()
+         WHERE id = $1`,
+        [userId]
+      );
+
+      // 9) Invalidér alle aktive sessions for den slettede bruger.
+      await client.query(
+        `DELETE FROM "session" WHERE "userId" = $1`,
+        [userId]
+      );
+
+      // 10) Fjern OAuth/password-accounts (Better Auth) — credentials skal
+      //     væk.
+      await client.query(
+        `DELETE FROM "account" WHERE "userId" = $1`,
+        [userId]
+      );
+
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+
+    // 11) Slet de fysiske filer fra disk EFTER commit. Hvis vi gjorde dette
+    //     før commit og DB-rollback skete, ville filerne være væk men
+    //     ikke-anonymiseret bruger blive bevaret. Hvis disk-sletning fejler
+    //     her, har vi i værste fald uoprydet diskplads — ikke et GDPR-brud,
+    //     fordi DB ikke længere refererer til filerne.
+    if (this.uploadStore) {
+      for (const row of photoPaths.rows) {
+        try {
+          await this.uploadStore.delete(row.storage_path);
+        } catch (error) {
+          console.error("Failed to delete profile photo from disk", error);
+        }
+      }
+      for (const row of verificationPaths.rows) {
+        if (row.id_document_path) {
+          try {
+            await this.uploadStore.delete(row.id_document_path);
+          } catch (error) {
+            console.error("Failed to delete ID document from disk", error);
+          }
+        }
+        if (row.selfie_path) {
+          try {
+            await this.uploadStore.delete(row.selfie_path);
+          } catch (error) {
+            console.error("Failed to delete selfie from disk", error);
+          }
+        }
+      }
+    }
   }
 
   async listVerifiedMembers(excludeUserId: string): Promise<MembershipProfile[]> {

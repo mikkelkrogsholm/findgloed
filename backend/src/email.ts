@@ -4,8 +4,25 @@ export class ResendEmailService implements EmailService {
   constructor(
     private readonly apiKey: string,
     private readonly fromEmail: string,
-    private readonly supportEmail: string
+    private readonly supportEmail: string,
+    // Navngiven dataansvarlig (issue A19) — bruges i mail-signaturen
+    // så modtagerne kan se hvem der står bag platformen.
+    private readonly dataControllerName: string = "",
+    private readonly dataControllerEmail: string = ""
   ) {}
+
+  private signature(): string {
+    const lines: string[] = [];
+    if (this.dataControllerName) {
+      lines.push(`Dataansvarlig: ${this.dataControllerName}`);
+    }
+    if (this.dataControllerEmail) {
+      lines.push(`Kontakt: ${this.dataControllerEmail}`);
+    } else if (this.supportEmail) {
+      lines.push(`Support: ${this.supportEmail}`);
+    }
+    return lines.join("\n");
+  }
 
   async sendWaitlistConfirm(email: string, confirmUrl: string): Promise<void> {
     if (!this.apiKey || !this.fromEmail) {
@@ -17,7 +34,7 @@ export class ResendEmailService implements EmailService {
       "Tak for din tilmelding.",
       "Klik på linket for at bekræfte din email:",
       confirmUrl,
-      this.supportEmail ? `Support: ${this.supportEmail}` : ""
+      this.signature()
     ]
       .filter(Boolean)
       .join("\n");
@@ -50,7 +67,7 @@ export class ResendEmailService implements EmailService {
     const text = [
       "Tak for din tilmelding til Glød.",
       "Vi giver dig besked, når næste skridt er klar.",
-      this.supportEmail ? `Support: ${this.supportEmail}` : ""
+      this.signature()
     ]
       .filter(Boolean)
       .join("\n");
@@ -84,7 +101,7 @@ export class ResendEmailService implements EmailService {
       "Tak for din interesse i at blive samarbejdspartner.",
       "Klik på linket for at bekræfte din henvendelse:",
       confirmUrl,
-      this.supportEmail ? `Support: ${this.supportEmail}` : ""
+      this.signature()
     ]
       .filter(Boolean)
       .join("\n");
@@ -117,7 +134,7 @@ export class ResendEmailService implements EmailService {
     const text = [
       "Din samarbejdsforespørgsel er bekræftet.",
       "Vi vender tilbage hurtigst muligt.",
-      this.supportEmail ? `Support: ${this.supportEmail}` : ""
+      this.signature()
     ]
       .filter(Boolean)
       .join("\n");
