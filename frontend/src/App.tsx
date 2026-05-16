@@ -8,6 +8,8 @@ import { DesignPage } from "@/pages/design-page";
 import { LandingPage } from "@/pages/landing-page";
 import { NotFoundPage } from "@/pages/not-found-page";
 import { PrivacyPage } from "@/pages/privacy-page";
+import { TermsPage } from "@/pages/terms-page";
+import { CodeOfConductPage } from "@/pages/code-of-conduct-page";
 import { VisionPage } from "@/pages/vision-page";
 import { PartnerConfirmPage } from "@/pages/partner-confirm-page";
 import { WaitlistConfirmPage } from "@/pages/waitlist-confirm-page";
@@ -37,6 +39,12 @@ function resolveRoute(pathname: string): AppRouteName {
   }
   if (pathname === appConfig.routes.privacy) {
     return "privacy";
+  }
+  if (pathname === appConfig.routes.terms) {
+    return "terms";
+  }
+  if (pathname === appConfig.routes.codeOfConduct) {
+    return "code-of-conduct";
   }
   if (pathname === appConfig.routes.waitlistConfirm || pathname === `${appConfig.routes.waitlistConfirm}/`) {
     return "waitlist-confirm";
@@ -149,6 +157,8 @@ export default function App() {
       landing: "Glød",
       vision: "Glød - Vision",
       privacy: "Glød - Persondatapolitik",
+      terms: "Glød - Handelsbetingelser",
+      "code-of-conduct": "Glød - Code of conduct",
       "waitlist-confirm": "Glød - Bekræft tilmelding",
       "partner-confirm": "Glød - Bekræft samarbejde",
       design: "Glød - Design System",
@@ -188,6 +198,8 @@ export default function App() {
         >
           {route === "vision" && <VisionPage />}
           {route === "privacy" && <PrivacyPage />}
+          {route === "terms" && <TermsPage />}
+          {route === "code-of-conduct" && <CodeOfConductPage />}
           {route === "waitlist-confirm" && <WaitlistConfirmPage />}
           {route === "partner-confirm" && <PartnerConfirmPage />}
           {route === "login" && <LoginPage />}

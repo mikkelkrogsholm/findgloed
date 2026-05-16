@@ -139,8 +139,16 @@ export function SignupPage() {
                     Jeg accepterer{" "}
                     <a className="link-inline" href={appConfig.routes.privacy}>
                       persondatapolitikken
+                    </a>
+                    ,{" "}
+                    <a className="link-inline" href={appConfig.routes.terms}>
+                      handelsbetingelserne
                     </a>{" "}
-                    og samtykker til at min profil først vises efter manuel verificering.
+                    og{" "}
+                    <a className="link-inline" href={appConfig.routes.codeOfConduct}>
+                      code of conduct
+                    </a>
+                    , og samtykker til at min profil først vises efter manuel verificering.
                   </span>
                 </label>
               </div>

@@ -175,7 +175,15 @@ export function LandingPage() {
                           onCheckedChange={(value) => setAcceptedTermsPrivacy(Boolean(value))}
                         />
                         <Label htmlFor="terms_privacy" className="body-text text-sm leading-relaxed">
-                          Jeg har læst og accepterer handelsbetingelserne og persondatapolitikken.
+                          Jeg har læst og accepterer{" "}
+                          <a className="link-inline" href={appConfig.routes.terms}>
+                            handelsbetingelserne
+                          </a>{" "}
+                          og{" "}
+                          <a className="link-inline" href={appConfig.routes.privacy}>
+                            persondatapolitikken
+                          </a>
+                          .
                         </Label>
                       </div>
 

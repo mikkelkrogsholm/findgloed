@@ -142,6 +142,11 @@ export function SiteShell({ children, showDesignLink = false, themePreset }: Sit
                     active={isCurrent(pathname, appConfig.routes.vision)}
                   />
                   <NavLink
+                    href={appConfig.routes.codeOfConduct}
+                    label="Code of conduct"
+                    active={isCurrent(pathname, appConfig.routes.codeOfConduct)}
+                  />
+                  <NavLink
                     href={appConfig.routes.privacy}
                     label="Privatliv"
                     active={isCurrent(pathname, appConfig.routes.privacy)}
@@ -217,6 +222,7 @@ export function SiteShell({ children, showDesignLink = false, themePreset }: Sit
               ) : (
                 <>
                   <NavLink href={appConfig.routes.vision} label="Vision" />
+                  <NavLink href={appConfig.routes.codeOfConduct} label="Code of conduct" />
                   <NavLink href={appConfig.routes.privacy} label="Privatliv" />
                   <NavLink href={appConfig.routes.login} label="Log ind" />
                   <NavLink
@@ -274,6 +280,64 @@ export function SiteShell({ children, showDesignLink = false, themePreset }: Sit
       </motion.header>
 
       {children}
+
+      {!isFocusedRoute(pathname) && (
+        <footer
+          className="mx-auto w-full max-w-6xl px-6 py-8 text-xs text-[color:var(--color-text-tertiary)]"
+          data-testid="site-footer"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[color:var(--border-subtle)] pt-6">
+            <p>© Glød {new Date().getFullYear()}</p>
+            <nav
+              aria-label="Sidefod"
+              className="flex flex-wrap gap-x-4 gap-y-2"
+              data-testid="site-footer-nav"
+            >
+              <a
+                href={appConfig.routes.privacy}
+                className="link-inline"
+                onClick={(event) => {
+                  event.preventDefault();
+                  navigate(appConfig.routes.privacy);
+                }}
+              >
+                Privatliv
+              </a>
+              <a
+                href={appConfig.routes.terms}
+                className="link-inline"
+                onClick={(event) => {
+                  event.preventDefault();
+                  navigate(appConfig.routes.terms);
+                }}
+              >
+                Vilkår
+              </a>
+              <a
+                href={appConfig.routes.codeOfConduct}
+                className="link-inline"
+                onClick={(event) => {
+                  event.preventDefault();
+                  navigate(appConfig.routes.codeOfConduct);
+                }}
+              >
+                Code of conduct
+              </a>
+              <a href="mailto:mikkel@findgloed.dk" className="link-inline">
+                Kontakt
+              </a>
+            </nav>
+          </div>
+        </footer>
+      )}
     </main>
   );
+}
+
+function isFocusedRoute(pathname: string): boolean {
+  // Skjul footer i fokuserede flows hvor den vil skygge for indhold
+  if (pathname.startsWith(`${appConfig.routes.messages}/`)) {
+    return true;
+  }
+  return false;
 }

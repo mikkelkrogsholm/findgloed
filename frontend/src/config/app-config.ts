@@ -13,6 +13,8 @@ export const appConfig = {
     landing: "/",
     vision: "/vision",
     privacy: "/privacy",
+    terms: "/terms",
+    codeOfConduct: "/code-of-conduct",
     waitlistConfirm: "/waitlist/confirm",
     partnerConfirm: "/partner/confirm",
     login: "/login",
@@ -45,6 +47,8 @@ export type AppRouteName =
   | "landing"
   | "vision"
   | "privacy"
+  | "terms"
+  | "code-of-conduct"
   | "waitlist-confirm"
   | "partner-confirm"
   | "login"
