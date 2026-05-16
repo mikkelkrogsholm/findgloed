@@ -1,0 +1,48 @@
+# Glød Issue-Loop — Progress Tracker
+
+**Startet:** 5. maj 2026
+**Orkestrator:** Claude (auto mode + ScheduleWakeup safety net)
+**Base branch:** `feature/platform-fase-1-4`
+
+## Workflow pr. pakke
+
+1. Opret epic-branch fra `feature/platform-fase-1-4`: `epic/pakke-N-<slug>`
+2. Send subagent ud med konkret brief
+3. Når agent er færdig: tjek tests, type-check, visuel verifikation hvor relevant
+4. Hvis grønt: merge tilbage til `feature/platform-fase-1-4`
+5. Opdatér denne fil
+6. Næste pakke
+
+## Status pr. pakke
+
+| # | Pakke | Branch | Status | Agent-ID | Noter |
+|---|-------|--------|--------|----------|-------|
+| 1 | Make verification real | `epic/pakke-1-verification` | 🟢 DONE | claude-opus-4.7 | A6, A7, A8, A21, A23 — alle fixet, 45/45 tests grønne |
+| 2 | Couple as first-class | `epic/pakke-2-couple` | ⚪ TODO | — | A3, A4, C6, C24 |
+| 3 | Lag 2 (match) skal virke | `epic/pakke-3-match-layer` | ⚪ TODO | — | A2, B1, B2, B48 |
+| 4 | Brand-rens (beslutning 1+9) | `epic/pakke-4-brand-rens` | ⚪ TODO | — | A15, A16, B12, C33-C43 |
+| 5 | GDPR + dataansvar | `epic/pakke-5-gdpr` | ⚪ TODO | — | A9, A10, A17, A19, C9 |
+| 6 | Code of conduct + terms | `epic/pakke-6-coc-terms` | ⚪ TODO | — | A5, A19, B46 |
+| 7 | Auth & rate-limiting | `epic/pakke-7-auth-hardening` | ⚪ TODO | — | A14, A18, B13, B14, B20-B22 |
+| 8 | Skeleton + a11y | `epic/pakke-8-a11y-skeleton` | ⚪ TODO | — | A20, A22, B23-B31, C47-C58 |
+| 9 | Admin UX | `epic/pakke-9-admin-ux` | ⚪ TODO | — | B8, B9, B10, B17, C30-C32 |
+| 10 | Stripe live-readiness | `epic/pakke-10-stripe` | ⚪ TODO | — | A18, B37, C25-C29 |
+| 11 | DB- & query-optimering | `epic/pakke-11-perf` | ⚪ TODO | — | A11, A12, A13, A24, B15, B16 |
+
+Legend: ⚪ TODO · 🟡 PENDING (briefed) · 🟠 IN PROGRESS · 🟢 MERGED · 🔴 BLOCKED
+
+## Beslutningsregler
+
+- Hvis agent rapporterer fejl: send ny agent med præcis hvad der mangler
+- Hvis tests fejler: send ny agent med "fix testene"
+- Hvis blokeret af brugerinput-behov: dokumentér i Noter og spring til næste pakke
+- Hvis kompleks merge-conflict: spring pakken over og notér til menneskelig review
+
+## Hændelseslog
+
+(senest øverst)
+
+| Tid | Hændelse |
+|-----|----------|
+| 16. maj 2026 | Pakke 1 afsluttet 🟢 — A6 (SQL ambiguous fix), A7 (ghost-medlemmer filter), A8 (admin-verifications + admin-reports UI), A21 (onboarding-knap-tekst), A23 (rejectVerification nedgraderer altid). Smoke-test bekræftet: `/api/admin/verifications` returnerer 200, ghost-bruger filtreres ud af `/api/members`. Build + 45/45 tests grønne. |
+| (init) | Loop-progress oprettet. Starter Pakke 1. |

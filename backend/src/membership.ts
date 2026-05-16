@@ -83,6 +83,21 @@ const VERIFICATION_FIELDS = `
   rejection_reason
 `;
 
+// Prefiks-version af VERIFICATION_FIELDS til JOINs hvor "user".id
+// ellers ville give "ambiguous column"-fejl (issue A6).
+const VERIFICATION_FIELDS_PREFIXED = `
+  v.id,
+  v.user_id,
+  v.id_document_path,
+  v.selfie_path,
+  v.status,
+  v.submitted_at,
+  v.reviewed_at,
+  v.reviewed_by_admin_id,
+  v.notes,
+  v.rejection_reason
+`;
+
 function rowToProfile(row: Record<string, unknown>): MembershipProfile {
   return {
     user_id: String(row.user_id),
@@ -219,10 +234,14 @@ export class PostgresMembershipRepository implements MembershipRepository {
   }
 
   async listVerifiedMembers(excludeUserId: string): Promise<MembershipProfile[]> {
+    // Issue A7: kun brugere der har gennemført onboarding må optræde i /members.
+    // Nye signups bliver auto-verified (verified_via='temporary') via auth-hook
+    // før de har valgt rolle/photo, og må ikke være synlige som ghost-medlemmer.
     const result = await this.pool.query(
       `SELECT ${PROFILE_FIELDS}
        FROM "user" u
        WHERE u.verification_status = 'verified'
+         AND u.onboarded_at IS NOT NULL
          AND u.deleted_at IS NULL
          AND u.paused_at IS NULL
          AND u.id <> $1
@@ -243,6 +262,10 @@ export class PostgresMembershipRepository implements MembershipRepository {
       return null;
     }
     if (profile.verification_status !== "verified" && userId !== viewerId) {
+      return null;
+    }
+    // Issue A7: skjul ghost-profiler (ikke færdig-onboardede) for andre.
+    if (profile.onboarded_at === null && userId !== viewerId) {
       return null;
     }
 
@@ -521,6 +544,11 @@ export class PostgresMembershipRepository implements MembershipRepository {
         [input.user_id, input.id_document_path, input.selfie_path]
       );
 
+      // Issue A23: Hvis brugeren allerede er 'verified' (typisk via
+      // 'temporary'-markeringen fra signup-hook'en), bevarer vi den status
+      // mens admin behandler den nye indsendelse — så de stadig kan bruge
+      // platformen indtil afvisning. Kun ikke-verified-brugere flyttes til
+      // 'pending' her.
       await client.query(
         `UPDATE "user" SET verification_status = 'pending', "updatedAt" = NOW()
          WHERE id = $1 AND verification_status NOT IN ('verified')`,
@@ -546,8 +574,10 @@ export class PostgresMembershipRepository implements MembershipRepository {
   }
 
   async listPendingVerifications(): Promise<Array<VerificationSubmission & { email: string }>> {
+    // Bruger PREFIXED-version pga. ambiguous "id"-kolonne mellem
+    // verification_submission og "user" (issue A6).
     const result = await this.pool.query(
-      `SELECT ${VERIFICATION_FIELDS}, u.email AS email
+      `SELECT ${VERIFICATION_FIELDS_PREFIXED}, u.email AS email
        FROM verification_submission v
        JOIN "user" u ON u.id = v.user_id
        WHERE v.status = 'pending'
@@ -610,9 +640,18 @@ export class PostgresMembershipRepository implements MembershipRepository {
         return null;
       }
       const submission = rowToVerification(result.rows[0]);
+      // Issue A23: Ved afvisning nedgraderer vi brugeren uanset gammel status.
+      // Temporary-verified brugere (status='verified', verified_via='temporary')
+      // skal også nedgraderes til 'rejected' når deres rigtige ID-indsendelse
+      // afvises — ellers forbliver de verified på platformen efter afslag.
+      // Vi rydder også verified_via og verified_at så vi ikke har inkonsistens.
       await client.query(
-        `UPDATE "user" SET verification_status = 'rejected', "updatedAt" = NOW()
-         WHERE id = $1 AND verification_status = 'pending'`,
+        `UPDATE "user"
+           SET verification_status = 'rejected',
+               verified_via = NULL,
+               verified_at = NULL,
+               "updatedAt" = NOW()
+         WHERE id = $1`,
         [submission.user_id]
       );
       await client.query("COMMIT");
