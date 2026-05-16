@@ -445,10 +445,39 @@ export function registerMessagingRoutes(
 
   app.use("/api/admin/reports", adminOnly);
   app.use("/api/admin/reports/*", adminOnly);
+  // B17: admin-only event-post moderation. Skjuler en post via
+  // hidden_by_admin_at — sletning ville hærge audit-spor og kan ikke
+  // fortrydes. Den skjulte post forsvinder fra listEventPosts().
+  app.use("/api/admin/event-posts/*", adminOnly);
 
   app.get("/api/admin/reports", async (c) => {
     const reports = await messagingRepository.listOpenReports();
     return c.json({ ok: true, reports });
+  });
+
+  app.get("/api/admin/event-posts/:id", async (c) => {
+    const id = c.req.param("id");
+    const post = await messagingRepository.getEventPostById(id);
+    if (!post) return c.json({ ok: false, code: "NOT_FOUND" }, 404);
+    return c.json({
+      ok: true,
+      post: {
+        id: post.id,
+        event_id: post.event_id,
+        author_user_id: post.author_user_id,
+        body: post.body,
+        posted_at: post.posted_at.toISOString(),
+        hidden_by_admin_at: post.hidden_by_admin_at?.toISOString() ?? null,
+        deleted_at: post.deleted_at?.toISOString() ?? null
+      }
+    });
+  });
+
+  app.delete("/api/admin/event-posts/:id", async (c) => {
+    const id = c.req.param("id");
+    const ok = await messagingRepository.hideEventPost(id);
+    if (!ok) return c.json({ ok: false, code: "NOT_FOUND" }, 404);
+    return c.json({ ok: true });
   });
 
   app.post("/api/admin/reports/:id/resolve", async (c) => {
