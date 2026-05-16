@@ -103,6 +103,8 @@ export function SignupPage() {
                   placeholder="dig@eksempel.dk"
                   required
                   autoComplete="email"
+                  aria-invalid={errorMessage ? "true" : undefined}
+                  aria-describedby={errorMessage ? "signup-form-error" : undefined}
                 />
               </div>
 
@@ -154,7 +156,7 @@ export function SignupPage() {
               </div>
 
               {errorMessage && (
-                <Alert>
+                <Alert id="signup-form-error" role="alert">
                   <AlertDescription>{errorMessage}</AlertDescription>
                 </Alert>
               )}

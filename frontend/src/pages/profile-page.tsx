@@ -24,6 +24,8 @@ import {
   SelectValue
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { PageHeader } from "@/components/layout/page-header";
+import { FormSkeleton } from "@/components/layout/loading-state";
 import { appConfig } from "@/config/app-config";
 import {
   api,
@@ -87,6 +89,8 @@ export function ProfilePage() {
   const [deleteConfirmEmail, setDeleteConfirmEmail] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
+  // Revoke-grant-dialog (erstatter window.confirm — accessibility-fix)
+  const [revokeGrantUserId, setRevokeGrantUserId] = useState<string | null>(null);
   const motionMode = getMotionMode();
 
   async function reload() {
@@ -192,10 +196,8 @@ export function ProfilePage() {
   }
 
   // B2: Revoke en grant så modtageren mister adgang til mit private album.
-  async function handleRevokeGrant(recipientUserId: string) {
-    if (!window.confirm("Træk adgang til dit private album tilbage?")) {
-      return;
-    }
+  // Bruger Dialog (a11y) — window.confirm er native og kan ikke styles eller skærmlæses ordentligt.
+  async function performRevokeGrant(recipientUserId: string) {
     const result = await api.revokePrivateAlbum(recipientUserId);
     if (!result.ok) {
       setError("Kunne ikke trække adgang tilbage.");
@@ -246,9 +248,15 @@ export function ProfilePage() {
   }
 
   if (loading) {
+    // A22: Form-skeleton matcher de tre profil-kort.
     return (
-      <section className="mx-auto w-full max-w-md px-6 py-20 text-center">
-        <p className="body-text-muted">Indlæser…</p>
+      <section className="mx-auto w-full max-w-3xl px-6 py-10 md:py-16">
+        <PageHeader kicker="Din profil" title="Henter…" />
+        <div className="space-y-6">
+          <FormSkeleton rows={3} data-testid="profile-loading-1" />
+          <FormSkeleton rows={4} />
+          <FormSkeleton rows={2} />
+        </div>
       </section>
     );
   }
@@ -501,14 +509,22 @@ export function ProfilePage() {
                   Ingen billeder endnu.
                 </p>
               )}
-              {data.photos.map((photo) => (
+              {data.photos.map((photo) => {
+                // B23: Meningsfuld alt-tekst pr. foto-type.
+                const photoAlt =
+                  photo.kind === "face"
+                    ? `Dit ansigts-billede (${photo.visibility})`
+                    : photo.kind === "ambient"
+                      ? "Dit stemningsbillede"
+                      : "Privat billede";
+                return (
                 <div
                   key={photo.id}
                   className="relative overflow-hidden rounded-2xl border border-[color:var(--border-subtle)]"
                 >
                   <img
                     src={api.asset(photo.url)}
-                    alt=""
+                    alt={photoAlt}
                     loading="lazy"
                     className="h-40 w-full object-cover"
                   />
@@ -525,7 +541,8 @@ export function ProfilePage() {
                     </Button>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
 
             <div className="grid gap-3 sm:grid-cols-3">
@@ -631,7 +648,7 @@ export function ProfilePage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleRevokeGrant(grant.recipient_user_id)}
+                        onClick={() => setRevokeGrantUserId(grant.recipient_user_id)}
                         data-testid={`profile-revoke-grant-${grant.recipient_user_id}`}
                       >
                         Træk adgang tilbage
@@ -644,33 +661,54 @@ export function ProfilePage() {
           </Card>
         )}
 
+        {/* B27: Splittede 7 knapper i tre semantiske grupper med visuel
+            adskillelse — så hierarkiet er læsbart (Status > Genveje > Konto). */}
         <Card className="mb-6 p-6 md:p-8">
           <CardHeader className="px-0 pt-0">
             <CardTitle>Kontoadministration</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3 px-0 pb-0">
-            <div className="flex flex-wrap gap-2">
-              <Button variant="outline" onClick={handlePause}>
-                {data.profile.paused_at ? "Aktivér profil" : "Sæt profil på pause"}
-              </Button>
-              <Button variant="outline" onClick={() => navigate(appConfig.routes.verification)}>
-                Verificering
-              </Button>
-              <Button variant="outline" onClick={() => navigate(appConfig.routes.members)}>
-                Medlemmer
-              </Button>
-              <Button variant="outline" onClick={() => navigate(appConfig.routes.events)}>
-                Events
-              </Button>
-              <Button variant="outline" onClick={() => navigate(appConfig.routes.messages)}>
-                Beskeder
-              </Button>
-              <Button variant="outline" onClick={() => navigate(appConfig.routes.membership)}>
-                Medlemskab
-              </Button>
-              <Button variant="ghost" onClick={handleSignOut}>
-                Log ud
-              </Button>
+          <CardContent className="divide-y divide-[color:var(--border-subtle)] px-0 pb-0">
+            <div className="space-y-3 pb-4">
+              <p className="text-xs uppercase tracking-wider text-[color:var(--color-text-tertiary)]">
+                Status
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" onClick={handlePause}>
+                  {data.profile.paused_at ? "Aktivér profil" : "Sæt profil på pause"}
+                </Button>
+                <Button variant="outline" onClick={() => navigate(appConfig.routes.verification)}>
+                  Verificering
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-3 py-4">
+              <p className="text-xs uppercase tracking-wider text-[color:var(--color-text-tertiary)]">
+                Genveje
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" onClick={() => navigate(appConfig.routes.members)}>
+                  Medlemmer
+                </Button>
+                <Button variant="outline" onClick={() => navigate(appConfig.routes.events)}>
+                  Events
+                </Button>
+                <Button variant="outline" onClick={() => navigate(appConfig.routes.messages)}>
+                  Beskeder
+                </Button>
+                <Button variant="outline" onClick={() => navigate(appConfig.routes.membership)}>
+                  Medlemskab
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-3 pt-4">
+              <p className="text-xs uppercase tracking-wider text-[color:var(--color-text-tertiary)]">
+                Konto
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="ghost" onClick={handleSignOut}>
+                  Log ud
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -793,6 +831,39 @@ export function ProfilePage() {
                   : deleteMode === "hard"
                     ? "Slet permanent"
                     : "Pause + skjul"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Revoke-grant Dialog — erstatter native window.confirm. */}
+        <Dialog
+          open={revokeGrantUserId !== null}
+          onOpenChange={(open) => {
+            if (!open) setRevokeGrantUserId(null);
+          }}
+        >
+          <DialogContent data-testid="revoke-grant-dialog">
+            <DialogHeader>
+              <DialogTitle>Træk adgang tilbage?</DialogTitle>
+              <DialogDescription>
+                Modtageren mister øjeblikkeligt adgang til dit private album. Du
+                kan altid give adgang igen senere.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setRevokeGrantUserId(null)}>
+                Annullér
+              </Button>
+              <Button
+                onClick={async () => {
+                  if (!revokeGrantUserId) return;
+                  await performRevokeGrant(revokeGrantUserId);
+                  setRevokeGrantUserId(null);
+                }}
+                data-testid="confirm-revoke-grant"
+              >
+                Træk adgang tilbage
               </Button>
             </DialogFooter>
           </DialogContent>

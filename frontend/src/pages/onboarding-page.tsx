@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { FormSkeleton } from "@/components/layout/loading-state";
 import { appConfig } from "@/config/app-config";
 import { api, type FaceVisibility, type InitiatorRole, type OwnProfile } from "@/lib/api";
 import { getMotionMode, revealVariants } from "@/lib/motion";
@@ -171,9 +172,10 @@ export function OnboardingPage() {
   }
 
   if (loadingProfile) {
+    // A22: Form-skeleton matcher onboarding-kortet.
     return (
-      <section className="mx-auto w-full max-w-md px-6 py-20 text-center">
-        <p className="body-text-muted">Indlæser…</p>
+      <section className="mx-auto w-full max-w-2xl px-6 py-12 md:py-20">
+        <FormSkeleton rows={4} data-testid="onboarding-loading" />
       </section>
     );
   }
@@ -212,7 +214,8 @@ export function OnboardingPage() {
                       key={option.title}
                       type="button"
                       onClick={() => setInitiatorRole(option.value)}
-                      className={`w-full rounded-2xl border p-4 text-left transition-colors ${
+                      aria-pressed={initiatorRole === option.value}
+                      className={`w-full rounded-2xl border p-4 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-link)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--color-bg-base)] ${
                         initiatorRole === option.value
                           ? "border-[color:var(--color-link)] bg-[color:var(--surface-glass-strong)]"
                           : "border-[color:var(--border-subtle)] bg-[color:var(--surface-glass)] hover:bg-[color:var(--surface-glass-strong)]"
@@ -239,7 +242,8 @@ export function OnboardingPage() {
                       key={option.value}
                       type="button"
                       onClick={() => setFaceVisibility(option.value)}
-                      className={`w-full rounded-2xl border p-4 text-left transition-colors ${
+                      aria-pressed={faceVisibility === option.value}
+                      className={`w-full rounded-2xl border p-4 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-link)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--color-bg-base)] ${
                         faceVisibility === option.value
                           ? "border-[color:var(--color-link)] bg-[color:var(--surface-glass-strong)]"
                           : "border-[color:var(--border-subtle)] bg-[color:var(--surface-glass)] hover:bg-[color:var(--surface-glass-strong)]"
@@ -267,6 +271,7 @@ export function OnboardingPage() {
                     placeholder="F.eks. Moa, Nordlys, eller dit fornavn"
                     maxLength={48}
                     required
+                    autoComplete="nickname"
                   />
                 </div>
 
@@ -293,6 +298,7 @@ export function OnboardingPage() {
                       value={region}
                       onChange={(event) => setRegion(event.target.value)}
                       placeholder="København"
+                      autoComplete="address-level2"
                     />
                   </div>
                 </div>

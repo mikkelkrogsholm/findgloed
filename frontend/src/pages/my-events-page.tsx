@@ -6,6 +6,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/layout/page-header";
+import { SkeletonGrid } from "@/components/layout/loading-state";
 import { appConfig } from "@/config/app-config";
 import { api, type PublicEvent } from "@/lib/api";
 import { CATEGORY_LABEL, LEVEL_LABEL, formatDateTime } from "@/lib/event-display";
@@ -55,7 +57,8 @@ export function MyEventsPage() {
           Til alle events
         </Button>
 
-        <h1 className="mb-6 font-display text-3xl">Mine tilmeldinger</h1>
+        {/* B25: kicker tilføjet så header-mønster er konsistent. */}
+        <PageHeader kicker="Begivenheder" title="Mine tilmeldinger" />
 
         {error && (
           <Alert className="mb-4">
@@ -64,37 +67,59 @@ export function MyEventsPage() {
         )}
 
         {loading ? (
-          <p className="body-text-muted text-center">Henter…</p>
+          <SkeletonGrid variant="my-events" count={3} data-testid="my-events-loading" />
         ) : registrations.length === 0 ? (
           <p className="body-text-muted text-center">
             Du er ikke tilmeldt nogen events endnu.
           </p>
         ) : (
           <div className="space-y-4">
-            {registrations.map((reg) => (
-              <Card
-                key={reg.id}
-                className="cursor-pointer p-5 transition-transform hover:scale-[1.005]"
-                onClick={() => navigate(`${appConfig.routes.events}/${reg.event.slug}`)}
-              >
-                <CardHeader className="px-0 pt-0">
-                  <div className="mb-2 flex flex-wrap gap-1.5">
-                    <Badge variant="secondary">{CATEGORY_LABEL[reg.event.category]}</Badge>
-                    <Badge variant="outline">{LEVEL_LABEL[reg.event.level]}</Badge>
-                    <Badge variant="outline">{reg.status}</Badge>
-                  </div>
-                  <CardTitle className="text-lg">{reg.event.title}</CardTitle>
-                </CardHeader>
-                <CardContent className="px-0 pb-0">
-                  <p className="text-sm text-[color:var(--color-text-secondary)]">
-                    {formatDateTime(reg.event.starts_at)}
-                  </p>
-                  <p className="text-xs text-[color:var(--color-text-tertiary)]">
-                    {reg.event.location_label ?? reg.event.region}
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
+            {registrations.map((reg) => {
+              const eventHref = `${appConfig.routes.events}/${reg.event.slug}`;
+              return (
+                // A20: <a> wrapper sikrer tastatur-tilgængelighed.
+                <Card
+                  key={reg.id}
+                  className="p-0 transition-transform hover:scale-[1.005] focus-within:ring-2 focus-within:ring-[color:var(--color-link)] focus-within:ring-offset-2 focus-within:ring-offset-[color:var(--color-bg-base)]"
+                >
+                  <a
+                    href={eventHref}
+                    onClick={(e) => {
+                      if (
+                        e.defaultPrevented ||
+                        e.metaKey ||
+                        e.ctrlKey ||
+                        e.shiftKey ||
+                        e.button !== 0
+                      ) {
+                        return;
+                      }
+                      e.preventDefault();
+                      navigate(eventHref);
+                    }}
+                    className="block p-5 focus:outline-none"
+                    aria-label={`Se ${reg.event.title}`}
+                  >
+                    <CardHeader className="px-0 pt-0">
+                      <div className="mb-2 flex flex-wrap gap-1.5">
+                        <Badge variant="secondary">{CATEGORY_LABEL[reg.event.category]}</Badge>
+                        <Badge variant="outline">{LEVEL_LABEL[reg.event.level]}</Badge>
+                        <Badge variant="outline">{reg.status}</Badge>
+                      </div>
+                      <CardTitle className="text-lg">{reg.event.title}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="px-0 pb-0">
+                      <p className="text-sm text-[color:var(--color-text-secondary)]">
+                        {formatDateTime(reg.event.starts_at)}
+                      </p>
+                      <p className="text-xs text-[color:var(--color-text-tertiary)]">
+                        {reg.event.location_label ?? reg.event.region}
+                      </p>
+                    </CardContent>
+                  </a>
+                </Card>
+              );
+            })}
           </div>
         )}
       </motion.div>

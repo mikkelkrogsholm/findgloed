@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EventThread } from "@/components/event-thread";
+import { FormSkeleton } from "@/components/layout/loading-state";
 import { appConfig } from "@/config/app-config";
 import { api, type EventLevel, type PublicEvent } from "@/lib/api";
 import {
@@ -78,9 +79,10 @@ export function EventDetailPage() {
   }
 
   if (loading) {
+    // A22: Skeleton matcher event-detail-layoutet (header + beskrivelse + tilmelding).
     return (
-      <section className="mx-auto w-full max-w-3xl px-6 py-20 text-center">
-        <p className="body-text-muted">Indlæser…</p>
+      <section className="mx-auto w-full max-w-3xl px-6 py-10 md:py-16">
+        <FormSkeleton rows={5} data-testid="event-detail-loading" />
       </section>
     );
   }
