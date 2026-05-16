@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EventThread } from "@/components/event-thread";
 import { appConfig } from "@/config/app-config";
-import { api, type PublicEvent } from "@/lib/api";
+import { api, type EventLevel, type PublicEvent } from "@/lib/api";
 import {
   CATEGORY_LABEL,
   LEVEL_DESCRIPTION,
@@ -18,6 +18,12 @@ import {
 } from "@/lib/event-display";
 import { getMotionMode, revealVariants } from "@/lib/motion";
 import { navigate } from "@/lib/nav";
+
+const COC_HASH_BY_LEVEL: Record<EventLevel, string> = {
+  sensual_social: "#sensual-social",
+  sensual: "#sensual",
+  explicit: "#explicit"
+};
 
 export function EventDetailPage() {
   const slug = window.location.pathname.split("/").pop() ?? "";
@@ -238,6 +244,22 @@ export function EventDetailPage() {
                     : "Tilmeld dig"}
               </Button>
             )}
+
+            <p
+              className="text-center text-xs text-[color:var(--color-text-tertiary)]"
+              data-testid="event-coc-link"
+            >
+              <a
+                className="link-inline"
+                href={`${appConfig.routes.codeOfConduct}${COC_HASH_BY_LEVEL[event.level]}`}
+                onClick={(linkEvent) => {
+                  linkEvent.preventDefault();
+                  navigate(`${appConfig.routes.codeOfConduct}${COC_HASH_BY_LEVEL[event.level]}`);
+                }}
+              >
+                Læs code of conduct for {LEVEL_LABEL[event.level].toLowerCase()}-events →
+              </a>
+            </p>
           </CardContent>
         </Card>
 
