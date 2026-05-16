@@ -305,15 +305,21 @@ export class PostgresMessagingRepository implements MessagingRepository {
       }
       const signal = rowToInterest(signalRow);
 
-      // 2) Tjek mutual interest under låsen. Vi tager med FOR UPDATE på
-      //    de relevante rækker, så ingen anden process kan modify dem mens
-      //    vi læser.
+      // 2) Tjek mutual interest under låsen. PostgreSQL tillader IKKE
+      //    FOR UPDATE direkte sammen med aggregate (COUNT) — derfor
+      //    låser vi rækkerne i en subquery og tæller bagefter.
+      //    pg_advisory_xact_lock (line 274) serialiserer i forvejen
+      //    parallelle signaler for samme par, men FOR UPDATE giver
+      //    forsvar i dybden mod fremtidige bugs der ikke ville bruge
+      //    den samme advisory-lock-key.
       const mutualResult = await client.query<{ count: string }>(
-        `SELECT COUNT(*)::text AS count FROM interest_signal
-         WHERE withdrawn_at IS NULL
-           AND ((from_user_id = $1 AND to_user_id = $2)
-             OR (from_user_id = $2 AND to_user_id = $1))
-         FOR UPDATE`,
+        `SELECT COUNT(*)::text AS count FROM (
+           SELECT 1 FROM interest_signal
+           WHERE withdrawn_at IS NULL
+             AND ((from_user_id = $1 AND to_user_id = $2)
+               OR (from_user_id = $2 AND to_user_id = $1))
+           FOR UPDATE
+         ) locked`,
         [fromUserId, toUserId]
       );
       const isMutual = Number(mutualResult.rows[0]?.count ?? 0) >= 2;
