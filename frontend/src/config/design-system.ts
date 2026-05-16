@@ -69,7 +69,7 @@ const sharedTypography = [
   {
     label: "Kicker",
     variable: "--font-kicker",
-    sample: "TRYGHED OG KLARHED FØRST"
+    sample: "VOKSEN SANSELIGHED FØRST"
   }
 ] as const satisfies TypographyItem[];
 
@@ -82,7 +82,7 @@ const presets: Record<ThemePreset, ThemeDescriptor> = {
   },
   "anthro-v1": {
     name: "Anthro v1",
-    tone: "Editorial serif + clean sans med roligere kontrast og tryghed i fokus.",
+    tone: "Editorial serif + clean sans med roligere kontrast og voksen sanselighed i fokus.",
     tokenGroups: [...sharedTokenGroups],
     typography: [...sharedTypography]
   }
@@ -98,7 +98,7 @@ export const designSystem = {
     "Frosted glass med reel transparens, blur og tydelig læsbarhed.",
     "Editorial serif til overskrifter og ren sans-serif til brødtekst.",
     "Subtil motion med respekt for prefers-reduced-motion.",
-    "Neutral og inkluderende copy med fokus på tryghedssignaler."
+    "Voksen og inkluderende copy der peger på features frem for mantraer."
   ],
   presets,
   tokenGroups: presets[appConfig.themePreset].tokenGroups,

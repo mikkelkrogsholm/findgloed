@@ -112,7 +112,7 @@ export function MembershipPage() {
           <p className="noxus-kicker kicker-text text-[0.65rem]">Medlemskab</p>
           <h1 className="font-display text-3xl">Glød er kun for medlemmer</h1>
           <p className="mt-1 max-w-xl text-sm text-[color:var(--color-text-secondary)]">
-            Et medlemskab er det filter der gør Glød trygt. Du kan annullere når som helst.
+            Et medlemskab er det filter der holder Glød voksent. Du kan annullere når som helst.
           </p>
         </div>
 

@@ -29,7 +29,7 @@ const ROLE_OPTIONS = [
 const INTEREST_OPTIONS = [
   "Oprette events",
   "Nå nye deltagere",
-  "Styrke trygge rammer",
+  "Styrke rammer for samtykke og respekt",
   "Samarbejde om platformen"
 ] as const;
 

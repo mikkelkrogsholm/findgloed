@@ -82,7 +82,7 @@ export function EventThread({ slug }: { slug: string }) {
       <CardHeader className="px-0 pt-0">
         <CardTitle className="text-lg">Diskussion</CardTitle>
         <p className="text-xs text-[color:var(--color-text-tertiary)]">
-          Skab fællesskab før og efter eventet — det her er ikke et kødmarked, men en samtale.
+          En tråd til at fortsætte samtalen før og efter aftenen.
         </p>
       </CardHeader>
       <CardContent className="space-y-4 px-0 pb-0">

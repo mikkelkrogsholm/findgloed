@@ -60,7 +60,7 @@ async function run(): Promise<void> {
       slug: "intim-aabning-koebenhavn",
       title: "Intim åbning — en aften om nærvær",
       description:
-        "En faciliteret aften med øvelser i tilstedeværelse og åbning. Vi arbejder med åndedræt, blikkontakt og kropsbevidsthed — påklædt hele aftenen.\n\nAftenen ledes af en sexolog fra Sexologisk Akademi. Du går derfra med konkrete redskaber og en tydelig oplevelse af hvad nærvær gør ved kontakten.",
+        "En faciliteret aften med øvelser i nærvær og åbning. Vi arbejder med åndedræt, blikkontakt og kropsbevidsthed — påklædt hele aftenen.\n\nAftenen ledes af en sexolog fra Sexologisk Akademi. Du går derfra med en tydeligere fornemmelse af hvad nærvær gør ved kontakten.",
       not_for:
         "Kommer du for at finde en at gå hjem med? Vælg et andet event. Det her er for dig der vil arbejde med tilstedeværelse.",
       category: "mixed",
@@ -96,7 +96,7 @@ async function run(): Promise<void> {
       experience_required: false,
       facilitator_user_id: null,
       facilitator_name: "Henrik Sørensen",
-      facilitator_credential: "Sexolog & terapeut",
+      facilitator_credential: "Sexolog, Sexologisk Akademi",
       starts_at: daysFromNow(14, 18),
       ends_at: daysFromNow(14, 22),
       capacity: 8,
@@ -114,7 +114,7 @@ async function run(): Promise<void> {
       slug: "singles-i-halvmoerket",
       title: "Singles i halvmørket — en sanselig aften",
       description:
-        "Singles mødes til en kuraderet aften med dæmpet lys, stemningsmusik og strukturerede samtaler — designet så du kan møde folk uden at skulle 'sælge' dig selv.\n\nFor dig der ikke ønsker dating-app-flade, men heller ikke en tantrisk weekend.",
+        "Singles mødes til en kuraderet aften med dæmpet lys, stemningsmusik og strukturerede samtaler — designet så du kan møde folk uden at skulle 'sælge' dig selv.\n\nFor dig der ikke ønsker dating-app-flade, men heller ikke en spirituel weekend.",
       not_for: "Folk der primært søger hookups eller er forsigtigt-nysgerrige om relationen til en partner.",
       category: "single_only",
       level: "sensual_social",
@@ -142,7 +142,7 @@ async function run(): Promise<void> {
       description:
         "En aften med klare rammer hvor alt går inden for samtykke. Faciliteret af to værter, code of conduct læses op før kl 21.\n\nKun for medlemmer der har deltaget i mindst ét tidligere event hos Glød eller har anden relevant erfaring.",
       not_for:
-        "Folk der er nye i sex-positive rum, eller som søger en blødere ramme. Vi har andre events.",
+        "Folk der er nye i eksplicitte rum, eller som søger en blødere ramme. Vi har andre events.",
       category: "mixed",
       level: "explicit",
       beginner_friendly: false,
