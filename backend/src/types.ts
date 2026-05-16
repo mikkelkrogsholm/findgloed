@@ -251,6 +251,46 @@ export type CoupleUpsert = {
   accepts_mixed_events: boolean;
 };
 
+export type CoupleInvitationStatus =
+  | "pending"
+  | "accepted"
+  | "declined"
+  | "cancelled"
+  | "expired";
+
+export type CoupleInvitation = {
+  id: string;
+  primary_user_id: string;
+  partner_user_id: string;
+  display_name: string;
+  bio: string | null;
+  region: string | null;
+  open_to_singles: boolean;
+  accepts_mixed_events: boolean;
+  status: CoupleInvitationStatus;
+  expires_at: Date;
+  created_at: Date;
+  responded_at: Date | null;
+};
+
+export type CoupleInvitationWithUsers = CoupleInvitation & {
+  primary_email: string;
+  primary_display_name: string | null;
+  partner_email: string;
+  partner_display_name: string | null;
+};
+
+export type CoupleInvitationInsert = {
+  primary_user_id: string;
+  partner_user_id: string;
+  display_name: string;
+  bio: string | null;
+  region: string | null;
+  open_to_singles: boolean;
+  accepts_mixed_events: boolean;
+  expires_at: Date;
+};
+
 export type CoupleUpdate = {
   display_name?: string;
   bio?: string | null;
@@ -298,6 +338,31 @@ export type MembershipRepository = {
   updateCouple: (id: string, update: CoupleUpdate) => Promise<CoupleProfile | null>;
   getCoupleByUser: (userId: string) => Promise<CoupleProfile | null>;
   deleteCouple: (id: string, requestedBy: string) => Promise<boolean>;
+
+  createCoupleInvitation: (input: CoupleInvitationInsert) => Promise<CoupleInvitation>;
+  getCoupleInvitationById: (id: string) => Promise<CoupleInvitation | null>;
+  listIncomingCoupleInvitations: (
+    userId: string
+  ) => Promise<CoupleInvitationWithUsers[]>;
+  listOutgoingCoupleInvitations: (
+    userId: string
+  ) => Promise<CoupleInvitationWithUsers[]>;
+  acceptCoupleInvitation: (
+    id: string,
+    partnerUserId: string
+  ) => Promise<{ invitation: CoupleInvitation; couple: CoupleProfile } | null>;
+  declineCoupleInvitation: (
+    id: string,
+    partnerUserId: string
+  ) => Promise<CoupleInvitation | null>;
+  cancelCoupleInvitation: (
+    id: string,
+    primaryUserId: string
+  ) => Promise<CoupleInvitation | null>;
+  hasPendingInvitationBetween: (
+    primaryUserId: string,
+    partnerUserId: string
+  ) => Promise<boolean>;
 
   insertPhoto: (input: PhotoInsert) => Promise<ProfilePhoto>;
   listPhotos: (ownerUserId: string | null, ownerCoupleId: string | null) => Promise<ProfilePhoto[]>;

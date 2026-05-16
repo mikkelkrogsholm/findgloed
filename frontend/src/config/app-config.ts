@@ -20,6 +20,7 @@ export const appConfig = {
     onboarding: "/onboarding",
     verification: "/onboarding/verification",
     profile: "/profile",
+    coupleProfile: "/profile/couple",
     members: "/members",
     member: "/members/:id",
     events: "/events",
@@ -51,6 +52,7 @@ export type AppRouteName =
   | "onboarding"
   | "verification"
   | "profile"
+  | "couple-profile"
   | "members"
   | "member-detail"
   | "events"

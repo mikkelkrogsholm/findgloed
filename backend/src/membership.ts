@@ -1,5 +1,8 @@
 import type { Pool } from "pg";
 import type {
+  CoupleInvitation,
+  CoupleInvitationInsert,
+  CoupleInvitationWithUsers,
   CoupleProfile,
   CoupleUpdate,
   CoupleUpsert,
@@ -98,6 +101,21 @@ const VERIFICATION_FIELDS_PREFIXED = `
   v.rejection_reason
 `;
 
+const COUPLE_INVITATION_FIELDS = `
+  id,
+  primary_user_id,
+  partner_user_id,
+  display_name,
+  bio,
+  region,
+  open_to_singles,
+  accepts_mixed_events,
+  status,
+  expires_at,
+  created_at,
+  responded_at
+`;
+
 function rowToProfile(row: Record<string, unknown>): MembershipProfile {
   return {
     user_id: String(row.user_id),
@@ -160,6 +178,35 @@ function rowToGrant(row: Record<string, unknown>): PrivateAlbumGrant {
     revoked_at: (row.revoked_at as Date | null) ?? null,
     last_viewed_at: (row.last_viewed_at as Date | null) ?? null,
     view_count: Number(row.view_count)
+  };
+}
+
+function rowToInvitation(row: Record<string, unknown>): CoupleInvitation {
+  return {
+    id: String(row.id),
+    primary_user_id: String(row.primary_user_id),
+    partner_user_id: String(row.partner_user_id),
+    display_name: String(row.display_name),
+    bio: (row.bio as string | null) ?? null,
+    region: (row.region as string | null) ?? null,
+    open_to_singles: Boolean(row.open_to_singles),
+    accepts_mixed_events: Boolean(row.accepts_mixed_events),
+    status: row.status as CoupleInvitation["status"],
+    expires_at: row.expires_at as Date,
+    created_at: row.created_at as Date,
+    responded_at: (row.responded_at as Date | null) ?? null
+  };
+}
+
+function rowToInvitationWithUsers(
+  row: Record<string, unknown>
+): CoupleInvitationWithUsers {
+  return {
+    ...rowToInvitation(row),
+    primary_email: String(row.primary_email),
+    primary_display_name: (row.primary_display_name as string | null) ?? null,
+    partner_email: String(row.partner_email),
+    partner_display_name: (row.partner_display_name as string | null) ?? null
   };
 }
 
@@ -363,6 +410,196 @@ export class PostgresMembershipRepository implements MembershipRepository {
        WHERE id = $1 AND (primary_user_id = $2 OR partner_user_id = $2)
          AND deleted_at IS NULL`,
       [id, requestedBy]
+    );
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async createCoupleInvitation(input: CoupleInvitationInsert): Promise<CoupleInvitation> {
+    const result = await this.pool.query(
+      `INSERT INTO couple_invitation (
+         primary_user_id, partner_user_id, display_name, bio, region,
+         open_to_singles, accepts_mixed_events, expires_at
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING ${COUPLE_INVITATION_FIELDS}`,
+      [
+        input.primary_user_id,
+        input.partner_user_id,
+        input.display_name,
+        input.bio,
+        input.region,
+        input.open_to_singles,
+        input.accepts_mixed_events,
+        input.expires_at
+      ]
+    );
+    return rowToInvitation(result.rows[0]);
+  }
+
+  async getCoupleInvitationById(id: string): Promise<CoupleInvitation | null> {
+    const result = await this.pool.query(
+      `SELECT ${COUPLE_INVITATION_FIELDS} FROM couple_invitation WHERE id = $1 LIMIT 1`,
+      [id]
+    );
+    return result.rows[0] ? rowToInvitation(result.rows[0]) : null;
+  }
+
+  async listIncomingCoupleInvitations(
+    userId: string
+  ): Promise<CoupleInvitationWithUsers[]> {
+    // Auto-udløb af inviteringer hvis tidsfristen er overskredet — så vi
+    // ikke ender med pending-rækker der i praksis er døde.
+    await this.pool.query(
+      `UPDATE couple_invitation
+         SET status = 'expired', responded_at = NOW()
+       WHERE status = 'pending' AND expires_at < NOW()`
+    );
+    const result = await this.pool.query(
+      `SELECT ci.id, ci.primary_user_id, ci.partner_user_id, ci.display_name,
+              ci.bio, ci.region, ci.open_to_singles, ci.accepts_mixed_events,
+              ci.status, ci.expires_at, ci.created_at, ci.responded_at,
+              p.email AS primary_email, p.display_name AS primary_display_name,
+              q.email AS partner_email, q.display_name AS partner_display_name
+       FROM couple_invitation ci
+       JOIN "user" p ON p.id = ci.primary_user_id
+       JOIN "user" q ON q.id = ci.partner_user_id
+       WHERE ci.partner_user_id = $1 AND ci.status = 'pending'
+       ORDER BY ci.created_at DESC`,
+      [userId]
+    );
+    return result.rows.map(rowToInvitationWithUsers);
+  }
+
+  async listOutgoingCoupleInvitations(
+    userId: string
+  ): Promise<CoupleInvitationWithUsers[]> {
+    await this.pool.query(
+      `UPDATE couple_invitation
+         SET status = 'expired', responded_at = NOW()
+       WHERE status = 'pending' AND expires_at < NOW()`
+    );
+    const result = await this.pool.query(
+      `SELECT ci.id, ci.primary_user_id, ci.partner_user_id, ci.display_name,
+              ci.bio, ci.region, ci.open_to_singles, ci.accepts_mixed_events,
+              ci.status, ci.expires_at, ci.created_at, ci.responded_at,
+              p.email AS primary_email, p.display_name AS primary_display_name,
+              q.email AS partner_email, q.display_name AS partner_display_name
+       FROM couple_invitation ci
+       JOIN "user" p ON p.id = ci.primary_user_id
+       JOIN "user" q ON q.id = ci.partner_user_id
+       WHERE ci.primary_user_id = $1 AND ci.status = 'pending'
+       ORDER BY ci.created_at DESC`,
+      [userId]
+    );
+    return result.rows.map(rowToInvitationWithUsers);
+  }
+
+  async acceptCoupleInvitation(
+    id: string,
+    partnerUserId: string
+  ): Promise<{ invitation: CoupleInvitation; couple: CoupleProfile } | null> {
+    const client = await this.pool.connect();
+    try {
+      await client.query("BEGIN");
+
+      const invitationResult = await client.query(
+        `UPDATE couple_invitation
+           SET status = 'accepted', responded_at = NOW()
+         WHERE id = $1
+           AND partner_user_id = $2
+           AND status = 'pending'
+           AND expires_at >= NOW()
+         RETURNING ${COUPLE_INVITATION_FIELDS}`,
+        [id, partnerUserId]
+      );
+      if (invitationResult.rowCount === 0) {
+        await client.query("ROLLBACK");
+        return null;
+      }
+      const invitation = rowToInvitation(invitationResult.rows[0]);
+
+      // Sørg for at ingen af parterne allerede er i en aktiv couple_profile.
+      // Hvis så, ruller vi tilbage så invitationen forbliver pending og ikke
+      // forbruges. (Pending-tilstand bevares så brugeren kan se den og evt.
+      // declined manuelt — accept er blokeret indtil eksisterende par er væk.)
+      const existing = await client.query(
+        `SELECT 1 FROM couple_profile
+         WHERE (primary_user_id IN ($1, $2) OR partner_user_id IN ($1, $2))
+           AND deleted_at IS NULL
+         LIMIT 1`,
+        [invitation.primary_user_id, invitation.partner_user_id]
+      );
+      if ((existing.rowCount ?? 0) > 0) {
+        await client.query("ROLLBACK");
+        return null;
+      }
+
+      const coupleResult = await client.query(
+        `INSERT INTO couple_profile (
+           primary_user_id, partner_user_id, display_name, bio, region,
+           open_to_singles, accepts_mixed_events
+         )
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         RETURNING ${COUPLE_FIELDS}`,
+        [
+          invitation.primary_user_id,
+          invitation.partner_user_id,
+          invitation.display_name,
+          invitation.bio,
+          invitation.region,
+          invitation.open_to_singles,
+          invitation.accepts_mixed_events
+        ]
+      );
+      const couple = rowToCouple(coupleResult.rows[0]);
+
+      await client.query("COMMIT");
+      return { invitation, couple };
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  async declineCoupleInvitation(
+    id: string,
+    partnerUserId: string
+  ): Promise<CoupleInvitation | null> {
+    const result = await this.pool.query(
+      `UPDATE couple_invitation
+         SET status = 'declined', responded_at = NOW()
+       WHERE id = $1 AND partner_user_id = $2 AND status = 'pending'
+       RETURNING ${COUPLE_INVITATION_FIELDS}`,
+      [id, partnerUserId]
+    );
+    return result.rows[0] ? rowToInvitation(result.rows[0]) : null;
+  }
+
+  async cancelCoupleInvitation(
+    id: string,
+    primaryUserId: string
+  ): Promise<CoupleInvitation | null> {
+    const result = await this.pool.query(
+      `UPDATE couple_invitation
+         SET status = 'cancelled', responded_at = NOW()
+       WHERE id = $1 AND primary_user_id = $2 AND status = 'pending'
+       RETURNING ${COUPLE_INVITATION_FIELDS}`,
+      [id, primaryUserId]
+    );
+    return result.rows[0] ? rowToInvitation(result.rows[0]) : null;
+  }
+
+  async hasPendingInvitationBetween(
+    primaryUserId: string,
+    partnerUserId: string
+  ): Promise<boolean> {
+    const result = await this.pool.query(
+      `SELECT 1 FROM couple_invitation
+       WHERE primary_user_id = $1 AND partner_user_id = $2 AND status = 'pending'
+       LIMIT 1`,
+      [primaryUserId, partnerUserId]
     );
     return (result.rowCount ?? 0) > 0;
   }

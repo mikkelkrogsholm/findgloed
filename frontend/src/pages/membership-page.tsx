@@ -27,7 +27,7 @@ function planSummary(plan: MembershipPlan): string {
 
 export function MembershipPage() {
   const [plans, setPlans] = useState<MembershipPlan[]>([]);
-  const [audience, setAudience] = useState<"single" | "couple">("single");
+  const [hasCouple, setHasCouple] = useState(false);
   const [subscription, setSubscription] = useState<ActiveSubscription | null>(null);
   const [activePlan, setActivePlan] = useState<MembershipPlan | null>(null);
   const [loading, setLoading] = useState(true);
@@ -44,7 +44,7 @@ export function MembershipPage() {
       );
     } else {
       setPlans(plansResult.plans);
-      setAudience(plansResult.audience);
+      setHasCouple(plansResult.has_couple);
     }
     if (subResult.ok) {
       setSubscription(subResult.subscription);
@@ -66,10 +66,11 @@ export function MembershipPage() {
     if (!result.ok) {
       const messages: Record<string, string> = {
         ALREADY_ACTIVE: "Du har allerede et aktivt abonnement.",
-        COUPLE_REQUIRED: "Par-plan kræver en par-profil. Opret den under profil først.",
+        COUPLE_REQUIRED:
+          "Par-plan kræver en par-profil. Opret par først under Par-profil.",
         UNAUTHORIZED: "Log ind først."
       };
-      setError(messages[result.code] ?? "Kunne ikke starte abonnement.");
+      setError(messages[result.code] ?? result.message ?? "Kunne ikke starte abonnement.");
       return;
     }
     setSuccess(
@@ -175,53 +176,86 @@ export function MembershipPage() {
         {!subscription && (
           <>
             <p className="mb-4 text-sm text-[color:var(--color-text-secondary)]">
-              {audience === "couple"
-                ? "Vi kan se du er på en par-profil — her er par-planer."
-                : "Vi kan se du ikke er i en par-profil endnu — her er single-planer. Opret par-profil først hvis I skal have par-plan."}
+              {hasCouple
+                ? "Vi viser både single- og par-planer. Som en del af et par kan I vælge en par-plan, der dækker jer begge."
+                : "Vi viser både single- og par-planer. Par-plan kræver at I først opretter par-profilen sammen."}
             </p>
-            <div className="grid gap-5 md:grid-cols-2">
-              {plans.map((plan) => (
-                <Card key={plan.id} className="overflow-hidden p-0">
-                  <CardHeader className="bg-[color:var(--surface-glass)] p-6">
-                    <CardTitle>{plan.name}</CardTitle>
-                    <p className="mt-1 text-sm text-[color:var(--color-text-secondary)]">
-                      {planSummary(plan)}
-                    </p>
-                  </CardHeader>
-                  <CardContent className="space-y-3 p-6">
-                    <ul className="space-y-2 text-sm">
-                      <li className="flex items-start gap-2">
-                        <Check className="mt-0.5 h-4 w-4 text-[color:var(--color-link)]" />
-                        Adgang til alle medlemmer (verificerede)
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <Check className="mt-0.5 h-4 w-4 text-[color:var(--color-link)]" />
-                        Direkte beskeder ved gensidig interesse
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <Check className="mt-0.5 h-4 w-4 text-[color:var(--color-link)]" />
-                        Tilmelding til events (events betales særskilt)
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <Check className="mt-0.5 h-4 w-4 text-[color:var(--color-link)]" />
-                        Diskret faktura-tekst ("GLOEDDK")
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <ShieldCheck className="mt-0.5 h-4 w-4 text-[color:var(--color-link)]" />
-                        Annullér når som helst — ingen binding
-                      </li>
-                    </ul>
-                    <Button
-                      className="w-full glow-cta"
-                      onClick={() => handleStart(plan.id)}
-                      disabled={submitting}
+            {(["single", "couple"] as const).map((group) => {
+              const groupPlans = plans.filter((p) => p.audience === group);
+              if (groupPlans.length === 0) return null;
+              const isCoupleGroup = group === "couple";
+              const coupleBlocked = isCoupleGroup && !hasCouple;
+              return (
+                <div key={group} className="mb-6">
+                  <h2 className="font-display mb-3 text-xl">
+                    {isCoupleGroup ? "Par-planer" : "Single-planer"}
+                  </h2>
+                  {coupleBlocked && (
+                    <p
+                      className="mb-3 text-sm text-[color:var(--color-text-tertiary)]"
+                      data-testid="couple-plan-blocked-hint"
                     >
-                      {submitting ? "Aktiverer…" : "Vælg denne plan"}
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                      Opret par-profilen først. Begge parter skal være verificerede medlemmer og
+                      acceptere invitationen.
+                    </p>
+                  )}
+                  <div className="grid gap-5 md:grid-cols-2">
+                    {groupPlans.map((plan) => (
+                      <Card key={plan.id} className="overflow-hidden p-0">
+                        <CardHeader className="bg-[color:var(--surface-glass)] p-6">
+                          <CardTitle>{plan.name}</CardTitle>
+                          <p className="mt-1 text-sm text-[color:var(--color-text-secondary)]">
+                            {planSummary(plan)}
+                          </p>
+                        </CardHeader>
+                        <CardContent className="space-y-3 p-6">
+                          <ul className="space-y-2 text-sm">
+                            <li className="flex items-start gap-2">
+                              <Check className="mt-0.5 h-4 w-4 text-[color:var(--color-link)]" />
+                              Adgang til alle medlemmer (verificerede)
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <Check className="mt-0.5 h-4 w-4 text-[color:var(--color-link)]" />
+                              Direkte beskeder ved gensidig interesse
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <Check className="mt-0.5 h-4 w-4 text-[color:var(--color-link)]" />
+                              Tilmelding til events (events betales særskilt)
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <Check className="mt-0.5 h-4 w-4 text-[color:var(--color-link)]" />
+                              Diskret faktura-tekst ("GLOEDDK")
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <ShieldCheck className="mt-0.5 h-4 w-4 text-[color:var(--color-link)]" />
+                              Annullér når som helst — ingen binding
+                            </li>
+                          </ul>
+                          {coupleBlocked ? (
+                            <Button
+                              variant="outline"
+                              className="w-full"
+                              onClick={() => navigate(appConfig.routes.coupleProfile)}
+                              title="Opret par-profil først"
+                            >
+                              Opret par-profil først
+                            </Button>
+                          ) : (
+                            <Button
+                              className="w-full glow-cta"
+                              onClick={() => handleStart(plan.id)}
+                              disabled={submitting}
+                            >
+                              {submitting ? "Aktiverer…" : "Vælg denne plan"}
+                            </Button>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </>
         )}
 

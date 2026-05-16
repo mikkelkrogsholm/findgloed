@@ -36,10 +36,13 @@ export function registerSubscriptionRoutes(
     const couple = await membershipRepository.getCoupleByUser(session.user.id);
     const plans = await subscriptionRepository.listPlans();
     const audience = couple ? "couple" : "single";
+    // Issue C24: Returnér alle plans med audience-felt, så frontend kan vise
+    // begge grupper og oplyse brugeren om at couple-plans kræver par-profil.
     return c.json({
       ok: true,
       audience,
-      plans: plans.filter((p) => p.audience === audience)
+      has_couple: couple !== null,
+      plans
     });
   });
 
@@ -66,7 +69,14 @@ export function registerSubscriptionRoutes(
 
     const couple = await membershipRepository.getCoupleByUser(session.user.id);
     if (plan.audience === "couple" && !couple) {
-      return c.json({ ok: false, code: "COUPLE_REQUIRED" }, 422);
+      return c.json(
+        {
+          ok: false,
+          code: "COUPLE_REQUIRED",
+          message: "Opret par-profil først."
+        },
+        422
+      );
     }
 
     const existing = await subscriptionRepository.getActiveSubscription(session.user.id);
