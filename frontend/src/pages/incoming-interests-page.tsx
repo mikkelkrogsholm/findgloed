@@ -6,6 +6,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { PageHeader } from "@/components/layout/page-header";
+import { SkeletonGrid } from "@/components/layout/loading-state";
 import { appConfig } from "@/config/app-config";
 import { api, type ProfileSummary, type PhotoSummary, type InterestSignal } from "@/lib/api";
 import { getMotionMode, revealVariants } from "@/lib/motion";
@@ -90,9 +92,15 @@ export function IncomingInterestsPage() {
   }
 
   if (loading) {
+    // A22: Skeleton matcher final-state med liste af row-skeletons.
     return (
-      <section className="mx-auto w-full max-w-3xl px-6 py-20 text-center">
-        <p className="body-text-muted">Indlæser…</p>
+      <section className="mx-auto w-full max-w-3xl px-6 py-10 md:py-16">
+        <PageHeader
+          kicker="Interesse-signaler"
+          title="Hvem har vist interesse for dig"
+          description="Når du viser interesse tilbage, åbnes en samtale mellem jer."
+        />
+        <SkeletonGrid variant="messages" count={3} data-testid="incoming-interests-loading" />
       </section>
     );
   }
@@ -109,13 +117,11 @@ export function IncomingInterestsPage() {
           Tilbage til profil
         </Button>
 
-        <div className="mb-6">
-          <p className="noxus-kicker kicker-text text-[0.65rem]">Interesse-signaler</p>
-          <h1 className="font-display text-3xl">Hvem har vist interesse for dig</h1>
-          <p className="body-text-muted mt-2 text-sm">
-            Når du viser interesse tilbage, åbnes en samtale mellem jer.
-          </p>
-        </div>
+        <PageHeader
+          kicker="Interesse-signaler"
+          title="Hvem har vist interesse for dig"
+          description="Når du viser interesse tilbage, åbnes en samtale mellem jer."
+        />
 
         {error && (
           <Alert className="mb-4">
@@ -144,23 +150,43 @@ export function IncomingInterestsPage() {
                 (p) => p.kind === "face" && profile.can_see_face
               );
               const cover = face ?? ambient ?? profile?.photos[0] ?? null;
+              const memberHref = `${appConfig.routes.members}/${signal.from_user_id}`;
+              const memberLabel = profile?.display_name ?? "Anonym";
+              const coverAlt = cover
+                ? cover.kind === "face"
+                  ? memberLabel
+                  : "Stemningsbillede"
+                : "";
               return (
                 <Card
                   key={signal.id}
-                  className="overflow-hidden p-0"
+                  className="overflow-hidden p-0 focus-within:ring-2 focus-within:ring-[color:var(--color-link)] focus-within:ring-offset-2 focus-within:ring-offset-[color:var(--color-bg-base)]"
                   data-testid={`incoming-interest-${signal.from_user_id}`}
                 >
-                  <div
-                    className="flex cursor-pointer gap-4 p-4"
-                    onClick={() =>
-                      navigate(`${appConfig.routes.members}/${signal.from_user_id}`)
-                    }
+                  {/* A20: <a> sikrer tastatur-fokus + Enter/Space åbner profilen */}
+                  <a
+                    href={memberHref}
+                    onClick={(e) => {
+                      if (
+                        e.defaultPrevented ||
+                        e.metaKey ||
+                        e.ctrlKey ||
+                        e.shiftKey ||
+                        e.button !== 0
+                      ) {
+                        return;
+                      }
+                      e.preventDefault();
+                      navigate(memberHref);
+                    }}
+                    className="flex gap-4 p-4 focus:outline-none"
+                    aria-label={`Se profil for ${memberLabel}`}
                   >
                     <div className="h-24 w-24 flex-shrink-0 overflow-hidden rounded-2xl bg-[color:var(--surface-glass)]">
                       {cover ? (
                         <img
                           src={api.asset(cover.url)}
-                          alt=""
+                          alt={coverAlt}
                           loading="lazy"
                           className="h-full w-full object-cover"
                         />
@@ -172,9 +198,7 @@ export function IncomingInterestsPage() {
                     </div>
                     <div className="flex flex-1 flex-col justify-between">
                       <div>
-                        <p className="font-display text-lg">
-                          {profile?.display_name ?? "Anonym"}
-                        </p>
+                        <p className="font-display text-lg">{memberLabel}</p>
                         <p className="text-xs text-[color:var(--color-text-secondary)]">
                           {profile?.age ? `${profile.age} år` : ""}
                           {profile?.region ? ` · ${profile.region}` : ""}
@@ -189,7 +213,7 @@ export function IncomingInterestsPage() {
                         Sendt {new Date(signal.created_at).toLocaleDateString("da-DK")}
                       </p>
                     </div>
-                  </div>
+                  </a>
                   <CardContent className="flex flex-wrap gap-2 border-t border-[color:var(--border-subtle)] bg-[color:var(--surface-glass)] p-4">
                     {alreadyReturned ? (
                       <Button

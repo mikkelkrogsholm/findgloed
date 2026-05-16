@@ -4,7 +4,7 @@ import { motion } from "motion/react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -12,6 +12,8 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
+import { PageHeader } from "@/components/layout/page-header";
+import { SkeletonGrid } from "@/components/layout/loading-state";
 import { appConfig } from "@/config/app-config";
 import { api, type EventCategory, type EventLevel, type PublicEvent } from "@/lib/api";
 import {
@@ -68,27 +70,28 @@ export function EventsPage() {
   return (
     <section className="mx-auto w-full max-w-6xl px-6 py-10 md:py-16">
       <motion.div initial="hidden" animate="visible" variants={revealVariants(motionMode, "hero")}>
-        <div className="mb-8 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <p className="noxus-kicker kicker-text text-[0.65rem]">Begivenheder</p>
-            <h1 className="font-display text-3xl">Voksne rum at mødes i</h1>
-            <p className="mt-1 max-w-xl text-sm text-[color:var(--color-text-secondary)]">
-              Faciliteret af Sexologisk Akademi. Vælg event-type og niveau der passer dig.
-            </p>
-          </div>
-          <Button variant="outline" onClick={() => navigate(appConfig.routes.myEvents)}>
-            Mine tilmeldinger
-          </Button>
-        </div>
+        <PageHeader
+          kicker="Begivenheder"
+          title="Voksne rum at mødes i"
+          description="Faciliteret af Sexologisk Akademi. Vælg event-type og niveau der passer dig."
+          actions={
+            <Button variant="outline" onClick={() => navigate(appConfig.routes.myEvents)}>
+              Mine tilmeldinger
+            </Button>
+          }
+        />
 
         <Card className="mb-6 p-5">
           <CardContent className="grid gap-3 px-0 pb-0 pt-0 sm:grid-cols-3">
             <div className="space-y-1">
-              <label className="text-xs uppercase tracking-wider text-[color:var(--color-text-tertiary)]">
+              <label
+                htmlFor="filter-category"
+                className="text-xs uppercase tracking-wider text-[color:var(--color-text-tertiary)]"
+              >
                 Type
               </label>
               <Select value={category} onValueChange={(v) => setCategory(v as EventCategory | "all")}>
-                <SelectTrigger>
+                <SelectTrigger id="filter-category">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -100,11 +103,14 @@ export function EventsPage() {
               </Select>
             </div>
             <div className="space-y-1">
-              <label className="text-xs uppercase tracking-wider text-[color:var(--color-text-tertiary)]">
+              <label
+                htmlFor="filter-level"
+                className="text-xs uppercase tracking-wider text-[color:var(--color-text-tertiary)]"
+              >
                 Niveau
               </label>
               <Select value={level} onValueChange={(v) => setLevel(v as EventLevel | "all")}>
-                <SelectTrigger>
+                <SelectTrigger id="filter-level">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -116,11 +122,14 @@ export function EventsPage() {
               </Select>
             </div>
             <div className="space-y-1">
-              <label className="text-xs uppercase tracking-wider text-[color:var(--color-text-tertiary)]">
+              <label
+                htmlFor="filter-beginner"
+                className="text-xs uppercase tracking-wider text-[color:var(--color-text-tertiary)]"
+              >
                 Erfaring
               </label>
               <Select value={beginner} onValueChange={(v) => setBeginner(v as "all" | "true" | "false")}>
-                <SelectTrigger>
+                <SelectTrigger id="filter-beginner">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -140,50 +149,73 @@ export function EventsPage() {
         )}
 
         {loading ? (
-          <p className="body-text-muted text-center">Henter events…</p>
+          <SkeletonGrid variant="events" count={6} data-testid="events-loading" />
         ) : events.length === 0 ? (
           <p className="body-text-muted text-center">
             Ingen events lige nu. Kom tilbage senere — eller justér filtrene.
           </p>
         ) : (
           <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-            {events.map((event) => (
-              <Card
-                key={event.id}
-                className="cursor-pointer overflow-hidden p-0 transition-transform hover:scale-[1.01]"
-                onClick={() => navigate(`${appConfig.routes.events}/${event.slug}`)}
-              >
-                <div className="bg-[color:var(--surface-glass)] p-5">
-                  <div className="mb-2 flex flex-wrap gap-1.5">
-                    <Badge variant="secondary">{CATEGORY_LABEL[event.category]}</Badge>
-                    <Badge variant="outline">{LEVEL_LABEL[event.level]}</Badge>
-                    {event.beginner_friendly && <Badge variant="outline">Også for første gang</Badge>}
-                    {event.experience_required && <Badge variant="outline">Kræver erfaring</Badge>}
-                  </div>
-                  <h2 className="font-display text-xl">{event.title}</h2>
-                  <p className="mt-1 text-xs text-[color:var(--color-text-secondary)]">
-                    {formatDateTime(event.starts_at)}
-                  </p>
-                </div>
-                <CardContent className="space-y-3 p-5">
-                  <p className="line-clamp-3 text-sm text-[color:var(--color-text-secondary)]">
-                    {event.description}
-                  </p>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-[color:var(--color-text-secondary)]">
-                      {event.region ?? "Region oplyses"}
-                    </span>
-                    <span className="font-display">{formatPrice(event.price_cents)}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-xs text-[color:var(--color-text-tertiary)]">
-                    <span>
-                      {event.spots_left} af {event.capacity} pladser tilbage
-                    </span>
-                    {event.is_registered && <Badge variant="secondary">Tilmeldt</Badge>}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+            {events.map((event) => {
+              const eventHref = `${appConfig.routes.events}/${event.slug}`;
+              return (
+                // A20: Hele kortet er en <a>-link så tastatur-fokus + Enter
+                // åbner detail-siden. Focus-ring via focus-within på Card.
+                <Card
+                  key={event.id}
+                  className="overflow-hidden p-0 transition-transform hover:scale-[1.01] focus-within:ring-2 focus-within:ring-[color:var(--color-link)] focus-within:ring-offset-2 focus-within:ring-offset-[color:var(--color-bg-base)]"
+                >
+                  <a
+                    href={eventHref}
+                    onClick={(e) => {
+                      if (
+                        e.defaultPrevented ||
+                        e.metaKey ||
+                        e.ctrlKey ||
+                        e.shiftKey ||
+                        e.button !== 0
+                      ) {
+                        return;
+                      }
+                      e.preventDefault();
+                      navigate(eventHref);
+                    }}
+                    className="block focus:outline-none"
+                    aria-label={`Se ${event.title}`}
+                  >
+                    <div className="bg-[color:var(--surface-glass)] p-5">
+                      <div className="mb-2 flex flex-wrap gap-1.5">
+                        <Badge variant="secondary">{CATEGORY_LABEL[event.category]}</Badge>
+                        <Badge variant="outline">{LEVEL_LABEL[event.level]}</Badge>
+                        {event.beginner_friendly && <Badge variant="outline">Også for første gang</Badge>}
+                        {event.experience_required && <Badge variant="outline">Kræver erfaring</Badge>}
+                      </div>
+                      <h2 className="font-display text-xl">{event.title}</h2>
+                      <p className="mt-1 text-xs text-[color:var(--color-text-secondary)]">
+                        {formatDateTime(event.starts_at)}
+                      </p>
+                    </div>
+                    <CardContent className="space-y-3 p-5">
+                      <p className="line-clamp-3 text-sm text-[color:var(--color-text-secondary)]">
+                        {event.description}
+                      </p>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-[color:var(--color-text-secondary)]">
+                          {event.region ?? "Region oplyses"}
+                        </span>
+                        <span className="font-display">{formatPrice(event.price_cents)}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs text-[color:var(--color-text-tertiary)]">
+                        <span>
+                          {event.spots_left} af {event.capacity} pladser tilbage
+                        </span>
+                        {event.is_registered && <Badge variant="secondary">Tilmeldt</Badge>}
+                      </div>
+                    </CardContent>
+                  </a>
+                </Card>
+              );
+            })}
           </div>
         )}
       </motion.div>
