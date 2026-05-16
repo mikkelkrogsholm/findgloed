@@ -136,9 +136,13 @@ export function IncomingInterestsPage() {
 
         {signals.length === 0 ? (
           <Card className="p-8 text-center" data-testid="incoming-interests-empty">
-            <p className="body-text-muted text-sm">
-              Ingen indkomne signaler endnu. Tjek igen senere.
+            <p className="body-text-muted mb-4 text-sm">
+              Ingen indkomne signaler endnu. Når andre medlemmer viser
+              interesse for dig, dukker de op her.
             </p>
+            <Button onClick={() => navigate(appConfig.routes.members)}>
+              Udforsk medlemmer
+            </Button>
           </Card>
         ) : (
           <div className="grid gap-4" data-testid="incoming-interests-list">

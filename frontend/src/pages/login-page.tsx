@@ -59,10 +59,10 @@ export function LoginPage() {
       >
         <Card className="p-8 md:p-10" data-testid="login-card">
           <CardHeader className="px-0 pt-0">
-            <p className="noxus-kicker kicker-text mb-2 text-[0.65rem]">Kun for administratorer</p>
+            <p className="noxus-kicker kicker-text mb-2 text-[0.65rem]">Velkommen tilbage</p>
             <CardTitle>Log ind</CardTitle>
             <p className="body-text-muted mt-1 text-sm">
-              Log ind for at se lead-oversigten og administrere platformen.
+              Log ind for at fortsætte til din profil.
             </p>
           </CardHeader>
           <CardContent className="space-y-5 px-0 pb-0">
