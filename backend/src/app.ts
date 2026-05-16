@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { bodyLimit } from "hono/body-limit";
 import { createHash, createHmac, randomBytes } from "node:crypto";
 import { registerEventRoutes } from "./event-routes";
 import type { EventRepository } from "./events";
@@ -296,6 +297,54 @@ export function createApp(deps: AppDeps): Hono<{ Variables: AppVariables }> {
     if (enableHsts && requestIsHttps(c.req.url, c.req.raw.headers, trustProxy)) {
       c.header("Strict-Transport-Security", `max-age=${hstsMaxAgeSeconds}; includeSubDomains`);
     }
+  });
+
+  // Issue A11: Body-limit for at undgå at en angriber kan sende store payloads
+  // og DoS'e serveren. Vi splitter mellem to scopes:
+  // - Multipart-routes (foto- + verifikations-upload): 32MB så et stort billede
+  //   stadig kan uploades. uploads.saveImage validerer derudover pr. fil
+  //   (8MB pr. billede), så 32MB er kun det ydre værn mod DoS.
+  // - Stripe-webhooks: 1MB — events er små men signaturen valideres senere.
+  // - Alle andre /api/*-routes: 64KB JSON. En typisk besked (4000 tegn) eller
+  //   et bio-felt fylder langt mindre, så 64KB er rigeligt og giver
+  //   beskyttelse mod tilfældig DoS.
+  // Vi bruger én middleware der vælger den korrekte limit baseret på path,
+  // så vi ikke får dobbelt-håndhævelse fra Hono's matcher.
+  const MULTIPART_BODY_LIMIT_BYTES = 32 * 1024 * 1024;
+  const WEBHOOK_BODY_LIMIT_BYTES = 1 * 1024 * 1024;
+  const JSON_BODY_LIMIT_BYTES = 64 * 1024;
+  const MULTIPART_PATHS = new Set(["/api/me/photos", "/api/me/verification"]);
+  const WEBHOOK_PATHS = new Set(["/api/webhooks/stripe"]);
+  const payloadTooLargeResponse = (c: { json: (body: unknown, status?: number) => Response }) =>
+    c.json(
+      {
+        ok: false,
+        code: "PAYLOAD_TOO_LARGE",
+        message: "Indholdet er for stort."
+      },
+      413
+    );
+  const multipartLimit = bodyLimit({
+    maxSize: MULTIPART_BODY_LIMIT_BYTES,
+    onError: payloadTooLargeResponse
+  });
+  const webhookLimit = bodyLimit({
+    maxSize: WEBHOOK_BODY_LIMIT_BYTES,
+    onError: payloadTooLargeResponse
+  });
+  const jsonLimit = bodyLimit({
+    maxSize: JSON_BODY_LIMIT_BYTES,
+    onError: payloadTooLargeResponse
+  });
+  app.use("/api/*", async (c, next) => {
+    const path = new URL(c.req.url).pathname;
+    if (MULTIPART_PATHS.has(path)) {
+      return multipartLimit(c, next);
+    }
+    if (WEBHOOK_PATHS.has(path)) {
+      return webhookLimit(c, next);
+    }
+    return jsonLimit(c, next);
   });
 
   app.use("/api/*", async (c, next) => {
