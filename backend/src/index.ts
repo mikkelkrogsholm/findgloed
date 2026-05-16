@@ -78,6 +78,11 @@ async function bootstrap(): Promise<void> {
   // membership-repoet får upload-store så hardDelete kan slette fysiske
   // filer ved konto-anonymisering (issue A10).
   const membershipRepository = new PostgresMembershipRepository(pool, uploadStore);
+  // Issue A2: Wire match-checkeren ind så getPublicProfile kan returnere
+  // relation="match" og photo-endpoint kan releasere match-visibility-billeder
+  // ved gensidig interesse. messagingRepository implementerer MatchChecker
+  // via hasMutualInterest. Cirkulær DI undgået ved sen-binding.
+  membershipRepository.setMatchChecker(messagingRepository);
 
   const app = createApp({
     leadRepository: repository,

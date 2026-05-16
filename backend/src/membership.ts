@@ -6,6 +6,7 @@ import type {
   CoupleProfile,
   CoupleUpdate,
   CoupleUpsert,
+  MatchChecker,
   MembershipProfile,
   MembershipRepository,
   MembershipUpdate,
@@ -230,10 +231,31 @@ export class PostgresMembershipRepository implements MembershipRepository {
   // uploadStore er optional så test-doubles og legacy-kald uden upload-store
   // stadig kan instantiere repoet. Når den er sat, bruges den til at fjerne
   // billeder fra disk ved hardDelete (issue A10 — GDPR-konform anonymisering).
+  //
+  // matchChecker er ligeledes optional: hvis ikke sat antages ingen mutual
+  // interest (svarer til den gamle adfærd hvor match-relationen aldrig blev
+  // beregnet). Sættes via setMatchChecker efter construction for at undgå
+  // cirkulær DI mellem membership- og messaging-repoet (issue A2).
+  private matchChecker?: MatchChecker;
+
   constructor(
     private readonly pool: Pool,
     private readonly uploadStore?: UploadStore
   ) {}
+
+  // Sætter match-checkeren — kaldes fra bootstrap efter messaging-repo er
+  // oprettet (issue A2). Bruges af getPublicProfile + isMatched.
+  setMatchChecker(checker: MatchChecker): void {
+    this.matchChecker = checker;
+  }
+
+  // Eksponeret så routes-laget kan kontrollere match uden at importere
+  // messaging-laget direkte (issue A2). Returnerer false hvis ingen checker
+  // er sat — så fail-closed for match-only-billeder.
+  async isMatched(viewerId: string, targetId: string): Promise<boolean> {
+    if (!this.matchChecker) return false;
+    return this.matchChecker.hasMutualInterest(viewerId, targetId);
+  }
 
   async getProfile(userId: string): Promise<MembershipProfile | null> {
     const result = await this.pool.query(
@@ -570,6 +592,13 @@ export class PostgresMembershipRepository implements MembershipRepository {
     if (userId === viewerId) {
       relation = "self";
     } else {
+      // Issue A2: Tjek mutual interest først — match-relationen aktiverer
+      // lag 2 (face-billeder + match-visibility-billeder pr. beslutning 4).
+      if (this.matchChecker && (await this.matchChecker.hasMutualInterest(userId, viewerId))) {
+        relation = "match";
+      }
+      // Private album-grant overruler match: hvis viewer både er matchet og
+      // har fået eksplicit grant, vises lag 3 (private billeder).
       const grantResult = await this.pool.query(
         `SELECT 1 FROM private_album_grant
          WHERE owner_user_id = $1 AND recipient_user_id = $2 AND revoked_at IS NULL

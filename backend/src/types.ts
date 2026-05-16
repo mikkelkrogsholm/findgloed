@@ -317,6 +317,14 @@ export type VerificationInsert = {
   selfie_path: string;
 };
 
+// Issue A2: Membership-laget skal kunne se gensidig interesse uden at
+// importere messaging-laget direkte (cirkulær afhængighed). Vi bruger
+// dette minimal-interface som DI-port — PostgresMessagingRepository
+// implementerer det allerede via hasMutualInterest.
+export type MatchChecker = {
+  hasMutualInterest: (userIdA: string, userIdB: string) => Promise<boolean>;
+};
+
 export type MembershipRepository = {
   getProfile: (userId: string) => Promise<MembershipProfile | null>;
   // Returnerer en minimal profil-stub for brugere der er soft-deleted
@@ -327,6 +335,11 @@ export type MembershipRepository = {
   updateProfile: (userId: string, update: MembershipUpdate) => Promise<MembershipProfile | null>;
   softDelete: (userId: string) => Promise<void>;
   hardDelete: (userId: string) => Promise<void>;
+  // Issue A2: Match-checker injiceres efter construction (cirkulær DI).
+  // isMatched bruges af routes-laget til at gate match-visibility-billeder
+  // uden at importere messaging-laget direkte.
+  setMatchChecker: (checker: MatchChecker) => void;
+  isMatched: (viewerId: string, targetId: string) => Promise<boolean>;
 
   listVerifiedMembers: (excludeUserId: string) => Promise<MembershipProfile[]>;
   getPublicProfile: (
