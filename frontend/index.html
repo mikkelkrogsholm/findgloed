@@ -32,7 +32,7 @@
     <meta name="twitter:description" content="Platform for voksne der vil mødes via events, ikke dating-apps. Manuelt verificeret adgang." />
     <meta name="twitter:image" content="https://findgloed.dk/og-image.png" />
 
-    <!-- JSON-LD: Organization + WebSite -->
+    <!-- JSON-LD: Organization + WebSite + ContactPoint (navngiven dataansvarlig — issue A19) -->
     <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -44,10 +44,22 @@
       "url": "https://findgloed.dk",
       "logo": "https://findgloed.dk/favicon.svg",
       "description": "Dansk platform for voksne forbindelser via begivenheder — manuelt verificeret og samtykkebaseret.",
-      "email": "support@findgloed.dk",
+      "email": "mikkel@findgloed.dk",
       "inLanguage": "da",
       "foundingDate": "2025",
-      "areaServed": "DK"
+      "areaServed": "DK",
+      "founder": {
+        "@type": "Person",
+        "name": "Mikkel Freltoft Krogsholm"
+      },
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "contactType": "Customer Service",
+        "name": "Mikkel Freltoft Krogsholm",
+        "email": "mikkel@findgloed.dk",
+        "areaServed": "DK",
+        "availableLanguage": ["da"]
+      }
     },
     {
       "@type": "WebSite",

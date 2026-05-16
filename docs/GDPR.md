@@ -8,10 +8,10 @@
 
 | Felt | Værdi |
 |------|-------|
+| Kontaktperson | Mikkel Freltoft Krogsholm |
+| Email | mikkel@findgloed.dk |
 | Virksomhed | UDFYLD (CVR: UDFYLD) |
 | Adresse | UDFYLD |
-| Kontaktperson | UDFYLD |
-| Email | UDFYLD |
 
 ---
 
@@ -78,11 +78,11 @@ Procedure for håndtering af rettigheder under GDPR art. 15-22:
 
 | Rettighed | Håndtering |
 |-----------|------------|
-| Indsigt (art. 15) | UDFYLD — manuel forespørgsel til support@findgloed.dk |
-| Berigtigelse (art. 16) | UDFYLD |
-| Sletning (art. 17) | UDFYLD — slet fra `leads`-tabel i database |
-| Dataportabilitet (art. 20) | UDFYLD |
-| Indsigelse (art. 21) | Samtykke kan trækkes via UDFYLD |
+| Indsigt (art. 15) | Manuel forespørgsel til mikkel@findgloed.dk |
+| Berigtigelse (art. 16) | Brugeren retter selv på `/profile`. Email/admin-rettelser: mikkel@findgloed.dk |
+| Sletning (art. 17) | Brugeren sletter selv via `/profile` → "Slet konto". Soft- og hard-delete er understøttet. Hard-delete anonymiserer user-rækken (display_name='[Slettet bruger]', persondata nulstilles), sletter billeder og ID-uploads fysisk, og opløser par-kobling. Andre brugeres samtaler bevares så de stadig giver mening. |
+| Dataportabilitet (art. 20) | Manuel udtræk via mikkel@findgloed.dk |
+| Indsigelse (art. 21) | Samtykke kan trækkes via afmelding af markedsføring eller konto-sletning på `/profile` |
 
 ---
 
