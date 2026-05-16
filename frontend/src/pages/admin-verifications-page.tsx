@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 
+import { AdminSubnav } from "@/components/admin/admin-subnav";
+import { PageHeader } from "@/components/layout/page-header";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,10 +17,8 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { appConfig } from "@/config/app-config";
 import { api } from "@/lib/api";
 import { getMotionMode, revealVariants } from "@/lib/motion";
-import { navigate } from "@/lib/nav";
 
 type PendingVerification = {
   id: string;
@@ -109,27 +109,14 @@ export function AdminVerificationsPage() {
   return (
     <section className="mx-auto w-full max-w-5xl px-6 py-10 md:py-16">
       <motion.div initial="hidden" animate="visible" variants={revealVariants(motionMode, "hero")}>
-        <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <p className="noxus-kicker kicker-text text-[0.65rem]">Admin</p>
-            <h1 className="font-display text-3xl">Verifikationer</h1>
-            <p className="body-text-muted mt-1 max-w-2xl text-sm">
-              Indsendte ID-dokumenter og selfies fra brugere som har bedt om
-              manuel verificering. Vi behandler dem her indtil MitID er live.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" onClick={() => navigate(appConfig.routes.admin)}>
-              Til lead-oversigt
-            </Button>
-            <Button variant="outline" onClick={() => navigate(appConfig.routes.adminEvents)}>
-              Til events
-            </Button>
-            <Button variant="outline" onClick={() => navigate(appConfig.routes.adminReports)}>
-              Til reports
-            </Button>
-          </div>
-        </div>
+        <AdminSubnav />
+
+        <PageHeader
+          kicker="Admin"
+          title="Verifikationer"
+          description="Indsendte ID-dokumenter og selfies fra brugere som har bedt om manuel verificering. Vi behandler dem her indtil MitID er live."
+          data-testid="admin-verifications-header"
+        />
 
         {error && (
           <Alert className="mb-4">

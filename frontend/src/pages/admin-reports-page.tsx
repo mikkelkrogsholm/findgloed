@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 
+import { AdminSubnav } from "@/components/admin/admin-subnav";
+import { PageHeader } from "@/components/layout/page-header";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,10 +24,8 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
-import { appConfig } from "@/config/app-config";
 import { api, type AdminReport } from "@/lib/api";
 import { getMotionMode, revealVariants } from "@/lib/motion";
-import { navigate } from "@/lib/nav";
 
 type ResolveStatus = "reviewed" | "dismissed" | "actioned";
 
@@ -34,6 +34,19 @@ const RESOLVE_LABEL: Record<ResolveStatus, string> = {
   dismissed: "Afvist",
   actioned: "Handling taget"
 };
+
+// B17: state for de event-post-previews der hentes lazy pr. report.
+// "loading" mens fetch er undervejs, EventPostPreview ved success,
+// "error" hvis 404/network, "hidden" når admin har skjult posten.
+type EventPostPreview = {
+  id: string;
+  body: string;
+  posted_at: string;
+  hidden_by_admin_at: string | null;
+  author_user_id: string;
+};
+
+type EventPostState = "loading" | "error" | "hiding" | "hidden" | EventPostPreview;
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleString("da-DK");
@@ -52,6 +65,11 @@ export function AdminReportsPage() {
   const [status, setStatus] = useState<ResolveStatus>("reviewed");
   const [notes, setNotes] = useState("");
   const [acting, setActing] = useState(false);
+
+  // B17: preview-state for event-post reports. Key er post-id, ikke
+  // report-id, så samme post kun fetches én gang selv hvis flere reports
+  // peger på den.
+  const [postPreviews, setPostPreviews] = useState<Record<string, EventPostState>>({});
 
   const motionMode = getMotionMode();
 
@@ -77,6 +95,85 @@ export function AdminReportsPage() {
   useEffect(() => {
     void reload();
   }, []);
+
+  // B17: når reports loaded — hent preview for hver post-rapport hvis
+  // ikke allerede cached. Vi sætter "loading" først så UI viser
+  // skeleton mens fetch er undervejs.
+  useEffect(() => {
+    const ids = Array.from(
+      new Set(
+        reports
+          .map((r) => r.reported_event_post_id)
+          .filter((id): id is string => id !== null)
+      )
+    );
+    const toFetch = ids.filter((id) => !postPreviews[id]);
+    if (toFetch.length === 0) return;
+
+    setPostPreviews((prev) => {
+      const next = { ...prev };
+      for (const id of toFetch) {
+        next[id] = "loading";
+      }
+      return next;
+    });
+
+    let cancelled = false;
+    for (const id of toFetch) {
+      void (async () => {
+        const result = await api.getAdminEventPost(id);
+        if (cancelled) return;
+        if (!result.ok) {
+          setPostPreviews((prev) => ({ ...prev, [id]: "error" }));
+          return;
+        }
+        const preview: EventPostPreview = {
+          id: result.post.id,
+          body: result.post.body,
+          posted_at: result.post.posted_at,
+          hidden_by_admin_at: result.post.hidden_by_admin_at,
+          author_user_id: result.post.author_user_id
+        };
+        if (result.post.hidden_by_admin_at) {
+          setPostPreviews((prev) => ({ ...prev, [id]: "hidden" }));
+        } else {
+          setPostPreviews((prev) => ({ ...prev, [id]: preview }));
+        }
+      })();
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [reports, postPreviews]);
+
+  async function handleHidePost(postId: string) {
+    setPostPreviews((prev) => ({ ...prev, [postId]: "hiding" }));
+    setError("");
+    const result = await api.hideAdminEventPost(postId);
+    if (!result.ok) {
+      setError(`Kunne ikke skjule kommentaren: ${result.code}`);
+      // Genhent posten så preview vender tilbage til synlig tilstand.
+      const fresh = await api.getAdminEventPost(postId);
+      if (fresh.ok) {
+        const preview: EventPostPreview = {
+          id: fresh.post.id,
+          body: fresh.post.body,
+          posted_at: fresh.post.posted_at,
+          hidden_by_admin_at: fresh.post.hidden_by_admin_at,
+          author_user_id: fresh.post.author_user_id
+        };
+        setPostPreviews((prev) => ({
+          ...prev,
+          [postId]: fresh.post.hidden_by_admin_at ? "hidden" : preview
+        }));
+      } else {
+        setPostPreviews((prev) => ({ ...prev, [postId]: "error" }));
+      }
+      return;
+    }
+    setPostPreviews((prev) => ({ ...prev, [postId]: "hidden" }));
+    setSuccess("Kommentaren er skjult.");
+  }
 
   async function handleResolve() {
     if (!resolving) {
@@ -105,28 +202,14 @@ export function AdminReportsPage() {
   return (
     <section className="mx-auto w-full max-w-5xl px-6 py-10 md:py-16">
       <motion.div initial="hidden" animate="visible" variants={revealVariants(motionMode, "hero")}>
-        <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <p className="noxus-kicker kicker-text text-[0.65rem]">Admin</p>
-            <h1 className="font-display text-3xl">Anmeldelser</h1>
-            <p className="body-text-muted mt-1 max-w-2xl text-sm">
-              Brugeranmeldelser af profiler, beskeder og event-kommentarer.
-              Behandl dem hurtigt — også afviste anmeldelser kræver en kort
-              note så vi kan dokumentere beslutningen.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" onClick={() => navigate(appConfig.routes.admin)}>
-              Til lead-oversigt
-            </Button>
-            <Button variant="outline" onClick={() => navigate(appConfig.routes.adminVerifications)}>
-              Til verifikationer
-            </Button>
-            <Button variant="outline" onClick={() => navigate(appConfig.routes.adminEvents)}>
-              Til events
-            </Button>
-          </div>
-        </div>
+        <AdminSubnav />
+
+        <PageHeader
+          kicker="Admin"
+          title="Anmeldelser"
+          description="Brugeranmeldelser af profiler, beskeder og event-kommentarer. Behandl dem hurtigt — også afviste anmeldelser kræver en kort note så vi kan dokumentere beslutningen."
+          data-testid="admin-reports-header"
+        />
 
         {error && (
           <Alert className="mb-4">
@@ -200,10 +283,78 @@ export function AdminReportsPage() {
                     </p>
                   )}
                   {report.reported_event_post_id && (
-                    <p>
-                      <span className="body-text-muted">Anmeldt event-kommentar: </span>
-                      <span className="font-mono">{shortenId(report.reported_event_post_id)}</span>
-                    </p>
+                    <div className="space-y-2">
+                      <p>
+                        <span className="body-text-muted">Anmeldt event-kommentar: </span>
+                        <span className="font-mono">{shortenId(report.reported_event_post_id)}</span>
+                      </p>
+                      {(() => {
+                        const previewState = postPreviews[report.reported_event_post_id];
+                        if (!previewState || previewState === "loading") {
+                          return (
+                            <div
+                              className="rounded-xl border border-[color:var(--border-subtle)] bg-[color:var(--surface-glass)] p-3"
+                              data-testid={`event-post-preview-loading-${report.reported_event_post_id}`}
+                            >
+                              <p className="body-text-muted text-xs">
+                                Henter kommentar…
+                              </p>
+                            </div>
+                          );
+                        }
+                        if (previewState === "error") {
+                          return (
+                            <Alert>
+                              <AlertDescription>
+                                Kunne ikke hente kommentaren.
+                              </AlertDescription>
+                            </Alert>
+                          );
+                        }
+                        if (previewState === "hidden") {
+                          return (
+                            <div
+                              className="rounded-xl border border-[color:var(--border-subtle)] bg-[color:var(--surface-glass)] p-3"
+                              data-testid={`event-post-preview-hidden-${report.reported_event_post_id}`}
+                            >
+                              <p className="body-text-muted text-xs">
+                                Kommentaren er skjult af admin.
+                              </p>
+                            </div>
+                          );
+                        }
+                        if (previewState === "hiding") {
+                          return (
+                            <div className="rounded-xl border border-[color:var(--border-subtle)] bg-[color:var(--surface-glass)] p-3">
+                              <p className="body-text-muted text-xs">
+                                Skjuler kommentar…
+                              </p>
+                            </div>
+                          );
+                        }
+                        // previewState er en EventPostPreview
+                        const postId = report.reported_event_post_id;
+                        return (
+                          <div
+                            className="space-y-2 rounded-xl border border-[color:var(--border-subtle)] bg-[color:var(--surface-glass)] p-3"
+                            data-testid={`event-post-preview-${postId}`}
+                          >
+                            <p className="body-text-muted text-xs">
+                              Kommentar
+                            </p>
+                            <p className="whitespace-pre-line">{previewState.body}</p>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleHidePost(postId)}
+                              data-testid={`hide-event-post-${postId}`}
+                            >
+                              Skjul kommentar
+                            </Button>
+                          </div>
+                        );
+                      })()}
+                    </div>
                   )}
                   {report.details && (
                     <div className="mt-2 rounded-xl border border-[color:var(--border-subtle)] bg-[color:var(--surface-glass)] p-3">

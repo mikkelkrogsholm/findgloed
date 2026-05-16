@@ -176,6 +176,11 @@ export type MessagingRepository = {
   listEventPosts: (eventId: string) => Promise<EventPost[]>;
   deleteEventPost: (id: string, userId: string) => Promise<boolean>;
   hideEventPost: (id: string) => Promise<boolean>;
+  // B17: admin har brug for at se preview af en rapporteret post —
+  // også selvom den allerede er hidden_by_admin_at, så audit-spor kan
+  // gennemgås. Returnerer null hvis post er hard-slettet (deleted_at)
+  // eller ikke findes.
+  getEventPostById: (id: string) => Promise<EventPost | null>;
 
   // Blocks
   block: (blockerId: string, blockedId: string, reason: string | null) => Promise<UserBlock>;
@@ -421,6 +426,16 @@ export class PostgresMessagingRepository implements MessagingRepository {
       [id]
     );
     return (result.rowCount ?? 0) > 0;
+  }
+
+  async getEventPostById(id: string): Promise<EventPost | null> {
+    const result = await this.pool.query(
+      `SELECT id, event_id, author_user_id, body, posted_at, edited_at, deleted_at, hidden_by_admin_at
+       FROM event_post WHERE id = $1`,
+      [id]
+    );
+    if (result.rows.length === 0) return null;
+    return rowToEventPost(result.rows[0]);
   }
 
   async block(blockerId: string, blockedId: string, reason: string | null): Promise<UserBlock> {

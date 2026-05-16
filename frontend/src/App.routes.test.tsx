@@ -80,7 +80,9 @@ describe("App routing", () => {
     window.history.pushState({}, "", "/admin");
     render(<App />);
 
-    expect(screen.getByRole("heading", { name: "Admin-overblik: Tilmeldte" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Tilmeldte" })
+    ).toBeInTheDocument();
     expect(document.title).toBe("Glød - Admin");
   });
 });

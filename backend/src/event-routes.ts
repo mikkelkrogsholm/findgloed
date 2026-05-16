@@ -349,6 +349,24 @@ export function registerEventRoutes(
   app.get("/api/admin/events/:id/registrations", async (c) => {
     const id = c.req.param("id");
     const registrations = await eventRepository.listRegistrationsForEvent(id);
-    return c.json({ ok: true, registrations });
+
+    // B10: Berig med display_name + email så admin kan se hvem der er
+    // tilmeldt uden at slå op i DB manuelt. Bruger
+    // getProfileIncludingDeleted så slettede brugere stadig vises som
+    // "[Slettet bruger]" i stedet for "Ukendt" — kontinuitet i A10.
+    const enriched = await Promise.all(
+      registrations.map(async (reg) => {
+        const profile = await membershipRepository.getProfileIncludingDeleted(
+          reg.user_id
+        );
+        return {
+          ...reg,
+          display_name: profile?.display_name ?? null,
+          email: profile?.email ?? null
+        };
+      })
+    );
+
+    return c.json({ ok: true, registrations: enriched });
   });
 }
