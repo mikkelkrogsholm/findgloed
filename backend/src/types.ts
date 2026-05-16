@@ -198,6 +198,13 @@ export type MembershipProfile = {
   created_at: Date;
 };
 
+// Issue A24: Profil til ikke-self lookups (lister af verificerede medlemmer).
+// Indeholder ALT undtagen email — email må kun læses af brugeren selv eller
+// admins. Tidligere blev MembershipProfile (inkl. email) sendt fra
+// listVerifiedMembers, hvilket lod en route-handler iterere alle medlemmer
+// for at finde en med matching email — et klassisk enumeration-leak.
+export type PublicMembershipProfile = Omit<MembershipProfile, "email">;
+
 export type CoupleProfile = {
   id: string;
   primary_user_id: string;
@@ -359,7 +366,16 @@ export type MembershipRepository = {
   setMatchChecker: (checker: MatchChecker) => void;
   isMatched: (viewerId: string, targetId: string) => Promise<boolean>;
 
-  listVerifiedMembers: (excludeUserId: string) => Promise<MembershipProfile[]>;
+  listVerifiedMembers: (
+    excludeUserId: string,
+    options?: { limit?: number; offset?: number }
+  ) => Promise<{ items: PublicMembershipProfile[]; total: number }>;
+  // Issue A24: Direkte opslag af en verificeret + onboarded bruger via email.
+  // Returnerer null hvis ingen matcher — eller hvis matchen ikke er
+  // færdig-onboarded eller ikke verificeret. Bruges af createCouple så vi
+  // kan finde en partner uden at iterere alle medlemmer (og dermed eksponere
+  // hele email-listen mod kalderen).
+  findVerifiedByEmail: (email: string) => Promise<MembershipProfile | null>;
   getPublicProfile: (
     userId: string,
     viewerId: string
@@ -402,6 +418,11 @@ export type MembershipRepository = {
 
   insertPhoto: (input: PhotoInsert) => Promise<ProfilePhoto>;
   listPhotos: (ownerUserId: string | null, ownerCoupleId: string | null) => Promise<ProfilePhoto[]>;
+  // Issue B16: Batch-fetch af fotos for flere brugere på én gang —
+  // erstatter N+1-loop i /api/members. Returnerer Map fra owner_user_id
+  // til foto-listen (sorteret efter position, created_at) så routen kan
+  // slå op uden ekstra queries.
+  listPhotosForUsers: (ownerUserIds: string[]) => Promise<Map<string, ProfilePhoto[]>>;
   getPhotoById: (id: string) => Promise<ProfilePhoto | null>;
   deletePhoto: (id: string, requestedBy: string) => Promise<ProfilePhoto | null>;
 
@@ -417,13 +438,22 @@ export type MembershipRepository = {
   ) => Promise<void>;
   listPrivateAlbumGrantsForOwner: (
     ownerUserId: string | null,
-    ownerCoupleId: string | null
-  ) => Promise<PrivateAlbumGrant[]>;
+    ownerCoupleId: string | null,
+    options?: { limit?: number; offset?: number }
+  ) => Promise<{ items: PrivateAlbumGrant[]; total: number }>;
   recordPrivateAlbumView: (
     ownerUserId: string | null,
     ownerCoupleId: string | null,
     recipientUserId: string
   ) => Promise<PrivateAlbumGrant | null>;
+  // Issue A13: Adgangs-check uden side-effekt. Bruges til at gates adgang
+  // til private fotos *før* vi inkrementerer view_count — så et 403-svar
+  // ikke længere tæller med i ejerens "set af N gange"-statistik.
+  existsPrivateAlbumGrant: (
+    ownerUserId: string | null,
+    ownerCoupleId: string | null,
+    recipientUserId: string
+  ) => Promise<boolean>;
 
   submitVerification: (input: VerificationInsert) => Promise<VerificationSubmission>;
   acceptFutureVerificationPolicy: (userId: string) => Promise<MembershipProfile | null>;

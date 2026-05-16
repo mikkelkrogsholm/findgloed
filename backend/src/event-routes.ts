@@ -32,6 +32,22 @@ function asString(value: unknown): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
+// Issue B15: pagination-helper.
+function parsePagination(
+  url: URL,
+  defaults: { limit: number; max: number }
+): { limit: number; offset: number } {
+  const limitRaw = Number(url.searchParams.get("limit"));
+  const offsetRaw = Number(url.searchParams.get("offset"));
+  const limit = Number.isFinite(limitRaw) && limitRaw > 0
+    ? Math.min(defaults.max, Math.floor(limitRaw))
+    : defaults.limit;
+  const offset = Number.isFinite(offsetRaw) && offsetRaw >= 0
+    ? Math.floor(offsetRaw)
+    : 0;
+  return { limit, offset };
+}
+
 function asInt(value: unknown): number | null {
   const n = Number(value);
   return Number.isInteger(n) ? n : null;
@@ -119,17 +135,27 @@ export function registerEventRoutes(
     const level = url.searchParams.get("level");
     const region = url.searchParams.get("region");
     const beginner = url.searchParams.get("beginner_friendly");
+    // Issue B15: pagination.
+    const { limit, offset } = parsePagination(url, { limit: 24, max: 100 });
 
-    const events = await eventRepository.list({
+    const { items: events, total } = await eventRepository.list({
       category: CATEGORIES.includes(category as EventCategory) ? (category as EventCategory) : undefined,
       level: LEVELS.includes(level as EventLevel) ? (level as EventLevel) : undefined,
       region: region ?? undefined,
       beginnerFriendly: beginner === "true" ? true : beginner === "false" ? false : undefined,
-      upcomingOnly: true
+      upcomingOnly: true,
+      limit,
+      offset
     });
 
     // Filtrér per beslutning 3: par-only events kun til verificerede par,
     // mixed events kun for par der har accepts_mixed_events=true (eller for singles).
+    // NB: filtreringen sker EFTER pagination — det er en kendt afvejning:
+    // total fra DB tæller events som brugeren måske ikke må se. Alternativ
+    // ville være at flytte filteret ind i SQL hvor det blandt andet kræver
+    // couple-info i query'en. For nu lever vi med at "has_more" potentielt
+    // overestimerer; events vil aldrig være < limit medmindre vi er på
+    // sidste side.
     const couple = await membershipRepository.getCoupleByUser(session.user.id);
     const userIsCouple = Boolean(couple);
     const allowedEvents = events.filter((event) => {
@@ -139,17 +165,32 @@ export function registerEventRoutes(
       return true;
     });
 
-    const enriched = await Promise.all(
-      allowedEvents.map(async (event) => {
-        const registration = await eventRepository.getRegistration(event.id, session.user.id);
-        const isRegistered =
-          !!registration && (registration.status === "confirmed" || registration.status === "pending");
-        const count = await eventRepository.countConfirmed(event.id);
-        return eventToPublicJson(event, isRegistered, count);
-      })
-    );
+    // Issue B16: Batch-fetch registrations + counts i én query hver, i stedet
+    // for at køre én DB-rundtur pr. event (N+1).
+    const eventIds = allowedEvents.map((e) => e.id);
+    const [registrations, counts] = await Promise.all([
+      eventRepository.listRegistrationsForUserOnEvents(session.user.id, eventIds),
+      eventRepository.countConfirmedForEvents(eventIds)
+    ]);
 
-    return c.json({ ok: true, events: enriched });
+    const enriched = allowedEvents.map((event) => {
+      const registration = registrations.get(event.id);
+      const isRegistered =
+        !!registration && (registration.status === "confirmed" || registration.status === "pending");
+      const count = counts.get(event.id) ?? 0;
+      return eventToPublicJson(event, isRegistered, count);
+    });
+
+    return c.json({
+      ok: true,
+      events: enriched,
+      meta: {
+        total,
+        limit,
+        offset,
+        has_more: offset + events.length < total
+      }
+    });
   });
 
   app.get("/api/events/:slug", async (c) => {
@@ -216,7 +257,15 @@ export function registerEventRoutes(
 
   app.get("/api/me/events", async (c) => {
     const session = c.get("authSession");
-    const registrations = await eventRepository.listRegistrationsForUser(session.user.id);
+    // Issue B15: pagination. Default 20, max 100.
+    const { limit, offset } = parsePagination(new URL(c.req.url), {
+      limit: 20,
+      max: 100
+    });
+    const { items: registrations, total } = await eventRepository.listRegistrationsForUser(
+      session.user.id,
+      { limit, offset }
+    );
     return c.json({
       ok: true,
       registrations: registrations.map((r) => ({
@@ -224,14 +273,34 @@ export function registerEventRoutes(
         status: r.status,
         registered_at: r.registered_at.toISOString(),
         event: eventToPublicJson(r.event, true, 0)
-      }))
+      })),
+      meta: {
+        total,
+        limit,
+        offset,
+        has_more: offset + registrations.length < total
+      }
     });
   });
 
   // Admin
   app.get("/api/admin/events", async (c) => {
-    const events = await eventRepository.listAdmin();
-    return c.json({ ok: true, events });
+    // Issue B15: pagination. Default 50, max 200.
+    const { limit, offset } = parsePagination(new URL(c.req.url), {
+      limit: 50,
+      max: 200
+    });
+    const { items: events, total } = await eventRepository.listAdmin({ limit, offset });
+    return c.json({
+      ok: true,
+      events,
+      meta: {
+        total,
+        limit,
+        offset,
+        has_more: offset + events.length < total
+      }
+    });
   });
 
   app.post("/api/admin/events", async (c) => {

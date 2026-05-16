@@ -145,6 +145,16 @@ function pair(a: string, b: string): [string, string] {
 export type MessagingRepository = {
   // Interest signals
   signalInterest: (fromUserId: string, toUserId: string) => Promise<InterestSignal>;
+  // Issue A12: Atomisk variant — signal + mutual-check + conversation-creation
+  // i samme transaktion, så to parallelle signaler ikke kan ende med duplicate
+  // conversation eller falsk-negativ mutual-check.
+  signalInterestAndOpenIfMutual: (
+    fromUserId: string,
+    toUserId: string
+  ) => Promise<{
+    signal: InterestSignal;
+    conversation: Conversation | null;
+  }>;
   withdrawInterest: (fromUserId: string, toUserId: string) => Promise<boolean>;
   hasMutualInterest: (userIdA: string, userIdB: string) => Promise<boolean>;
   listIncomingInterest: (userId: string) => Promise<InterestSignal[]>;
@@ -160,9 +170,14 @@ export type MessagingRepository = {
   ) => Promise<Conversation>;
   getConversationByUsers: (userA: string, userB: string) => Promise<Conversation | null>;
   getConversationById: (id: string) => Promise<Conversation | null>;
-  listConversations: (userId: string) => Promise<
-    Array<Conversation & { other_user_id: string; unread_count: number }>
-  >;
+  // Issue B15: pagination.
+  listConversations: (
+    userId: string,
+    options?: { limit?: number; offset?: number }
+  ) => Promise<{
+    items: Array<Conversation & { other_user_id: string; unread_count: number }>;
+    total: number;
+  }>;
   postMessage: (
     conversationId: string,
     senderUserId: string,
@@ -197,7 +212,11 @@ export type MessagingRepository = {
     reason: string;
     details?: string | null;
   }) => Promise<UserReport>;
-  listOpenReports: () => Promise<UserReport[]>;
+  // Issue B15: pagination.
+  listOpenReports: (options?: { limit?: number; offset?: number }) => Promise<{
+    items: UserReport[];
+    total: number;
+  }>;
   resolveReport: (
     id: string,
     adminId: string,
@@ -228,6 +247,100 @@ export class PostgresMessagingRepository implements MessagingRepository {
       [fromUserId, toUserId]
     );
     return rowToInterest(existing.rows[0]);
+  }
+
+  // Issue A12: Atomisk signal + mutual-check + conversation-creation.
+  // Tidligere kørte vi tre separate queries fra route-laget, hvilket gav
+  // race conditions hvis to brugere signalerede samtidig:
+  // 1) Begge sender signal samtidigt
+  // 2) Begge hasMutualInterest-tjek ser den andens signal
+  // 3) Begge forsøger ensureConversation → ON CONFLICT DO UPDATE
+  //    der dog kan ende med inkonsistent origin.
+  //
+  // Vi løser det ved at:
+  // - Køre alt i én transaktion
+  // - Bruge SELECT FOR UPDATE på interest_signal-rækken (eller låse via
+  //   pg_advisory_xact_lock på det sorterede user-par) for at serialisere
+  //   concurrent signaler mellem samme par.
+  //
+  // Vi vælger pg_advisory_xact_lock med en hash af de to user-ids
+  // (sorteret) — det er billigere end at låse hele interest_signal-tabellen
+  // og garanterer at to processer for samme par kører sekventielt.
+  //
+  // conversation_origin bevares hvis conversation allerede findes (en
+  // tidligere shared_event-conversation skal ikke degraderes til
+  // mutual_interest selv om der nu også er gensidig interesse).
+  async signalInterestAndOpenIfMutual(
+    fromUserId: string,
+    toUserId: string
+  ): Promise<{ signal: InterestSignal; conversation: Conversation | null }> {
+    const [a, b] = pair(fromUserId, toUserId);
+    const client = await this.pool.connect();
+    try {
+      await client.query("BEGIN");
+
+      // Advisory-lock på det sorterede par — hashCode af "a|b" via
+      // hashtext() der er deterministisk pr. par. To processer der vil
+      // signalere mellem samme par serialiseres her.
+      await client.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [`${a}|${b}`]);
+
+      // 1) Indsæt signalet (idempotent via ON CONFLICT).
+      const inserted = await client.query(
+        `INSERT INTO interest_signal (from_user_id, to_user_id)
+         VALUES ($1, $2)
+         ON CONFLICT (from_user_id, to_user_id) WHERE withdrawn_at IS NULL DO NOTHING
+         RETURNING id, from_user_id, to_user_id, created_at, withdrawn_at`,
+        [fromUserId, toUserId]
+      );
+      let signalRow = inserted.rows[0];
+      if (!signalRow) {
+        const existing = await client.query(
+          `SELECT id, from_user_id, to_user_id, created_at, withdrawn_at
+           FROM interest_signal
+           WHERE from_user_id = $1 AND to_user_id = $2 AND withdrawn_at IS NULL
+           LIMIT 1`,
+          [fromUserId, toUserId]
+        );
+        signalRow = existing.rows[0];
+      }
+      const signal = rowToInterest(signalRow);
+
+      // 2) Tjek mutual interest under låsen. Vi tager med FOR UPDATE på
+      //    de relevante rækker, så ingen anden process kan modify dem mens
+      //    vi læser.
+      const mutualResult = await client.query<{ count: string }>(
+        `SELECT COUNT(*)::text AS count FROM interest_signal
+         WHERE withdrawn_at IS NULL
+           AND ((from_user_id = $1 AND to_user_id = $2)
+             OR (from_user_id = $2 AND to_user_id = $1))
+         FOR UPDATE`,
+        [fromUserId, toUserId]
+      );
+      const isMutual = Number(mutualResult.rows[0]?.count ?? 0) >= 2;
+
+      let conversation: Conversation | null = null;
+      if (isMutual) {
+        // 3) Insert conversation. ON CONFLICT bevarer eksisterende origin
+        //    (vi sætter origin = conversation.origin, hvilket lader en
+        //    tidligere shared_event-conversation forblive shared_event).
+        const conversationResult = await client.query(
+          `INSERT INTO conversation (user_a_id, user_b_id, origin, origin_event_id)
+           VALUES ($1, $2, 'mutual_interest', NULL)
+           ON CONFLICT (user_a_id, user_b_id) DO UPDATE SET origin = conversation.origin
+           RETURNING id, user_a_id, user_b_id, origin, origin_event_id, last_message_at, closed_at, created_at`,
+          [a, b]
+        );
+        conversation = rowToConversation(conversationResult.rows[0]);
+      }
+
+      await client.query("COMMIT");
+      return { signal, conversation };
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 
   async withdrawInterest(fromUserId: string, toUserId: string): Promise<boolean> {
@@ -324,25 +437,43 @@ export class PostgresMessagingRepository implements MessagingRepository {
     return result.rows[0] ? rowToConversation(result.rows[0]) : null;
   }
 
-  async listConversations(userId: string) {
-    const result = await this.pool.query(
-      `SELECT c.id, c.user_a_id, c.user_b_id, c.origin, c.origin_event_id,
-              c.last_message_at, c.closed_at, c.created_at,
-              CASE WHEN c.user_a_id = $1 THEN c.user_b_id ELSE c.user_a_id END AS other_user_id,
-              COALESCE((SELECT COUNT(*) FROM message m
-                        WHERE m.conversation_id = c.id
-                          AND m.sender_user_id <> $1
-                          AND m.read_at IS NULL), 0)::text AS unread_count
-       FROM conversation c
-       WHERE ($1 = c.user_a_id OR $1 = c.user_b_id)
-       ORDER BY COALESCE(c.last_message_at, c.created_at) DESC`,
-      [userId]
-    );
-    return result.rows.map((row) => ({
-      ...rowToConversation(row),
-      other_user_id: String(row.other_user_id),
-      unread_count: Number(row.unread_count)
-    }));
+  async listConversations(
+    userId: string,
+    options?: { limit?: number; offset?: number }
+  ) {
+    // Issue B15: pagination med limit/offset (default 20, max 100).
+    const limit = Math.max(1, Math.min(100, options?.limit ?? 20));
+    const offset = Math.max(0, options?.offset ?? 0);
+    const [itemsResult, countResult] = await Promise.all([
+      this.pool.query(
+        `SELECT c.id, c.user_a_id, c.user_b_id, c.origin, c.origin_event_id,
+                c.last_message_at, c.closed_at, c.created_at,
+                CASE WHEN c.user_a_id = $1 THEN c.user_b_id ELSE c.user_a_id END AS other_user_id,
+                COALESCE((SELECT COUNT(*) FROM message m
+                          WHERE m.conversation_id = c.id
+                            AND m.sender_user_id <> $1
+                            AND m.read_at IS NULL), 0)::text AS unread_count
+         FROM conversation c
+         WHERE ($1 = c.user_a_id OR $1 = c.user_b_id)
+         ORDER BY COALESCE(c.last_message_at, c.created_at) DESC
+         LIMIT $2 OFFSET $3`,
+        [userId, limit, offset]
+      ),
+      this.pool.query<{ count: string }>(
+        `SELECT COUNT(*)::text AS count
+         FROM conversation c
+         WHERE ($1 = c.user_a_id OR $1 = c.user_b_id)`,
+        [userId]
+      )
+    ]);
+    return {
+      items: itemsResult.rows.map((row) => ({
+        ...rowToConversation(row),
+        other_user_id: String(row.other_user_id),
+        unread_count: Number(row.unread_count)
+      })),
+      total: Number(countResult.rows[0]?.count ?? 0)
+    };
   }
 
   async postMessage(
@@ -503,13 +634,28 @@ export class PostgresMessagingRepository implements MessagingRepository {
     return rowToReport(result.rows[0]);
   }
 
-  async listOpenReports(): Promise<UserReport[]> {
-    const result = await this.pool.query(
-      `SELECT id, reporter_user_id, reported_user_id, reported_message_id, reported_event_post_id,
-              reason, details, status, created_at, reviewed_at, reviewed_by_admin_id, resolution_notes
-       FROM user_report WHERE status = 'open' ORDER BY created_at DESC LIMIT 200`
-    );
-    return result.rows.map(rowToReport);
+  async listOpenReports(options?: { limit?: number; offset?: number }): Promise<{
+    items: UserReport[];
+    total: number;
+  }> {
+    // Issue B15: pagination med limit/offset (default 20, max 100).
+    const limit = Math.max(1, Math.min(100, options?.limit ?? 20));
+    const offset = Math.max(0, options?.offset ?? 0);
+    const [itemsResult, countResult] = await Promise.all([
+      this.pool.query(
+        `SELECT id, reporter_user_id, reported_user_id, reported_message_id, reported_event_post_id,
+                reason, details, status, created_at, reviewed_at, reviewed_by_admin_id, resolution_notes
+         FROM user_report WHERE status = 'open' ORDER BY created_at DESC LIMIT $1 OFFSET $2`,
+        [limit, offset]
+      ),
+      this.pool.query<{ count: string }>(
+        `SELECT COUNT(*)::text AS count FROM user_report WHERE status = 'open'`
+      )
+    ]);
+    return {
+      items: itemsResult.rows.map(rowToReport),
+      total: Number(countResult.rows[0]?.count ?? 0)
+    };
   }
 
   async resolveReport(

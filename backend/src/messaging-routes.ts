@@ -29,6 +29,22 @@ function asString(value: unknown): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
+// Issue B15: pagination-helper — samme contract som i membership-routes.
+function parsePagination(
+  url: URL,
+  defaults: { limit: number; max: number }
+): { limit: number; offset: number } {
+  const limitRaw = Number(url.searchParams.get("limit"));
+  const offsetRaw = Number(url.searchParams.get("offset"));
+  const limit = Number.isFinite(limitRaw) && limitRaw > 0
+    ? Math.min(defaults.max, Math.floor(limitRaw))
+    : defaults.limit;
+  const offset = Number.isFinite(offsetRaw) && offsetRaw >= 0
+    ? Math.floor(offsetRaw)
+    : 0;
+  return { limit, offset };
+}
+
 const MAX_MESSAGE_LENGTH = 4000;
 
 export function registerMessagingRoutes(
@@ -133,20 +149,18 @@ export function registerMessagingRoutes(
       );
     }
 
-    const signal = await messagingRepository.signalInterest(session.user.id, targetId);
+    // Issue A12: samlet signal+mutual-check+conversation-creation i én transaktion
+    // for at undgå race conditions ved parallelle signaler mellem samme par.
+    const { signal, conversation } = await messagingRepository.signalInterestAndOpenIfMutual(
+      session.user.id,
+      targetId
+    );
 
-    let conversationOpened = false;
-    if (await messagingRepository.hasMutualInterest(session.user.id, targetId)) {
-      await messagingRepository.ensureConversation(
-        session.user.id,
-        targetId,
-        "mutual_interest",
-        null
-      );
-      conversationOpened = true;
-    }
-
-    return c.json({ ok: true, signal, conversation_opened: conversationOpened });
+    return c.json({
+      ok: true,
+      signal,
+      conversation_opened: conversation !== null
+    });
   });
 
   app.delete("/api/me/interests/:user_id", async (c) => {
@@ -168,30 +182,53 @@ export function registerMessagingRoutes(
 
   app.get("/api/conversations", async (c) => {
     const session = c.get("authSession");
-    const conversations = await messagingRepository.listConversations(session.user.id);
-
-    const enriched = await Promise.all(
-      conversations.map(async (conv) => {
-        // Brug getProfileIncludingDeleted så slettede brugere stadig
-        // vises som "[Slettet bruger]" i samtale-listen (issue A10).
-        const other = await membershipRepository.getProfileIncludingDeleted(conv.other_user_id);
-        return {
-          id: conv.id,
-          origin: conv.origin,
-          last_message_at: conv.last_message_at?.toISOString() ?? null,
-          unread_count: conv.unread_count,
-          other: other
-            ? {
-                user_id: other.user_id,
-                display_name: other.display_name,
-                region: other.region
-              }
-            : { user_id: conv.other_user_id, display_name: null, region: null }
-        };
-      })
+    // Issue B15: pagination. Default 20, max 100.
+    const { limit, offset } = parsePagination(new URL(c.req.url), {
+      limit: 20,
+      max: 100
+    });
+    const { items: conversations, total } = await messagingRepository.listConversations(
+      session.user.id,
+      { limit, offset }
     );
 
-    return c.json({ ok: true, conversations: enriched });
+    // Issue B16: N+1-batch — vi henter profiles parallelt med Promise.all
+    // (Postgres-pool håndterer concurrent queries fint). Tidligere blev de
+    // hentet sekventielt via await i map-callback. For at gøre det helt
+    // batch'et kunne vi tilføje en getProfilesIncludingDeleted([ids]) helper,
+    // men her er parallel fetch tilstrækkeligt for typiske side-størrelser.
+    const profiles = await Promise.all(
+      conversations.map((conv) =>
+        membershipRepository.getProfileIncludingDeleted(conv.other_user_id)
+      )
+    );
+    const enriched = conversations.map((conv, idx) => {
+      const other = profiles[idx];
+      return {
+        id: conv.id,
+        origin: conv.origin,
+        last_message_at: conv.last_message_at?.toISOString() ?? null,
+        unread_count: conv.unread_count,
+        other: other
+          ? {
+              user_id: other.user_id,
+              display_name: other.display_name,
+              region: other.region
+            }
+          : { user_id: conv.other_user_id, display_name: null, region: null }
+      };
+    });
+
+    return c.json({
+      ok: true,
+      conversations: enriched,
+      meta: {
+        total,
+        limit,
+        offset,
+        has_more: offset + enriched.length < total
+      }
+    });
   });
 
   app.post("/api/conversations", async (c) => {
@@ -451,8 +488,25 @@ export function registerMessagingRoutes(
   app.use("/api/admin/event-posts/*", adminOnly);
 
   app.get("/api/admin/reports", async (c) => {
-    const reports = await messagingRepository.listOpenReports();
-    return c.json({ ok: true, reports });
+    // Issue B15: pagination.
+    const { limit, offset } = parsePagination(new URL(c.req.url), {
+      limit: 20,
+      max: 100
+    });
+    const { items: reports, total } = await messagingRepository.listOpenReports({
+      limit,
+      offset
+    });
+    return c.json({
+      ok: true,
+      reports,
+      meta: {
+        total,
+        limit,
+        offset,
+        has_more: offset + reports.length < total
+      }
+    });
   });
 
   app.get("/api/admin/event-posts/:id", async (c) => {

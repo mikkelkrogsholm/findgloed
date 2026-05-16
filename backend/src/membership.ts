@@ -14,6 +14,7 @@ import type {
   PhotoVisibility,
   PrivateAlbumGrant,
   ProfilePhoto,
+  PublicMembershipProfile,
   VerificationInsert,
   VerificationSubmission
 } from "./types";
@@ -22,6 +23,27 @@ import type { UploadStore } from "./uploads";
 const PROFILE_FIELDS = `
   u.id AS user_id,
   u.email,
+  u.display_name,
+  u.birth_year,
+  u.region,
+  u.bio,
+  u.initiator_role,
+  u.face_visibility,
+  u.verification_status,
+  u.verified_at,
+  u.verified_via,
+  u.future_verification_accepted_at,
+  u.onboarded_at,
+  u.paused_at,
+  u.role,
+  u."createdAt" AS created_at
+`;
+
+// Issue A24: PROFILE_FIELDS uden email — bruges når vi viser profiler for
+// andre brugere (lister af verificerede medlemmer). Email må kun læses
+// for brugeren selv eller af admins.
+const PROFILE_FIELDS_PUBLIC = `
+  u.id AS user_id,
   u.display_name,
   u.birth_year,
   u.region,
@@ -122,6 +144,28 @@ function rowToProfile(row: Record<string, unknown>): MembershipProfile {
   return {
     user_id: String(row.user_id),
     email: String(row.email),
+    display_name: (row.display_name as string | null) ?? null,
+    birth_year: (row.birth_year as number | null) ?? null,
+    region: (row.region as string | null) ?? null,
+    bio: (row.bio as string | null) ?? null,
+    initiator_role: (row.initiator_role as MembershipProfile["initiator_role"]) ?? null,
+    face_visibility: row.face_visibility as MembershipProfile["face_visibility"],
+    verification_status: row.verification_status as MembershipProfile["verification_status"],
+    verified_at: (row.verified_at as Date | null) ?? null,
+    verified_via: (row.verified_via as MembershipProfile["verified_via"]) ?? null,
+    future_verification_accepted_at:
+      (row.future_verification_accepted_at as Date | null) ?? null,
+    onboarded_at: (row.onboarded_at as Date | null) ?? null,
+    paused_at: (row.paused_at as Date | null) ?? null,
+    role: (row.role as string | null) ?? null,
+    created_at: row.created_at as Date
+  };
+}
+
+// Issue A24: Profil uden email til ikke-self-lookups.
+function rowToPublicProfile(row: Record<string, unknown>): PublicMembershipProfile {
+  return {
+    user_id: String(row.user_id),
     display_name: (row.display_name as string | null) ?? null,
     birth_year: (row.birth_year as number | null) ?? null,
     region: (row.region as string | null) ?? null,
@@ -549,24 +593,67 @@ export class PostgresMembershipRepository implements MembershipRepository {
     }
   }
 
-  async listVerifiedMembers(excludeUserId: string): Promise<MembershipProfile[]> {
+  async listVerifiedMembers(
+    excludeUserId: string,
+    options?: { limit?: number; offset?: number }
+  ): Promise<{ items: PublicMembershipProfile[]; total: number }> {
     // Issue A7: kun brugere der har gennemført onboarding må optræde i /members.
     // Nye signups bliver auto-verified (verified_via='temporary') via auth-hook
     // før de har valgt rolle/photo, og må ikke være synlige som ghost-medlemmer.
+    // Issue A24: bruger PROFILE_FIELDS_PUBLIC (uden email).
+    // Issue B15: pagination — limit + offset med count i samme svar.
+    const limit = Math.max(1, Math.min(100, options?.limit ?? 24));
+    const offset = Math.max(0, options?.offset ?? 0);
+    const baseWhere = `
+      u.verification_status = 'verified'
+        AND u.onboarded_at IS NOT NULL
+        AND u.deleted_at IS NULL
+        AND u.paused_at IS NULL
+        AND u.id <> $1
+        AND COALESCE(u.role, 'user') = 'user'
+    `;
+    const [itemsResult, countResult] = await Promise.all([
+      this.pool.query(
+        `SELECT ${PROFILE_FIELDS_PUBLIC}
+         FROM "user" u
+         WHERE ${baseWhere}
+         ORDER BY u."createdAt" DESC
+         LIMIT $2 OFFSET $3`,
+        [excludeUserId, limit, offset]
+      ),
+      this.pool.query<{ count: string }>(
+        `SELECT COUNT(*)::text AS count
+         FROM "user" u
+         WHERE ${baseWhere}`,
+        [excludeUserId]
+      )
+    ]);
+    return {
+      items: itemsResult.rows.map(rowToPublicProfile),
+      total: Number(countResult.rows[0]?.count ?? 0)
+    };
+  }
+
+  // Issue A24: Direkte verified-by-email-opslag. Returnerer null hvis ingen
+  // matchende verificeret+onboarded bruger findes — det udelukker både
+  // ikke-eksisterende emails, slettede brugere, og ikke-verificerede brugere.
+  // Kalderen får dermed kun information om at "denne bruger findes og er
+  // potentiel partner" hvis svaret IKKE er null. Vi normaliserer email
+  // case-insensitively via LOWER() så bogstavernes store/små ikke leaker
+  // forskellige fejlmeldinger.
+  async findVerifiedByEmail(email: string): Promise<MembershipProfile | null> {
     const result = await this.pool.query(
       `SELECT ${PROFILE_FIELDS}
        FROM "user" u
-       WHERE u.verification_status = 'verified'
+       WHERE LOWER(u.email) = LOWER($1)
+         AND u.verification_status = 'verified'
          AND u.onboarded_at IS NOT NULL
          AND u.deleted_at IS NULL
-         AND u.paused_at IS NULL
-         AND u.id <> $1
          AND COALESCE(u.role, 'user') = 'user'
-       ORDER BY u."createdAt" DESC
-       LIMIT 200`,
-      [excludeUserId]
+       LIMIT 1`,
+      [email]
     );
-    return result.rows.map(rowToProfile);
+    return result.rows[0] ? rowToProfile(result.rows[0]) : null;
   }
 
   async getPublicProfile(userId: string, viewerId: string) {
@@ -923,6 +1010,40 @@ export class PostgresMembershipRepository implements MembershipRepository {
     return [];
   }
 
+  // Issue B16: Batch-fetch af fotos for flere brugere. Bruges af /api/members
+  // for at undgå N+1: tidligere kørte route-handleren én listPhotos pr.
+  // member, hvilket gav O(N) DB-rundture. Nu kører vi én single SELECT med
+  // WHERE owner_user_id = ANY($1::text[]) og grupperer pr. owner.
+  async listPhotosForUsers(ownerUserIds: string[]): Promise<Map<string, ProfilePhoto[]>> {
+    const map = new Map<string, ProfilePhoto[]>();
+    if (ownerUserIds.length === 0) {
+      return map;
+    }
+    const result = await this.pool.query(
+      `SELECT ${PHOTO_FIELDS} FROM profile_photo
+       WHERE owner_user_id = ANY($1::text[])
+       ORDER BY owner_user_id, position, created_at`,
+      [ownerUserIds]
+    );
+    for (const row of result.rows) {
+      const photo = rowToPhoto(row);
+      const ownerId = photo.owner_user_id;
+      if (!ownerId) continue;
+      const existing = map.get(ownerId);
+      if (existing) {
+        existing.push(photo);
+      } else {
+        map.set(ownerId, [photo]);
+      }
+    }
+    // Sørg for at hver ønsket ownerId har en entry (også tom liste) så
+    // kalderen ikke behøver checke for undefined.
+    for (const id of ownerUserIds) {
+      if (!map.has(id)) map.set(id, []);
+    }
+    return map;
+  }
+
   async getPhotoById(id: string): Promise<ProfilePhoto | null> {
     const result = await this.pool.query(
       `SELECT ${PHOTO_FIELDS} FROM profile_photo WHERE id = $1 LIMIT 1`,
@@ -992,15 +1113,31 @@ export class PostgresMembershipRepository implements MembershipRepository {
 
   async listPrivateAlbumGrantsForOwner(
     ownerUserId: string | null,
-    ownerCoupleId: string | null
-  ): Promise<PrivateAlbumGrant[]> {
-    const result = await this.pool.query(
-      `SELECT ${GRANT_FIELDS} FROM private_album_grant
-       WHERE ((owner_user_id IS NOT NULL AND owner_user_id = $1) OR (owner_couple_id IS NOT NULL AND owner_couple_id = $2))
-       ORDER BY granted_at DESC`,
-      [ownerUserId, ownerCoupleId]
-    );
-    return result.rows.map(rowToGrant);
+    ownerCoupleId: string | null,
+    options?: { limit?: number; offset?: number }
+  ): Promise<{ items: PrivateAlbumGrant[]; total: number }> {
+    // Issue B15: pagination med limit/offset (default 20, max 100).
+    const limit = Math.max(1, Math.min(100, options?.limit ?? 20));
+    const offset = Math.max(0, options?.offset ?? 0);
+    const where = `((owner_user_id IS NOT NULL AND owner_user_id = $1)
+                    OR (owner_couple_id IS NOT NULL AND owner_couple_id = $2))`;
+    const [itemsResult, countResult] = await Promise.all([
+      this.pool.query(
+        `SELECT ${GRANT_FIELDS} FROM private_album_grant
+         WHERE ${where}
+         ORDER BY granted_at DESC
+         LIMIT $3 OFFSET $4`,
+        [ownerUserId, ownerCoupleId, limit, offset]
+      ),
+      this.pool.query<{ count: string }>(
+        `SELECT COUNT(*)::text AS count FROM private_album_grant WHERE ${where}`,
+        [ownerUserId, ownerCoupleId]
+      )
+    ]);
+    return {
+      items: itemsResult.rows.map(rowToGrant),
+      total: Number(countResult.rows[0]?.count ?? 0)
+    };
   }
 
   async recordPrivateAlbumView(
@@ -1018,6 +1155,26 @@ export class PostgresMembershipRepository implements MembershipRepository {
       [ownerUserId, ownerCoupleId, recipientUserId]
     );
     return result.rows[0] ? rowToGrant(result.rows[0]) : null;
+  }
+
+  // Issue A13: Side-effekt-fri adgangs-check. Returnerer true hvis et aktivt
+  // (ikke-revoked) grant findes mellem owner og recipient. Bruges som gate
+  // før selve view_count-incrementeringen så et 403-svar ikke længere
+  // pumper tællere op for ejeren.
+  async existsPrivateAlbumGrant(
+    ownerUserId: string | null,
+    ownerCoupleId: string | null,
+    recipientUserId: string
+  ): Promise<boolean> {
+    const result = await this.pool.query(
+      `SELECT 1 FROM private_album_grant
+       WHERE recipient_user_id = $3
+         AND ((owner_user_id IS NOT NULL AND owner_user_id = $1) OR (owner_couple_id IS NOT NULL AND owner_couple_id = $2))
+         AND revoked_at IS NULL
+       LIMIT 1`,
+      [ownerUserId, ownerCoupleId, recipientUserId]
+    );
+    return (result.rowCount ?? 0) > 0;
   }
 
   async acceptFutureVerificationPolicy(userId: string): Promise<MembershipProfile | null> {

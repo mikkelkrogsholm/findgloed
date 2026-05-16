@@ -86,9 +86,18 @@ export type MeResponse = {
   photos: PhotoSummary[];
 };
 
+// Issue B15: standard pagination-meta returneret af alle paginerede endpoints.
+export type PaginationMeta = {
+  total: number;
+  limit: number;
+  offset: number;
+  has_more: boolean;
+};
+
 export type MembersResponse = {
   ok: true;
   members: Array<ProfileSummary & { photos: PhotoSummary[] }>;
+  meta?: PaginationMeta;
 };
 
 export type MemberDetailResponse = {
@@ -242,7 +251,15 @@ export const api = {
   deleteCouple: (id: string) =>
     request<{ ok: true }>(`/api/couples/${id}`, { method: "DELETE" }),
 
-  listMembers: () => request<MembersResponse>("/api/members"),
+  // Issue B15: pagination — params er optional og defaults eksisterer på serveren
+  // så eksisterende kalde-stedet uden args stadig virker.
+  listMembers: (params: { limit?: number; offset?: number } = {}) => {
+    const qs = new URLSearchParams();
+    if (params.limit !== undefined) qs.set("limit", String(params.limit));
+    if (params.offset !== undefined) qs.set("offset", String(params.offset));
+    const suffix = qs.toString();
+    return request<MembersResponse>(`/api/members${suffix ? `?${suffix}` : ""}`);
+  },
   getMember: (id: string) => request<MemberDetailResponse>(`/api/members/${id}`),
   grantPrivateAlbum: (recipient_user_id: string) =>
     request<{ ok: true }>("/api/me/album-grants", {
@@ -256,11 +273,17 @@ export const api = {
   // B2: Liste over modtagere af mit private album så ejeren kan se hvem
   // der har adgang, hvornår de fik den, hvor mange gange de har set, og
   // revoke individuelt.
-  listAlbumGrants: () =>
-    request<{
+  listAlbumGrants: (params: { limit?: number; offset?: number } = {}) => {
+    const qs = new URLSearchParams();
+    if (params.limit !== undefined) qs.set("limit", String(params.limit));
+    if (params.offset !== undefined) qs.set("offset", String(params.offset));
+    const suffix = qs.toString();
+    return request<{
       ok: true;
       grants: PrivateAlbumGrantSummary[];
-    }>("/api/me/album-grants"),
+      meta?: PaginationMeta;
+    }>(`/api/me/album-grants${suffix ? `?${suffix}` : ""}`);
+  },
 
   listPendingVerifications: () =>
     request<{
@@ -285,11 +308,17 @@ export const api = {
       body: JSON.stringify({ reason })
     }),
 
-  listAdminReports: () =>
-    request<{
+  listAdminReports: (params: { limit?: number; offset?: number } = {}) => {
+    const qs = new URLSearchParams();
+    if (params.limit !== undefined) qs.set("limit", String(params.limit));
+    if (params.offset !== undefined) qs.set("offset", String(params.offset));
+    const suffix = qs.toString();
+    return request<{
       ok: true;
       reports: AdminReport[];
-    }>("/api/admin/reports"),
+      meta?: PaginationMeta;
+    }>(`/api/admin/reports${suffix ? `?${suffix}` : ""}`);
+  },
 
   resolveAdminReport: (
     id: string,
@@ -330,6 +359,8 @@ export const api = {
     level?: EventLevel;
     region?: string;
     beginner_friendly?: boolean;
+    limit?: number;
+    offset?: number;
   } = {}) => {
     const params = new URLSearchParams();
     if (filters.category) params.set("category", filters.category);
@@ -338,8 +369,10 @@ export const api = {
     if (filters.beginner_friendly !== undefined) {
       params.set("beginner_friendly", String(filters.beginner_friendly));
     }
+    if (filters.limit !== undefined) params.set("limit", String(filters.limit));
+    if (filters.offset !== undefined) params.set("offset", String(filters.offset));
     const qs = params.toString();
-    return request<{ ok: true; events: PublicEvent[] }>(
+    return request<{ ok: true; events: PublicEvent[]; meta?: PaginationMeta }>(
       `/api/events${qs ? `?${qs}` : ""}`
     );
   },
@@ -353,8 +386,12 @@ export const api = {
   cancelEventRegistration: (slug: string) =>
     request<{ ok: true }>(`/api/events/${slug}/register`, { method: "DELETE" }),
 
-  myEvents: () =>
-    request<{
+  myEvents: (params: { limit?: number; offset?: number } = {}) => {
+    const qs = new URLSearchParams();
+    if (params.limit !== undefined) qs.set("limit", String(params.limit));
+    if (params.offset !== undefined) qs.set("offset", String(params.offset));
+    const suffix = qs.toString();
+    return request<{
       ok: true;
       registrations: Array<{
         id: string;
@@ -362,11 +399,20 @@ export const api = {
         registered_at: string;
         event: PublicEvent;
       }>;
-    }>("/api/me/events"),
+      meta?: PaginationMeta;
+    }>(`/api/me/events${suffix ? `?${suffix}` : ""}`);
+  },
 
   // Admin
-  listAdminEvents: () =>
-    request<{ ok: true; events: AdminEvent[] }>("/api/admin/events"),
+  listAdminEvents: (params: { limit?: number; offset?: number } = {}) => {
+    const qs = new URLSearchParams();
+    if (params.limit !== undefined) qs.set("limit", String(params.limit));
+    if (params.offset !== undefined) qs.set("offset", String(params.offset));
+    const suffix = qs.toString();
+    return request<{ ok: true; events: AdminEvent[]; meta?: PaginationMeta }>(
+      `/api/admin/events${suffix ? `?${suffix}` : ""}`
+    );
+  },
 
   createEvent: (body: AdminEventInput) =>
     request<{ ok: true; event: AdminEvent }>("/api/admin/events", {
@@ -416,8 +462,17 @@ export const api = {
       matches: string[];
     }>("/api/me/interests"),
 
-  listConversations: () =>
-    request<{ ok: true; conversations: ConversationSummary[] }>("/api/conversations"),
+  listConversations: (params: { limit?: number; offset?: number } = {}) => {
+    const qs = new URLSearchParams();
+    if (params.limit !== undefined) qs.set("limit", String(params.limit));
+    if (params.offset !== undefined) qs.set("offset", String(params.offset));
+    const suffix = qs.toString();
+    return request<{
+      ok: true;
+      conversations: ConversationSummary[];
+      meta?: PaginationMeta;
+    }>(`/api/conversations${suffix ? `?${suffix}` : ""}`);
+  },
 
   startConversation: (userId: string, eventSlug?: string) =>
     request<{ ok: true; conversation: { id: string } }>("/api/conversations", {

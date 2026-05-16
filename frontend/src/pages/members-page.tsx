@@ -12,15 +12,19 @@ import { api, type MembersResponse } from "@/lib/api";
 import { getMotionMode, revealVariants } from "@/lib/motion";
 import { navigate } from "@/lib/nav";
 
+// Issue B15: Side-størrelse for medlems-liste. Matcher server-default (24).
+const MEMBERS_PAGE_SIZE = 24;
+
 export function MembersPage() {
   const [data, setData] = useState<MembersResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
   const motionMode = getMotionMode();
 
   useEffect(() => {
     let active = true;
-    api.listMembers().then((result) => {
+    api.listMembers({ limit: MEMBERS_PAGE_SIZE, offset: 0 }).then((result) => {
       if (!active) return;
       if (!result.ok) {
         setError(
@@ -37,6 +41,23 @@ export function MembersPage() {
       active = false;
     };
   }, []);
+
+  // Issue B15: "Hent flere"-handler — appender næste side. Server-default 24,
+  // total + has_more læses fra meta.
+  async function loadMore() {
+    if (!data || !data.meta || loadingMore) return;
+    setLoadingMore(true);
+    const offset = data.meta.offset + data.members.length;
+    const result = await api.listMembers({ limit: MEMBERS_PAGE_SIZE, offset });
+    if (result.ok) {
+      setData({
+        ok: true,
+        members: [...data.members, ...result.members],
+        meta: result.meta
+      });
+    }
+    setLoadingMore(false);
+  }
 
   if (loading) {
     // A22: Skeleton-grid matcher final-state så vi undgår layout-shift.
@@ -87,7 +108,7 @@ export function MembersPage() {
           }
         />
 
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3" data-testid="members-grid">
           {data.members.map((member) => {
             const facePhoto = member.photos.find(
               (p) => p.kind === "face" && member.can_see_face
@@ -170,6 +191,19 @@ export function MembersPage() {
             );
           })}
         </div>
+
+        {data.meta?.has_more && (
+          <div className="mt-8 flex justify-center">
+            <Button
+              variant="outline"
+              onClick={loadMore}
+              disabled={loadingMore}
+              data-testid="members-load-more"
+            >
+              {loadingMore ? "Henter…" : "Hent flere medlemmer"}
+            </Button>
+          </div>
+        )}
       </motion.div>
     </section>
   );
