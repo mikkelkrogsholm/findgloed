@@ -1,4 +1,4 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { motion } from "motion/react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { appConfig } from "@/config/app-config";
+import { api } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
 import { getMotionMode, revealVariants } from "@/lib/motion";
 import { navigate } from "@/lib/nav";
@@ -17,6 +18,8 @@ export function SignupPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [inviteCode, setInviteCode] = useState("");
+  const [requiresInviteCode, setRequiresInviteCode] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [acceptedAge, setAcceptedAge] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -29,7 +32,26 @@ export function SignupPage() {
     password.length >= 8 &&
     acceptedTerms &&
     acceptedAge &&
+    (!requiresInviteCode || inviteCode.trim().length > 0) &&
     !loading;
+
+  // Hent signup-requirements ved load. Hvis admin har slået invite-code-gaten
+  // til vises et ekstra felt. Vi skipper ved fejl — så fallback'er vi til
+  // åbent signup. Backenden vil afvise med 403 hvis koden er required men
+  // mangler, så vi mister ikke sikkerhed ved at fejle åbent her.
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const result = await api.getSignupRequirements();
+      if (cancelled) return;
+      if (result.ok) {
+        setRequiresInviteCode(result.requires_invite_code);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -37,15 +59,29 @@ export function SignupPage() {
     setErrorMessage("");
 
     try {
-      const result = await authClient.signUp.email({
+      // Better Auth's signUp.email tager kun de officielle felter, men vores
+      // backend-middleware på /api/auth/sign-up/email læser body som JSON før
+      // det videresendes. authClient sender alle ekstra felter med — invite_code
+      // smugles dermed igennem til vores wrapper uden at forstyrre Better Auth.
+      // Vi sender KUN invite_code når det er required, så test-asserts kan
+      // bruge strict equal og vi ikke utilsigtet bumser med Better Auth.
+      const payload: { name: string; email: string; password: string; invite_code?: string } = {
         name,
         email,
         password
-      });
+      };
+      if (requiresInviteCode) {
+        payload.invite_code = inviteCode;
+      }
+      const result = await authClient.signUp.email(
+        payload as Parameters<typeof authClient.signUp.email>[0]
+      );
       if (result.error) {
         const code = (result.error as { code?: string }).code;
         if (code === "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL") {
           setErrorMessage("Den e-mail har allerede en konto. Log ind i stedet.");
+        } else if (code === "INVITE_CODE_REQUIRED") {
+          setErrorMessage("Forkert eller manglende invitationskode.");
         } else {
           setErrorMessage(result.error.message ?? "Kunne ikke oprette konto.");
         }
@@ -121,6 +157,24 @@ export function SignupPage() {
                   autoComplete="new-password"
                 />
               </div>
+
+              {requiresInviteCode && (
+                <div className="space-y-2" data-testid="invite-code-field">
+                  <Label htmlFor="invite-code">Invitationskode</Label>
+                  <Input
+                    id="invite-code"
+                    type="text"
+                    value={inviteCode}
+                    onChange={(event) => setInviteCode(event.target.value)}
+                    placeholder="Den kode du fik tilsendt"
+                    required
+                    autoComplete="off"
+                  />
+                  <p className="text-xs text-[color:var(--color-text-tertiary)]">
+                    Glød er lukket for fri tilmelding lige nu. Skriv din invitationskode for at oprette konto.
+                  </p>
+                </div>
+              )}
 
               <div className="space-y-3 rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--surface-glass)] p-4">
                 <label className="flex items-start gap-3 text-sm">

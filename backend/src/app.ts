@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
-import { createHash, createHmac, randomBytes } from "node:crypto";
+import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { APP_SETTING_KEYS, type AppSettingRepository } from "./app-settings";
 import { registerEventRoutes } from "./event-routes";
 import type { EventRepository } from "./events";
 import { registerMembershipRoutes } from "./membership-routes";
@@ -69,11 +70,31 @@ type AppDeps = {
   // Webhook-relateret (issue A18).
   stripeWebhookSecret?: string;
   subscriptionEventLog?: SubscriptionEventLog;
+  // Invite-code-gate (admin-toggle). Hvis undefined er der ingen gate.
+  appSettings?: AppSettingRepository;
 };
 
 const DEFAULT_TOKEN_TTL_HOURS = 72;
 const DEFAULT_RESEND_COOLDOWN_MINUTES = 15;
 const DEFAULT_RATE_LIMIT_FAIL_OPEN = false;
+
+// Timing-safe string-sammenligning. Beskytter mod timing-attacks hvor
+// en angriber forsøger at brute-force en kode tegn for tegn ved at måle
+// hvor lang tid det tager før sammenligningen returnerer false.
+// Hvis længderne ikke matcher returnerer vi false uden at læse buffere
+// (timingSafeEqual kræver samme længde), men selve buffer-comparison
+// er konstant-tid.
+function timingSafeEqualString(a: string, b: string): boolean {
+  const ab = Buffer.from(a, "utf8");
+  const bb = Buffer.from(b, "utf8");
+  if (ab.length !== bb.length) {
+    // Vi udfører stadig en dummy-compare for at gøre length-discovery
+    // marginalt sværere — selvom det er en svag forsvar.
+    timingSafeEqual(ab, ab);
+    return false;
+  }
+  return timingSafeEqual(ab, bb);
+}
 const DEFAULT_HSTS_MAX_AGE_SECONDS = 31_536_000;
 const CORS_METHODS = "GET,POST,PATCH,DELETE,OPTIONS";
 const CORS_HEADERS = "Content-Type";
@@ -483,6 +504,21 @@ export function createApp(deps: AppDeps): Hono<{ Variables: AppVariables }> {
     return c.json({ ok: true, status: "received" }, 200);
   });
 
+  // Public endpoint: signup-frontend tjekker dette ved load for at vise
+  // invite-code-feltet kun når det faktisk kræves. Returnerer ALDRIG den
+  // faktiske kode — kun et boolean-flag. Skal registreres FØR app.all(/api/auth/*)
+  // ellers fanger catch-all-handleren denne route.
+  app.get("/api/auth/signup-requirements", async (c) => {
+    let requiresInviteCode = false;
+    if (deps.appSettings) {
+      const required = await deps.appSettings.get<boolean>(
+        APP_SETTING_KEYS.signupRequireInviteCode
+      );
+      requiresInviteCode = required === true;
+    }
+    return c.json({ ok: true, requires_invite_code: requiresInviteCode });
+  });
+
   app.all("/api/auth/*", async (c) => {
     if (!authService) {
       return c.json(
@@ -508,10 +544,14 @@ export function createApp(deps: AppDeps): Hono<{ Variables: AppVariables }> {
       // efter rate-limit-tjekket fordi body kun kan læses én gang.
       const bodyText = await c.req.raw.clone().text();
       let email: string | undefined;
+      let inviteCode: string | undefined;
       try {
-        const json = JSON.parse(bodyText) as { email?: unknown };
+        const json = JSON.parse(bodyText) as { email?: unknown; invite_code?: unknown };
         if (typeof json.email === "string") {
           email = normalizeEmail(json.email);
+        }
+        if (typeof json.invite_code === "string") {
+          inviteCode = json.invite_code;
         }
       } catch {
         // Ignorer parse-fejl — better-auth håndterer dem.
@@ -523,6 +563,31 @@ export function createApp(deps: AppDeps): Hono<{ Variables: AppVariables }> {
       const limitResponse = await enforceRateLimit(c, scope, isSignIn ? email : undefined);
       if (limitResponse) {
         return limitResponse;
+      }
+
+      // Invite-code-gate: hvis admin har slået SIGNUP_REQUIRE_INVITE_CODE
+      // til, skal request indeholde invite_code der matcher den konfigurerede
+      // kode. Sammenligning er timing-safe så timing-attacks ikke kan brute-
+      // force kode-tegn for tegn.
+      if (isSignUp && deps.appSettings) {
+        const required = await deps.appSettings.get<boolean>(
+          APP_SETTING_KEYS.signupRequireInviteCode
+        );
+        if (required === true) {
+          const expected = (await deps.appSettings.get<string>(
+            APP_SETTING_KEYS.signupInviteCode
+          )) ?? "";
+          if (!expected || !inviteCode || !timingSafeEqualString(inviteCode, expected)) {
+            return c.json(
+              {
+                ok: false,
+                code: "INVITE_CODE_REQUIRED",
+                message: "Du skal bruge en gyldig invitationskode for at oprette en konto."
+              },
+              403
+            );
+          }
+        }
       }
     }
 
@@ -652,6 +717,74 @@ export function createApp(deps: AppDeps): Hono<{ Variables: AppVariables }> {
 
     c.set("authSession", authSession);
     await next();
+  });
+
+  // ---------- Admin: app-settings ----------
+  // Generisk GET/PUT for de globale runtime-settings (migration 013).
+  // Bruges p.t. til invite-code-gaten, men strukturen tillader fremtidige
+  // settings uden nye endpoints.
+
+  app.get("/api/admin/settings", async (c) => {
+    const authSession = c.get("authSession") as { user?: { role?: string | null } } | undefined;
+    if (authSession?.user?.role !== "admin") {
+      return c.json({ ok: false, code: "FORBIDDEN", message: "Du har ikke adgang." }, 403);
+    }
+    if (!deps.appSettings) {
+      return c.json({ ok: false, code: "NOT_AVAILABLE" }, 503);
+    }
+    const rows = await deps.appSettings.listAll();
+    return c.json({
+      ok: true,
+      settings: rows.map((row) => ({
+        key: row.key,
+        value: row.value,
+        updated_at: row.updated_at.toISOString(),
+        updated_by: row.updated_by
+      }))
+    });
+  });
+
+  app.put("/api/admin/settings/:key", async (c) => {
+    const authSession = c.get("authSession") as
+      | { user?: { id: string; role?: string | null } }
+      | undefined;
+    if (authSession?.user?.role !== "admin") {
+      return c.json({ ok: false, code: "FORBIDDEN", message: "Du har ikke adgang." }, 403);
+    }
+    if (!deps.appSettings) {
+      return c.json({ ok: false, code: "NOT_AVAILABLE" }, 503);
+    }
+    const key = c.req.param("key");
+    // Allowlist — kun kendte nøgler kan skrives via admin-UI så vi ikke
+    // åbner en generisk JSONB-injection-vej.
+    const allowed: string[] = [
+      APP_SETTING_KEYS.signupRequireInviteCode,
+      APP_SETTING_KEYS.signupInviteCode
+    ];
+    if (!allowed.includes(key)) {
+      return c.json({ ok: false, code: "UNKNOWN_KEY" }, 422);
+    }
+
+    const body = (await c.req.json().catch(() => null)) as { value?: unknown } | null;
+    if (!body || body.value === undefined) {
+      return c.json({ ok: false, code: "MISSING_VALUE" }, 422);
+    }
+
+    // Type-check pr. kendt nøgle.
+    if (key === APP_SETTING_KEYS.signupRequireInviteCode && typeof body.value !== "boolean") {
+      return c.json({ ok: false, code: "INVALID_VALUE", message: "boolean required" }, 422);
+    }
+    if (key === APP_SETTING_KEYS.signupInviteCode) {
+      if (typeof body.value !== "string") {
+        return c.json({ ok: false, code: "INVALID_VALUE", message: "string required" }, 422);
+      }
+      if (body.value.length > 200) {
+        return c.json({ ok: false, code: "INVALID_VALUE", message: "max 200 chars" }, 422);
+      }
+    }
+
+    await deps.appSettings.set(key, body.value, authSession?.user?.id ?? null);
+    return c.json({ ok: true });
   });
 
   app.get("/api/admin/leads", async (c) => {

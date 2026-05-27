@@ -36,6 +36,7 @@ export const appConfig = {
     adminEvents: "/admin/events",
     adminVerifications: "/admin/verifications",
     adminReports: "/admin/reports",
+    adminSettings: "/admin/settings",
     design: "/design"
   },
   features: {
@@ -71,6 +72,7 @@ export type AppRouteName =
   | "admin-events"
   | "admin-verifications"
   | "admin-reports"
+  | "admin-settings"
   | "design"
   | "not-found";
 
