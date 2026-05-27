@@ -353,6 +353,30 @@ export const api = {
   hideAdminEventPost: (id: string) =>
     request<{ ok: true }>(`/api/admin/event-posts/${id}`, { method: "DELETE" }),
 
+  // ---------- Admin app-settings (invite-code-gate m.fl.) ----------
+  listAdminSettings: () =>
+    request<{
+      ok: true;
+      settings: Array<{
+        key: string;
+        value: unknown;
+        updated_at: string;
+        updated_by: string | null;
+      }>;
+    }>("/api/admin/settings"),
+
+  updateAdminSetting: (key: string, value: unknown) =>
+    request<{ ok: true }>(`/api/admin/settings/${encodeURIComponent(key)}`, {
+      method: "PUT",
+      body: JSON.stringify({ value })
+    }),
+
+  // Public — bruges af signup-siden for at vide om invite-code-felt skal vises.
+  getSignupRequirements: () =>
+    request<{ ok: true; requires_invite_code: boolean }>(
+      "/api/auth/signup-requirements"
+    ),
+
   // ---------- Events ----------
   listEvents: (filters: {
     category?: EventCategory;

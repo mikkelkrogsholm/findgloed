@@ -12,7 +12,8 @@ const ADMIN_LINKS = [
   { href: appConfig.routes.admin, label: "Leads" },
   { href: appConfig.routes.adminEvents, label: "Events" },
   { href: appConfig.routes.adminVerifications, label: "Verifikationer" },
-  { href: appConfig.routes.adminReports, label: "Reports" }
+  { href: appConfig.routes.adminReports, label: "Reports" },
+  { href: appConfig.routes.adminSettings, label: "Indstillinger" }
 ] as const;
 
 function isCurrent(pathname: string, href: string): boolean {

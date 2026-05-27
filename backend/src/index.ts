@@ -7,6 +7,7 @@ import { normalizeEmail } from "./validators";
 import { readConfig } from "./config";
 import { createPool, PostgresLeadRepository } from "./db";
 import { ResendEmailService } from "./email";
+import { PostgresAppSettingRepository } from "./app-settings";
 import { PostgresEventRepository } from "./events";
 import { PostgresMembershipRepository } from "./membership";
 import { PostgresMessagingRepository } from "./messaging";
@@ -125,7 +126,8 @@ async function bootstrap(): Promise<void> {
     subscriptionRepository,
     tokenHashSecret: config.betterAuthSecret,
     stripeWebhookSecret: config.stripeWebhookSecret,
-    subscriptionEventLog: new PostgresSubscriptionEventLog(pool)
+    subscriptionEventLog: new PostgresSubscriptionEventLog(pool),
+    appSettings: new PostgresAppSettingRepository(pool)
   });
 
   const server = serve({
