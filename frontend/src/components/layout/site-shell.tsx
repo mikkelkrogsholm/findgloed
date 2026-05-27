@@ -176,7 +176,7 @@ export function SiteShell({ children, showDesignLink = false, themePreset }: Sit
             {/* Mobile burger */}
             <button
               type="button"
-              className="glass-pill hover-glow partner-pill md:hidden rounded-full px-3 py-1 text-xs tracking-wider"
+              className="glass-pill hover-glow partner-pill md:hidden inline-flex items-center justify-center min-h-11 min-w-11 rounded-full px-4 text-xs tracking-wider"
               aria-label={mobileOpen ? "Luk menu" : "Åbn menu"}
               aria-expanded={mobileOpen}
               onClick={() => setMobileOpen((prev) => !prev)}
