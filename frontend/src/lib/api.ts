@@ -367,7 +367,9 @@ export const api = {
 
   updateAdminSetting: (key: string, value: unknown) =>
     request<{ ok: true }>(`/api/admin/settings/${encodeURIComponent(key)}`, {
-      method: "PUT",
+      // PATCH (ikke PUT) fordi CORS_METHODS ikke whitelister PUT.
+      // PATCH er også semantisk korrekt — vi opdaterer kun værdien.
+      method: "PATCH",
       body: JSON.stringify({ value })
     }),
 
