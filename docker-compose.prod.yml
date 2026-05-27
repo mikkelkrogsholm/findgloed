@@ -88,6 +88,10 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    volumes:
+      # Profil-fotos og verificeringsfiler skal overleve container-rebuild.
+      # Default uploads-root er process.cwd()/uploads = /app/uploads (jf. Dockerfile WORKDIR /app).
+      - findgloed_uploads:/app/uploads
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:39564/api/health || exit 1"]
       interval: 10s
@@ -134,3 +138,4 @@ volumes:
   postgres_data:
   caddy_data:
   caddy_config:
+  findgloed_uploads:

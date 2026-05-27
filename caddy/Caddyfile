@@ -2,14 +2,40 @@
 	email {$ACME_EMAIL}
 }
 
+# Genbrugelige security headers — anvendes med `import security_headers`.
+# HSTS sættes her i Caddy (proxy-laget) og IKKE i applikationen, så vi har
+# ét sted at justere TTL og preload. Api skal derfor køre med ENABLE_HSTS=false.
+(security_headers) {
+	header {
+		# 1 år, includeSubDomains. Preload kan tilføjes når domænet er
+		# klar til submission på hstspreload.org.
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		# Forhindrer MIME-sniffing-angreb.
+		X-Content-Type-Options "nosniff"
+		# Vi tillader ikke embedding i frames (clickjacking-beskyttelse).
+		X-Frame-Options "DENY"
+		# Lækker kun origin på cross-origin requests (ikke fuld URL).
+		Referrer-Policy "strict-origin-when-cross-origin"
+		# Drop sensors vi ikke bruger. Tilføj 'self' her hvis vi senere
+		# har brug for en sensor i en specifik feature.
+		Permissions-Policy "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()"
+		# Caddy sætter default en "Server: Caddy" header — fjern den
+		# så vi ikke afslører proxy-type.
+		-Server
+	}
+}
+
 findgloed.dk, www.findgloed.dk {
+	import security_headers
 	reverse_proxy web:80
 }
 
 api.findgloed.dk {
+	import security_headers
 	reverse_proxy api:39564
 }
 
 umami.findgloed.dk {
+	import security_headers
 	reverse_proxy umami:3000
 }
