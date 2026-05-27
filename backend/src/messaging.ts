@@ -185,6 +185,13 @@ export type MessagingRepository = {
   ) => Promise<Message>;
   listMessages: (conversationId: string, limit: number) => Promise<Message[]>;
   markRead: (conversationId: string, userId: string) => Promise<void>;
+  // C12: brugt til email-notifikation-debounce. Vi tæller ulæste beskeder
+  // fra alle andre afsendere end recipient — typisk i samtaler kun den
+  // ene modpart, men event-baserede samtaler kan i fremtiden have flere.
+  // Hvis tallet er 1 betyder det at den netop sendte besked er den eneste
+  // ulæste, dvs. recipient har læst alt før — så vi sender mail. Hvis > 1
+  // har de allerede en ulæst besked og dermed allerede fået notifikation.
+  countUnreadForRecipient: (conversationId: string, recipientUserId: string) => Promise<number>;
 
   // Event posts
   postEventComment: (eventId: string, userId: string, body: string) => Promise<EventPost>;
@@ -525,6 +532,21 @@ export class PostgresMessagingRepository implements MessagingRepository {
        WHERE conversation_id = $1 AND sender_user_id <> $2 AND read_at IS NULL`,
       [conversationId, userId]
     );
+  }
+
+  async countUnreadForRecipient(
+    conversationId: string,
+    recipientUserId: string
+  ): Promise<number> {
+    const result = await this.pool.query<{ unread: string }>(
+      `SELECT COUNT(*)::text AS unread
+       FROM message
+       WHERE conversation_id = $1
+         AND sender_user_id <> $2
+         AND read_at IS NULL`,
+      [conversationId, recipientUserId]
+    );
+    return Number(result.rows[0]?.unread ?? 0);
   }
 
   async postEventComment(eventId: string, userId: string, body: string): Promise<EventPost> {

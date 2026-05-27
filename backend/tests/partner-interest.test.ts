@@ -37,7 +37,9 @@ function createTestApp(options?: {
       sendWaitlistConfirm: async () => undefined,
       sendWaitlistWelcome: async () => undefined,
       sendPartnerInterestConfirm: options?.onConfirmEmail ?? (async () => undefined),
-      sendPartnerInterestReceived: options?.onReceivedEmail ?? (async () => undefined)
+      sendPartnerInterestReceived: options?.onReceivedEmail ?? (async () => undefined),
+      sendInterestSignal: async () => undefined,
+      sendNewMessage: async () => undefined
     },
     rateLimiter: options?.rateLimiter,
     rateLimitEnabled: options?.rateLimitEnabled,

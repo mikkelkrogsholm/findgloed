@@ -111,6 +111,16 @@ export type EmailService = {
   sendWaitlistWelcome: (email: string) => Promise<void>;
   sendPartnerInterestConfirm: (email: string, confirmUrl: string) => Promise<void>;
   sendPartnerInterestReceived: (email: string) => Promise<void>;
+  sendInterestSignal: (
+    toEmail: string,
+    fromDisplayName: string,
+    interestsUrl: string
+  ) => Promise<void>;
+  sendNewMessage: (
+    toEmail: string,
+    fromDisplayName: string,
+    conversationUrl: string
+  ) => Promise<void>;
 };
 
 // Issue B13: Per-scope rate-limit. Hver scope har sit eget bucket-mønster:

@@ -612,7 +612,9 @@ export function createApp(deps: AppDeps): Hono<{ Variables: AppVariables }> {
       rateLimiter: deps.rateLimiter,
       rateLimitEnabled,
       rateLimitFailOpen,
-      trustProxy
+      trustProxy,
+      emailService: deps.emailService,
+      appUrl: deps.appUrl
     });
   }
 

@@ -23,7 +23,9 @@ function createTestApp(options?: {
       sendWaitlistConfirm: async () => undefined,
       sendWaitlistWelcome: async () => undefined,
       sendPartnerInterestConfirm: async () => undefined,
-      sendPartnerInterestReceived: async () => undefined
+      sendPartnerInterestReceived: async () => undefined,
+      sendInterestSignal: async () => undefined,
+      sendNewMessage: async () => undefined
     },
     rateLimiter: options?.rateLimiter,
     rateLimitEnabled: options?.rateLimitEnabled,
@@ -74,7 +76,9 @@ describe("POST /api/waitlist", () => {
         },
         sendWaitlistWelcome: async () => undefined,
         sendPartnerInterestConfirm: async () => undefined,
-        sendPartnerInterestReceived: async () => undefined
+        sendPartnerInterestReceived: async () => undefined,
+        sendInterestSignal: async () => undefined,
+        sendNewMessage: async () => undefined
       },
       rateLimitEnabled: false,
       corsOrigins: ["http://localhost:39563"],

@@ -157,4 +157,84 @@ export class ResendEmailService implements EmailService {
       throw new Error(`Resend partner receipt failed with status ${response.status}`);
     }
   }
+
+  async sendInterestSignal(
+    toEmail: string,
+    fromDisplayName: string,
+    interestsUrl: string
+  ): Promise<void> {
+    if (!this.apiKey || !this.fromEmail) {
+      return;
+    }
+
+    const subject = `Nogen har vist interesse for dig på Glød`;
+    const text = [
+      `${fromDisplayName} har vist interesse for dig.`,
+      "Se hvem og vis interesse tilbage for at åbne en samtale:",
+      interestsUrl,
+      "",
+      "Vi viser kun pseudonym i denne mail. Hele profilen ser du på Glød.",
+      this.signature()
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${this.apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        from: this.fromEmail,
+        to: [toEmail],
+        subject,
+        text
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Resend interest-signal failed with status ${response.status}`);
+    }
+  }
+
+  async sendNewMessage(
+    toEmail: string,
+    fromDisplayName: string,
+    conversationUrl: string
+  ): Promise<void> {
+    if (!this.apiKey || !this.fromEmail) {
+      return;
+    }
+
+    const subject = `Ny besked fra ${fromDisplayName} på Glød`;
+    const text = [
+      `Du har modtaget en ny besked fra ${fromDisplayName}.`,
+      "Læs den her:",
+      conversationUrl,
+      "",
+      "Vi viser ikke beskedindholdet i mailen — log ind for at læse.",
+      this.signature()
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${this.apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        from: this.fromEmail,
+        to: [toEmail],
+        subject,
+        text
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Resend new-message failed with status ${response.status}`);
+    }
+  }
 }

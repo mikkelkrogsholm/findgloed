@@ -1,6 +1,6 @@
 import type { Hono, MiddlewareHandler } from "hono";
 import type { EventRepository } from "./events";
-import type { AuthService, MembershipRepository, RateLimiter } from "./types";
+import type { AuthService, EmailService, MembershipRepository, RateLimiter } from "./types";
 import type { MessagingRepository } from "./messaging";
 
 type AuthSessionData = {
@@ -21,6 +21,10 @@ type MessagingDeps = {
   rateLimitEnabled?: boolean;
   rateLimitFailOpen?: boolean;
   trustProxy?: boolean;
+  // C12: email-notifikationer for interest-signal + ny besked. Hvis undefined
+  // (fx i tests) skippes notifikationer helt — alt funktionalitet virker stadig.
+  emailService?: EmailService;
+  appUrl?: string;
 };
 
 function asString(value: unknown): string | null {
@@ -55,6 +59,31 @@ export function registerMessagingRoutes(
   const rateLimiter = deps.rateLimiter;
   const rateLimitEnabled = deps.rateLimitEnabled ?? true;
   const rateLimitFailOpen = deps.rateLimitFailOpen ?? false;
+  const emailService = deps.emailService;
+  const appUrl = (deps.appUrl ?? "").replace(/\/+$/, "");
+
+  // C12: lookup display_name + email til notifikations-recipient. Returnerer
+  // null hvis brugeren ikke findes eller mangler email — i begge tilfælde
+  // skipper vi notifikationen stille i stedet for at fejle requesten.
+  async function loadNotificationRecipient(
+    userId: string
+  ): Promise<{ email: string; displayName: string } | null> {
+    const profile = await membershipRepository.getProfile(userId);
+    if (!profile || !profile.email) return null;
+    return {
+      email: profile.email,
+      displayName: profile.display_name?.trim() || "Et medlem"
+    };
+  }
+
+  // C12: best-effort notifikation. Email-fejl må aldrig blokere besked-flowet.
+  async function notify(task: () => Promise<void>): Promise<void> {
+    try {
+      await task();
+    } catch (error) {
+      console.error("email notification failed", error);
+    }
+  }
 
   // Issue B13: helper der returnerer 429-response hvis rate-limit overskrides.
   // Vi bucketes på userId (smuglet ind via email-feltet) så samme bruger har
@@ -155,6 +184,23 @@ export function registerMessagingRoutes(
       session.user.id,
       targetId
     );
+
+    // C12: notifér modtageren om at nogen har vist interesse. Hvis det blev
+    // mutual og samtale blev åbnet, sender vi i stedet besked-notifikationen
+    // via det normale besked-flow (ingen besked sendt endnu = ingen mail).
+    // Vi sender altid interesse-mail på første signal — også når mutual er
+    // opnået, fordi modtageren da netop ikke har sendt en besked til afsender
+    // og derfor får én klar opfølgende handling: "se hvem du matchede med".
+    if (emailService) {
+      const sender = await loadNotificationRecipient(session.user.id);
+      const recipient = await loadNotificationRecipient(targetId);
+      if (sender && recipient) {
+        const url = `${appUrl}/interests/incoming`;
+        void notify(() =>
+          emailService.sendInterestSignal(recipient.email, sender.displayName, url)
+        );
+      }
+    }
 
     return c.json({
       ok: true,
@@ -345,6 +391,24 @@ export function registerMessagingRoutes(
     }
 
     const message = await messagingRepository.postMessage(id, session.user.id, content);
+
+    // C12: notifér modtageren — men kun hvis dette er deres første ulæste
+    // besked i samtalen. Hvis de allerede har ulæste beskeder, har de fået
+    // mail før og vi vil ikke spamme.
+    if (emailService) {
+      const unread = await messagingRepository.countUnreadForRecipient(id, otherId);
+      if (unread === 1) {
+        const sender = await loadNotificationRecipient(session.user.id);
+        const recipient = await loadNotificationRecipient(otherId);
+        if (sender && recipient) {
+          const url = `${appUrl}/messages/${id}`;
+          void notify(() =>
+            emailService.sendNewMessage(recipient.email, sender.displayName, url)
+          );
+        }
+      }
+    }
+
     return c.json({ ok: true, message });
   });
 
