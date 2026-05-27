@@ -7,7 +7,7 @@ findgloed.dk, www.findgloed.dk {
 }
 
 api.findgloed.dk {
-	reverse_proxy api:4564
+	reverse_proxy api:39564
 }
 
 umami.findgloed.dk {
