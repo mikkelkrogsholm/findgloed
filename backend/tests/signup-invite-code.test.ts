@@ -229,7 +229,7 @@ describe("POST /api/auth/sign-up/email — invite-code gate", () => {
   });
 });
 
-describe("Admin: GET/PUT /api/admin/settings", () => {
+describe("Admin: GET/PATCH /api/admin/settings", () => {
   function adminAuth(): AuthService {
     return {
       handler: async () => new Response("ok"),
@@ -273,7 +273,7 @@ describe("Admin: GET/PUT /api/admin/settings", () => {
     expect(res.status).toBe(403);
   });
 
-  test("PUT /api/admin/settings/:key opdaterer setting og kan læses tilbage", async () => {
+  test("PATCH /api/admin/settings/:key opdaterer setting og kan læses tilbage", async () => {
     const settings = createInMemorySettings({
       [APP_SETTING_KEYS.signupRequireInviteCode]: false,
       [APP_SETTING_KEYS.signupInviteCode]: ""
@@ -283,7 +283,7 @@ describe("Admin: GET/PUT /api/admin/settings", () => {
     const res = await app.request(
       `/api/admin/settings/${encodeURIComponent(APP_SETTING_KEYS.signupRequireInviteCode)}`,
       {
-        method: "PUT",
+        method: "PATCH",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ value: true })
       }
@@ -292,12 +292,12 @@ describe("Admin: GET/PUT /api/admin/settings", () => {
     expect(await settings.get(APP_SETTING_KEYS.signupRequireInviteCode)).toBe(true);
   });
 
-  test("PUT afviser ukendt key (allowlist)", async () => {
+  test("PATCH afviser ukendt key (allowlist)", async () => {
     const settings = createInMemorySettings({});
     const app = createTestApp(settings, adminAuth());
 
     const res = await app.request("/api/admin/settings/some.random.key", {
-      method: "PUT",
+      method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ value: true })
     });
@@ -313,7 +313,7 @@ describe("Admin: GET/PUT /api/admin/settings", () => {
     const res = await app.request(
       `/api/admin/settings/${APP_SETTING_KEYS.signupRequireInviteCode}`,
       {
-        method: "PUT",
+        method: "PATCH",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ value: "true" }) // string, ikke boolean
       }

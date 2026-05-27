@@ -130,15 +130,15 @@ export function AdminSettingsPage() {
           </Alert>
         )}
 
-        <Card>
-          <CardHeader>
+        <Card className="p-8 md:p-10">
+          <CardHeader className="px-0 pt-0">
             <CardTitle>Invitationskode ved signup</CardTitle>
             <p className="body-text-muted mt-1 text-sm">
               Når slået til kan ingen oprette konto uden den korrekte invitationskode.
               Brug den fx i en lukket beta eller når du vil styre hvem der får adgang.
             </p>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-0 pb-0">
             {loading ? (
               <p className="text-sm text-[color:var(--color-text-secondary)]">Indlæser…</p>
             ) : (

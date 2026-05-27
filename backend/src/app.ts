@@ -744,7 +744,7 @@ export function createApp(deps: AppDeps): Hono<{ Variables: AppVariables }> {
     });
   });
 
-  app.put("/api/admin/settings/:key", async (c) => {
+  app.patch("/api/admin/settings/:key", async (c) => {
     const authSession = c.get("authSession") as
       | { user?: { id: string; role?: string | null } }
       | undefined;
