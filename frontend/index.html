@@ -5,10 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="alternate icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon-180x180.png" />
+    <meta name="theme-color" content="#0c0a09" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Glød" />
     <title>Glød</title>
 
     <!-- Primary SEO -->
-    <meta name="description" content="Glød forbinder nysgerrige voksne via begivenheder — ikke swiping. MitID-verificeret, samtykkebaseret og i samarbejde med Dansk Sexologisk Akademi. Tilmeld dig waitlisten." />
+    <meta name="description" content="Glød forbinder voksne via begivenheder — ikke swiping. Vi verificerer alle medlemmer manuelt mens MitID-integrationen er under udarbejdelse. I samarbejde med Dansk Sexologisk Akademi. Tilmeld dig ventelisten." />
     <meta name="robots" content="index, follow" />
     <link rel="canonical" href="https://findgloed.dk/" />
 
@@ -16,7 +21,7 @@
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://findgloed.dk/" />
     <meta property="og:title" content="Glød — Voksne forbindelser via begivenheder" />
-    <meta property="og:description" content="Nysgerrig? Glød skaber rum for ægte møder mellem voksne via begivenheder — ikke swiping. Verificeret med MitID." />
+    <meta property="og:description" content="For voksne der vil mere end at swipe. Glød skaber rum for ægte møder via begivenheder. Manuelt verificeret adgang i samarbejde med Dansk Sexologisk Akademi." />
     <meta property="og:image" content="https://findgloed.dk/og-image.png" />
     <meta property="og:locale" content="da_DK" />
     <meta property="og:site_name" content="Glød" />
@@ -24,10 +29,10 @@
     <!-- Twitter/X Card -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Glød — Voksne forbindelser via begivenheder" />
-    <meta name="twitter:description" content="MitID-verificeret platform for voksne der vil mødes via events, ikke dating-apps." />
+    <meta name="twitter:description" content="Platform for voksne der vil mødes via events, ikke dating-apps. Manuelt verificeret adgang." />
     <meta name="twitter:image" content="https://findgloed.dk/og-image.png" />
 
-    <!-- JSON-LD: Organization + WebSite -->
+    <!-- JSON-LD: Organization + WebSite + ContactPoint (navngiven dataansvarlig — issue A19) -->
     <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -38,18 +43,30 @@
       "name": "Glød",
       "url": "https://findgloed.dk",
       "logo": "https://findgloed.dk/favicon.svg",
-      "description": "Dansk platform for voksne forbindelser via begivenheder — MitID-verificeret og samtykkebaseret.",
-      "email": "support@findgloed.dk",
+      "description": "Dansk platform for voksne forbindelser via begivenheder — manuelt verificeret og samtykkebaseret.",
+      "email": "mikkel@findgloed.dk",
       "inLanguage": "da",
       "foundingDate": "2025",
-      "areaServed": "DK"
+      "areaServed": "DK",
+      "founder": {
+        "@type": "Person",
+        "name": "Mikkel Freltoft Krogsholm"
+      },
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "contactType": "Customer Service",
+        "name": "Mikkel Freltoft Krogsholm",
+        "email": "mikkel@findgloed.dk",
+        "areaServed": "DK",
+        "availableLanguage": ["da"]
+      }
     },
     {
       "@type": "WebSite",
       "@id": "https://findgloed.dk/#website",
       "url": "https://findgloed.dk",
       "name": "Glød",
-      "description": "Begivenhedsbaseret platform for nysgerrige voksne i Danmark",
+      "description": "Begivenhedsbaseret platform for voksne i Danmark",
       "inLanguage": "da",
       "publisher": { "@id": "https://findgloed.dk/#organization" }
     }

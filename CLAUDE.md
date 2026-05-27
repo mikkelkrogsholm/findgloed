@@ -21,3 +21,20 @@ Se `docs/deployment.md` for trin-for-trin guide.
 ## Sprog
 
 Al kode skrives på engelsk. Kommentarer, commit-beskeder og dokumentation skrives på dansk.
+
+## Browser-automation
+
+**Brug altid `agent-browser`** til al browser-interaktion — IKKE Chrome MCP,
+Playwright direkte, eller andre browser-værktøjer. Skill ligger i
+`.claude/skills/agent-browser/SKILL.md`.
+
+Eksempler på hvornår: visuel verifikation af UI, end-to-end-test af user
+journeys, screenshot af sider, multi-bruger-flows (to dummy-brugere der
+skriver sammen), formular-udfyldning, klik-test, mobile-viewport-test.
+
+Start altid med at læse den aktuelle workflow:
+```sh
+agent-browser skills get core
+```
+før du kører andre `agent-browser`-kommandoer — så instruktionerne matcher
+den installerede version.

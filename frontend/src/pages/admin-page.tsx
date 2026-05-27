@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
+import { motion } from "motion/react";
 
+import { AdminSubnav } from "@/components/admin/admin-subnav";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PageHeader } from "@/components/layout/page-header";
 import {
   Table,
   TableBody,
@@ -13,8 +16,9 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table";
+import { getMotionMode, revealVariants } from "@/lib/motion";
 
-const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:4564";
+const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:39564";
 
 type LeadItem = {
   id: string;
@@ -137,7 +141,12 @@ export function AdminPage() {
   const [items, setItems] = useState<LeadItem[]>([]);
   const [meta, setMeta] = useState({ total: 0, confirmed: 0, pending: 0 });
   const [errorMessage, setErrorMessage] = useState("");
+  const motionMode = getMotionMode();
 
+  // C31 (teknisk gæld): filtrering og sortering sker client-side på hele
+  // datasættet. Det skalerer ikke når antallet af leads vokser — backend
+  // pagination/filter/sort kommer i Pakke 11 (DB- & query-optimering).
+  // Indtil da accepterer vi at hele leads-tabellen hentes pr. besøg.
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [marketingFilter, setMarketingFilter] = useState<MarketingFilter>("all");
@@ -234,151 +243,177 @@ export function AdminPage() {
   const hasData = useMemo(() => filteredItems.length > 0, [filteredItems.length]);
 
   return (
-    <section className="mx-auto w-full max-w-6xl space-y-6 px-6 py-14 md:py-16" data-testid="admin-page">
-      <Card className="p-6">
-        <CardHeader className="px-0 pt-0">
-          <CardTitle>Admin-overblik: Tilmeldte</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-3 px-0 pb-0 md:grid-cols-3">
-          <div className="glass-pill rounded-xl p-4">
-            <p className="body-text-muted text-xs">Total (viste)</p>
-            <p className="text-2xl font-semibold">{filteredMeta.total}</p>
-          </div>
-          <div className="glass-pill rounded-xl p-4">
-            <p className="body-text-muted text-xs">Bekræftet (viste)</p>
-            <p className="text-2xl font-semibold">{filteredMeta.confirmed}</p>
-          </div>
-          <div className="glass-pill rounded-xl p-4">
-            <p className="body-text-muted text-xs">Afventer (viste)</p>
-            <p className="text-2xl font-semibold">{filteredMeta.pending}</p>
-          </div>
-        </CardContent>
-      </Card>
+    <section
+      className="mx-auto w-full max-w-6xl space-y-6 px-6 py-10 md:py-16"
+      data-testid="admin-page"
+    >
+      <motion.div initial="hidden" animate="visible" variants={revealVariants(motionMode, "hero")}>
+        <AdminSubnav />
 
-      {loading && <p className="body-text-muted">Henter tilmeldinger...</p>}
+        <PageHeader
+          kicker="Admin"
+          title="Tilmeldte"
+          description="Overblik over leads fra landing-pagens venteliste."
+          data-testid="admin-leads-header"
+        />
 
-      {errorMessage && (
-        <Alert>
-          <AlertDescription>{errorMessage}</AlertDescription>
-        </Alert>
-      )}
-
-      {!loading && !errorMessage && (
         <Card className="p-6">
           <CardHeader className="px-0 pt-0">
-            <CardTitle>Filtre, sortering og eksport</CardTitle>
+            <CardTitle>Overblik</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4 px-0 pb-0">
-            <p className="body-text-muted text-sm">Viser {filteredItems.length} af {meta.total} tilmeldinger.</p>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-              <div className="space-y-2 lg:col-span-2">
-                <Label htmlFor="email-search">Søg på email</Label>
-                <Input
-                  id="email-search"
-                  placeholder="fx navn@eksempel.dk"
-                  value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="status-filter">Status</Label>
-                <select
-                  id="status-filter"
-                  className="input-field flex h-11 w-full px-4 py-2 text-sm"
-                  value={statusFilter}
-                  onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
-                >
-                  <option value="all">Alle</option>
-                  <option value="pending">Afventer</option>
-                  <option value="confirmed">Bekræftet</option>
-                  <option value="unsubscribed">Afmeldt</option>
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="marketing-filter">Marketing</Label>
-                <select
-                  id="marketing-filter"
-                  className="input-field flex h-11 w-full px-4 py-2 text-sm"
-                  value={marketingFilter}
-                  onChange={(event) => setMarketingFilter(event.target.value as MarketingFilter)}
-                >
-                  <option value="all">Alle</option>
-                  <option value="yes">Ja</option>
-                  <option value="no">Nej</option>
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="sort-field">Sortering</Label>
-                <div className="flex gap-2">
-                  <select
-                    id="sort-field"
-                    className="input-field flex h-11 w-full px-4 py-2 text-sm"
-                    value={sortField}
-                    onChange={(event) => setSortField(event.target.value as SortField)}
-                  >
-                    <option value="created_at">Oprettet</option>
-                    <option value="email">Email</option>
-                    <option value="status">Status</option>
-                    <option value="confirmed_at">Bekræftet</option>
-                  </select>
-                  <select
-                    aria-label="Sortering retning"
-                    className="input-field flex h-11 w-24 px-2 py-2 text-sm"
-                    value={sortDirection}
-                    onChange={(event) => setSortDirection(event.target.value as SortDirection)}
-                  >
-                    <option value="desc">↓</option>
-                    <option value="asc">↑</option>
-                  </select>
-                </div>
-              </div>
+          <CardContent className="grid gap-3 px-0 pb-0 md:grid-cols-3">
+            <div className="glass-pill rounded-xl p-4">
+              <p className="body-text-muted text-xs">Total (viste)</p>
+              <p className="text-2xl font-semibold">{filteredMeta.total}</p>
             </div>
-
-            <div className="flex flex-wrap gap-3">
-              <Button type="button" variant="secondary" onClick={() => triggerCsvDownload("leads-visible.csv", filteredItems)}>
-                Eksportér viste (CSV)
-              </Button>
-              <Button type="button" variant="secondary" onClick={() => triggerCsvDownload("leads-all.csv", allSortedItems)}>
-                Eksportér alle (CSV)
-              </Button>
+            <div className="glass-pill rounded-xl p-4">
+              <p className="body-text-muted text-xs">Bekræftet (viste)</p>
+              <p className="text-2xl font-semibold">{filteredMeta.confirmed}</p>
+            </div>
+            <div className="glass-pill rounded-xl p-4">
+              <p className="body-text-muted text-xs">Afventer (viste)</p>
+              <p className="text-2xl font-semibold">{filteredMeta.pending}</p>
             </div>
           </CardContent>
         </Card>
-      )}
 
-      {!loading && !errorMessage && hasData && (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Email</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Kilde</TableHead>
-              <TableHead>Marketing</TableHead>
-              <TableHead>Oprettet</TableHead>
-              <TableHead>Bekræftet</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredItems.map((item) => (
-              <TableRow key={item.id}>
-                <TableCell>{item.email}</TableCell>
-                <TableCell>{item.status}</TableCell>
-                <TableCell>{item.source}</TableCell>
-                <TableCell>{item.marketing_opt_in ? "Ja" : "Nej"}</TableCell>
-                <TableCell>{formatDate(item.created_at)}</TableCell>
-                <TableCell>{formatDate(item.confirmed_at)}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
+        {loading && <p className="body-text-muted mt-4">Henter tilmeldinger...</p>}
 
-      {!loading && !errorMessage && !hasData && (
-        <p className="body-text-muted">Ingen tilmeldinger matcher dit filter.</p>
-      )}
+        {errorMessage && (
+          <Alert className="mt-4">
+            <AlertDescription>{errorMessage}</AlertDescription>
+          </Alert>
+        )}
+
+        {!loading && !errorMessage && (
+          <Card className="mt-6 p-6">
+            <CardHeader className="px-0 pt-0">
+              <CardTitle>Filtre, sortering og eksport</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 px-0 pb-0">
+              <p className="body-text-muted text-sm">
+                Viser {filteredItems.length} af {meta.total} tilmeldinger.
+              </p>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+                <div className="space-y-2 lg:col-span-2">
+                  <Label htmlFor="email-search">Søg på email</Label>
+                  <Input
+                    id="email-search"
+                    placeholder="fx navn@eksempel.dk"
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="status-filter">Status</Label>
+                  <select
+                    id="status-filter"
+                    className="input-field flex h-11 w-full px-4 py-2 text-sm"
+                    value={statusFilter}
+                    onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
+                  >
+                    <option value="all">Alle</option>
+                    <option value="pending">Afventer</option>
+                    <option value="confirmed">Bekræftet</option>
+                    <option value="unsubscribed">Afmeldt</option>
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="marketing-filter">Marketing</Label>
+                  <select
+                    id="marketing-filter"
+                    className="input-field flex h-11 w-full px-4 py-2 text-sm"
+                    value={marketingFilter}
+                    onChange={(event) => setMarketingFilter(event.target.value as MarketingFilter)}
+                  >
+                    <option value="all">Alle</option>
+                    <option value="yes">Ja</option>
+                    <option value="no">Nej</option>
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="sort-field">Sortering</Label>
+                  <div className="flex gap-2">
+                    <select
+                      id="sort-field"
+                      className="input-field flex h-11 w-full px-4 py-2 text-sm"
+                      value={sortField}
+                      onChange={(event) => setSortField(event.target.value as SortField)}
+                    >
+                      <option value="created_at">Oprettet</option>
+                      <option value="email">Email</option>
+                      <option value="status">Status</option>
+                      <option value="confirmed_at">Bekræftet</option>
+                    </select>
+                    <select
+                      aria-label="Sortering retning"
+                      className="input-field flex h-11 w-24 px-2 py-2 text-sm"
+                      value={sortDirection}
+                      onChange={(event) => setSortDirection(event.target.value as SortDirection)}
+                    >
+                      <option value="desc">↓</option>
+                      <option value="asc">↑</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => triggerCsvDownload("leads-visible.csv", filteredItems)}
+                >
+                  Eksportér viste (CSV)
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => triggerCsvDownload("leads-all.csv", allSortedItems)}
+                >
+                  Eksportér alle (CSV)
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {!loading && !errorMessage && hasData && (
+          <Card className="mt-6 overflow-hidden p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Kilde</TableHead>
+                  <TableHead>Marketing</TableHead>
+                  <TableHead>Oprettet</TableHead>
+                  <TableHead>Bekræftet</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredItems.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell>{item.email}</TableCell>
+                    <TableCell>{item.status}</TableCell>
+                    <TableCell>{item.source}</TableCell>
+                    <TableCell>{item.marketing_opt_in ? "Ja" : "Nej"}</TableCell>
+                    <TableCell>{formatDate(item.created_at)}</TableCell>
+                    <TableCell>{formatDate(item.confirmed_at)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Card>
+        )}
+
+        {!loading && !errorMessage && !hasData && (
+          <p className="body-text-muted mt-4">Ingen tilmeldinger matcher dit filter.</p>
+        )}
+      </motion.div>
     </section>
   );
 }

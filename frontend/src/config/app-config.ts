@@ -13,10 +13,29 @@ export const appConfig = {
     landing: "/",
     vision: "/vision",
     privacy: "/privacy",
+    terms: "/terms",
+    codeOfConduct: "/code-of-conduct",
     waitlistConfirm: "/waitlist/confirm",
     partnerConfirm: "/partner/confirm",
     login: "/login",
+    signup: "/signup",
+    onboarding: "/onboarding",
+    verification: "/onboarding/verification",
+    profile: "/profile",
+    coupleProfile: "/profile/couple",
+    members: "/members",
+    member: "/members/:id",
+    incomingInterests: "/interests/incoming",
+    events: "/events",
+    event: "/events/:slug",
+    myEvents: "/me/events",
+    messages: "/messages",
+    conversation: "/messages/:id",
+    membership: "/membership",
     admin: "/admin",
+    adminEvents: "/admin/events",
+    adminVerifications: "/admin/verifications",
+    adminReports: "/admin/reports",
     design: "/design"
   },
   features: {
@@ -29,10 +48,29 @@ export type AppRouteName =
   | "landing"
   | "vision"
   | "privacy"
+  | "terms"
+  | "code-of-conduct"
   | "waitlist-confirm"
   | "partner-confirm"
   | "login"
+  | "signup"
+  | "onboarding"
+  | "verification"
+  | "profile"
+  | "couple-profile"
+  | "members"
+  | "member-detail"
+  | "incoming-interests"
+  | "events"
+  | "event-detail"
+  | "my-events"
+  | "messages"
+  | "conversation"
+  | "membership"
   | "admin"
+  | "admin-events"
+  | "admin-verifications"
+  | "admin-reports"
   | "design"
   | "not-found";
 

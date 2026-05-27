@@ -17,14 +17,17 @@ describe("VisionPage", () => {
     expect(screen.getByRole("heading", { name: "Et voksent fællesskab, bygget omkring oplevelser" })).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Glød er for mennesker, der vil mødes i virkeligheden først."
+        "Glød er for voksne, der vil mødes i virkeligheden først."
       )
     ).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Vi starter med Dansk Sexologisk Akademi" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "For dig, der deltager" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "For jer, der arrangerer" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Tre principper i praksis" })).toBeInTheDocument();
-    expect(screen.getAllByText("MitID-verificeret adgang").length).toBeGreaterThan(0);
+    expect(screen.getByRole("heading", { name: "To roller, ligeværdige" })).toBeInTheDocument();
+    expect(screen.getByText("Den der inviterer")).toBeInTheDocument();
+    expect(screen.getByText("Den der bestemmer tempoet")).toBeInTheDocument();
+    expect(screen.getAllByText("Manuelt verificeret adgang").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Event-first").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Klare rammer").length).toBeGreaterThan(0);
   });

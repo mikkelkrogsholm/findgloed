@@ -100,7 +100,7 @@ Sættes som Docker build args (`VITE_*` bages ind i JS-bundlen):
 
 | Var | Formål |
 |-----|--------|
-| `VITE_API_URL` | API-base URL (default: `http://localhost:4564`) |
+| `VITE_API_URL` | API-base URL (default: `http://localhost:39564`) |
 | `VITE_UMAMI_WEBSITE_ID` | Umami analytics website ID |
 | `VITE_ENABLE_DESIGN_PAGE` | Feature flag for design-siden |
 | `VITE_THEME_PRESET` | `legacy` eller `anthro-v1` |
@@ -186,7 +186,7 @@ Sættes som Docker build args (`VITE_*` bages ind i JS-bundlen):
 6. Opret Better Auth service (med adminEmails)
 7. `ensureSuperAdmin()` hvis konfigureret
 8. Opret Hono app
-9. Start Bun server på `PORT` (4564 i prod)
+9. Start Bun server på `PORT` (39564 i prod)
 10. SIGINT/SIGTERM → graceful shutdown
 
 ### Sikkerhedsheaders (alle responses)

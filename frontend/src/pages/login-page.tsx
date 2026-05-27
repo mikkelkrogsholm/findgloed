@@ -10,11 +10,8 @@ import { Label } from "@/components/ui/label";
 import { appConfig } from "@/config/app-config";
 import { authClient } from "@/lib/auth-client";
 import { getMotionMode, revealVariants, staggerContainerVariants, successRevealVariants } from "@/lib/motion";
-
-function goToAdmin(): void {
-  window.history.pushState({}, "", appConfig.routes.admin);
-  window.dispatchEvent(new PopStateEvent("popstate"));
-}
+import { navigate } from "@/lib/nav";
+import { refreshSession } from "@/lib/use-session";
 
 export function LoginPage() {
   const [email, setEmail] = useState("");
@@ -44,7 +41,8 @@ export function LoginPage() {
       }
 
       setMessage("Du er logget ind.");
-      goToAdmin();
+      await refreshSession();
+      navigate(appConfig.routes.profile);
     } catch {
       setErrorMessage("Forbindelsesfejl. Prøv igen om lidt.");
     } finally {
@@ -61,10 +59,10 @@ export function LoginPage() {
       >
         <Card className="p-8 md:p-10" data-testid="login-card">
           <CardHeader className="px-0 pt-0">
-            <p className="noxus-kicker kicker-text mb-2 text-[0.65rem]">Kun for administratorer</p>
+            <p className="noxus-kicker kicker-text mb-2 text-[0.65rem]">Velkommen tilbage</p>
             <CardTitle>Log ind</CardTitle>
             <p className="body-text-muted mt-1 text-sm">
-              Log ind for at se lead-oversigten og administrere platformen.
+              Log ind for at fortsætte til din profil.
             </p>
           </CardHeader>
           <CardContent className="space-y-5 px-0 pb-0">
@@ -84,6 +82,9 @@ export function LoginPage() {
                   onChange={(event) => setEmail(event.target.value)}
                   placeholder="dig@eksempel.dk"
                   required
+                  autoComplete="email"
+                  aria-invalid={errorMessage ? "true" : undefined}
+                  aria-describedby={errorMessage ? "login-form-error" : undefined}
                 />
               </motion.div>
 
@@ -98,6 +99,9 @@ export function LoginPage() {
                     placeholder="Mindst 8 tegn"
                     required
                     className="pr-10"
+                    autoComplete="current-password"
+                    aria-invalid={errorMessage ? "true" : undefined}
+                    aria-describedby={errorMessage ? "login-form-error" : undefined}
                   />
                   <Button
                     type="button"
@@ -143,7 +147,7 @@ export function LoginPage() {
                     animate="animate"
                     exit="exit"
                   >
-                    <Alert>
+                    <Alert id="login-form-error" role="alert">
                       <AlertDescription>{errorMessage}</AlertDescription>
                     </Alert>
                   </motion.div>

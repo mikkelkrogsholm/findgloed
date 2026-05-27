@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Journey Paneldebat — Glød</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* ===== Base Reset & Typography ===== */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --terracotta: #B85B43;
+      --terracotta-light: rgba(184, 91, 67, 0.12);
+      --terracotta-mid: rgba(184, 91, 67, 0.2);
+      --creme: #F7EEE1;
+      --creme-light: #FDF8F3;
+      --sand: #EDDCC6;
+      --sand-light: #F3E8D6;
+      --moerkebrun: #3E312F;
+      --moerkebrun-sec: rgba(62, 49, 47, 0.86);
+      --moerkebrun-tert: rgba(62, 49, 47, 0.68);
+      --teal: #3C7380;
+      --teal-light: rgba(60, 115, 128, 0.12);
+      --teal-border: rgba(60, 115, 128, 0.22);
+      --white-glass: rgba(255, 255, 255, 0.58);
+      --radius: 1.45rem;
+      --radius-sm: 0.75rem;
+    }
+
+    html {
+      font-size: 15px;
+    }
+
+    body {
+      font-family: 'Manrope', 'Segoe UI', sans-serif;
+      color: var(--moerkebrun);
+      background: var(--creme);
+      line-height: 1.7;
+      padding: 2rem;
+    }
+
+    .page-wrapper {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    /* ===== Header ===== */
+    .doc-header {
+      text-align: center;
+      margin-bottom: 3rem;
+      padding: 2.5rem 2rem 2rem;
+      background: linear-gradient(155deg, rgba(255, 255, 255, 0.36), rgba(255, 255, 255, 0.08));
+      backdrop-filter: blur(28px);
+      border: 1px solid var(--teal-border);
+      border-radius: var(--radius);
+      box-shadow: 0 16px 42px rgba(62, 49, 47, 0.08);
+    }
+
+    .logo {
+      font-family: 'Playfair Display', serif;
+      font-size: 2.4rem;
+      font-weight: 700;
+      color: var(--terracotta);
+      letter-spacing: 0.06em;
+      margin-bottom: 0.3rem;
+    }
+
+    .doc-header h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.6rem;
+      font-weight: 600;
+      color: var(--moerkebrun);
+      margin-top: 0.6rem;
+      letter-spacing: 0.015em;
+    }
+
+    .header-line {
+      width: 80px;
+      height: 3px;
+      background: var(--terracotta);
+      border-radius: 2px;
+      margin: 1rem auto 0.8rem;
+    }
+
+    .doc-meta {
+      font-size: 0.9rem;
+      color: var(--moerkebrun-sec);
+    }
+
+    .doc-meta span {
+      display: block;
+      margin-bottom: 0.2rem;
+    }
+
+    /* ===== Headings ===== */
+    h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.35rem;
+      font-weight: 600;
+      color: var(--moerkebrun);
+      margin-top: 2.5rem;
+      margin-bottom: 0.8rem;
+      padding-bottom: 0.4rem;
+      border-bottom: 2px solid var(--terracotta-mid);
+      letter-spacing: 0.015em;
+    }
+
+    h3 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--terracotta);
+      margin-top: 1.8rem;
+      margin-bottom: 0.5rem;
+    }
+
+    h4 {
+      font-family: 'Manrope', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--moerkebrun);
+      margin-top: 1.4rem;
+      margin-bottom: 0.4rem;
+    }
+
+    /* ===== Paragraphs & Lists ===== */
+    p {
+      margin-bottom: 0.8rem;
+    }
+
+    ul, ol {
+      margin-bottom: 0.8rem;
+      padding-left: 1.5rem;
+    }
+
+    li {
+      margin-bottom: 0.35rem;
+    }
+
+    strong {
+      font-weight: 600;
+    }
+
+    em {
+      font-style: italic;
+    }
+
+    a {
+      color: var(--teal);
+      text-decoration: underline;
+      text-decoration-color: rgba(60, 115, 128, 0.45);
+      text-underline-offset: 2px;
+    }
+
+    hr {
+      border: none;
+      border-top: 1px solid var(--sand);
+      margin: 2rem 0;
+    }
+
+    /* ===== Tables ===== */
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      margin: 1rem 0 1.5rem;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      border: 1px solid var(--teal-border);
+      font-size: 0.9rem;
+    }
+
+    thead th {
+      background: var(--terracotta);
+      color: var(--creme-light);
+      font-family: 'Manrope', sans-serif;
+      font-weight: 600;
+      font-size: 0.85rem;
+      text-align: left;
+      padding: 0.7rem 0.9rem;
+      letter-spacing: 0.02em;
+    }
+
+    tbody td {
+      padding: 0.6rem 0.9rem;
+      border-top: 1px solid rgba(237, 220, 198, 0.6);
+      vertical-align: top;
+    }
+
+    tbody tr:nth-child(odd) {
+      background: var(--creme-light);
+    }
+
+    tbody tr:nth-child(even) {
+      background: var(--sand-light);
+    }
+
+    /* ===== Blockquotes ===== */
+    blockquote {
+      border-left: 3px solid var(--terracotta);
+      background: var(--terracotta-light);
+      padding: 0.8rem 1.2rem;
+      margin: 0.8rem 0;
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      font-style: italic;
+      color: var(--moerkebrun-sec);
+    }
+
+    blockquote p {
+      margin-bottom: 0.3rem;
+    }
+
+    blockquote p:last-child {
+      margin-bottom: 0;
+    }
+
+    /* ===== Section Cards ===== */
+    .section-card {
+      background: var(--white-glass);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--teal-border);
+      border-radius: var(--radius);
+      padding: 1.5rem 2rem;
+      margin: 1.5rem 0;
+      box-shadow: 0 8px 24px rgba(62, 49, 47, 0.06);
+    }
+
+    .section-card h2 {
+      margin-top: 0;
+    }
+
+    /* ===== Tips Box ===== */
+    .tips-box {
+      background: var(--teal-light);
+      border: 1px solid var(--teal-border);
+      border-radius: var(--radius-sm);
+      padding: 1rem 1.3rem;
+      margin: 1rem 0;
+    }
+
+    .tips-box p {
+      margin-bottom: 0.4rem;
+    }
+
+    .tips-box p:last-child {
+      margin-bottom: 0;
+    }
+
+    /* ===== Speaker label ===== */
+    .speaker {
+      font-weight: 700;
+      color: var(--terracotta);
+    }
+
+    /* ===== Persona dialogue block ===== */
+    .persona-block {
+      margin-bottom: 1.2rem;
+    }
+
+    /* ===== Footer ===== */
+    .doc-footer {
+      text-align: center;
+      margin-top: 3rem;
+      padding: 1.2rem;
+      font-size: 0.8rem;
+      color: var(--moerkebrun-tert);
+      border-top: 1px solid var(--sand);
+    }
+
+    /* ===== Print Styles ===== */
+    @media print {
+      @page {
+        size: A4;
+        margin: 18mm 16mm;
+      }
+
+      html {
+        font-size: 12px;
+      }
+
+      body {
+        background: white;
+        padding: 0;
+        color: #333;
+      }
+
+      .page-wrapper {
+        max-width: 100%;
+      }
+
+      .doc-header,
+      .section-card,
+      .tips-box {
+        background: none;
+        backdrop-filter: none;
+        box-shadow: none;
+        border-color: #ccc;
+      }
+
+      h2 {
+        border-bottom-color: var(--terracotta);
+      }
+
+      thead th {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        background: var(--terracotta) !important;
+        color: white !important;
+      }
+
+      tbody tr:nth-child(odd) {
+        background: #faf6f2 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      tbody tr:nth-child(even) {
+        background: #f0e8da !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      table {
+        page-break-inside: auto;
+      }
+
+      tr {
+        page-break-inside: avoid;
+      }
+
+      .section-card,
+      .tips-box {
+        page-break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-wrapper">
+
+    <!-- ===== HEADER ===== -->
+    <header class="doc-header">
+      <div class="logo">Glød</div>
+      <h1>User Journey Paneldebat</h1>
+      <div class="header-line"></div>
+      <div class="doc-meta">
+        <span><strong>Dato:</strong> 13. april 2026</span>
+        <span><strong>Metode:</strong> AI-simulerede persona-interviews. Hver persona kender kun sin egen beskrivelse og en brugervenlig beskrivelse af Glød — ingen tekniske detaljer.</span>
+        <span><strong>Formål:</strong> Udkast til user journeys for Carina og Bjørns review og kvalificering.</span>
+      </div>
+    </header>
+
+    <!-- ===== TIL CARINA OG BJØRN ===== -->
+    <div class="tips-box">
+      <p><strong>Til Carina og Bjørn:</strong> Dette er et AI-genereret udkast baseret på vores persona-beskrivelser. Jeres opgave er at læse det og markere alt der føles forkert, mangler, eller overrasker jer. Det er jeres domæneviden der gør dette brugbart.</p>
+    </div>
+
+    <hr>
+
+    <!-- ===== DELTAGERE ===== -->
+    <h2>Deltagere</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Persona</th>
+          <th>Profil</th>
+          <th>Strategisk rolle</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Anders &amp; Mette</strong></td>
+          <td>32–38 år, etableret par, små børn</td>
+          <td>Primær målgruppe</td>
+        </tr>
+        <tr>
+          <td><strong>Maria</strong></td>
+          <td>30–40 år, reflekteret kvinde, i parforhold</td>
+          <td>Indgangspersona/driver</td>
+        </tr>
+        <tr>
+          <td><strong>Sofie</strong></td>
+          <td>32 år, marketing, gift 8 år, barn på 2</td>
+          <td>Vanilla-nysgerrig validator</td>
+        </tr>
+        <tr>
+          <td><strong>Line &amp; Kasper</strong></td>
+          <td>25–33 år, tidligt parforhold, uden børn</td>
+          <td>Fremtidig målgruppe</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <hr>
+
+    <!-- ===== SPØRGSMÅL 1 ===== -->
+    <h2>Spørgsmål 1: Hvordan hører I første gang om Glød?</h2>
+
+    <h3>Anders &amp; Mette</h3>
+
+    <div class="persona-block">
+      <p><span class="speaker">Mette:</span> Jeg tror, jeg ville støde på det via Instagram. Måske en sponsoreret story eller et opslag, der dukker op, fordi algoritmen ved, jeg interesserer mig for parforhold og personlig udvikling. Eller måske deler en veninde et link i en gruppechat — sådan lidt forsigtig, med en "har I set det her?" Det ville fange mig, hvis det så æstetisk ud. Ikke som en datingside. Ikke som noget... skummelt. Hvis det lignede en wellness-retreat eller en workshop, ville jeg klikke. Hvis det lignede noget fra en voksenbutik, ville jeg scrolle forbi med det samme.</p>
+    </div>
+
+    <div class="persona-block">
+      <p><span class="speaker">Anders:</span> Jeg ville nok ikke finde det selv, skal jeg være ærlig. Det ville være Mette, der sendte mig et link. Og min første tanke ville helt sikkert være: "Hvad er det her for noget?" Lidt defensiv måske. Men hvis jeg åbnede det og det så... normalt ud — professionelt, roligt, ikke provokerende — så ville jeg faktisk læse videre. Det er vigtigt for mig, at det ikke føles som om man melder sig til noget man ikke kan forklare. Hvis en kollega så det over min skulder, ville jeg gerne kunne sige "det er en slags parworkshop." Uden at rødme.</p>
+    </div>
+
+    <h3>Maria</h3>
+
+    <div class="persona-block">
+      <p>Ærligt talt tror jeg, jeg ville støde på Glød via Instagram eller en podcast. Måske en af de der danske podcasts om parforhold og personlig udvikling — den type indhold, jeg alligevel lytter til, når jeg går tur alene om aftenen.</p>
+
+      <p>Min umiddelbare reaktion ville være en blanding af nysgerrighed og skepsis. Nysgerrighed, fordi jeg har ledt efter noget — ikke noget specifikt, men bare... et rum, der tager den her længsel alvorligt. Og skepsis, fordi alt der handler om intimitet og par online hurtigt kan føles som noget fra en helt anden verden end min.</p>
+
+      <p>Men hvis æstetikken var ren og voksen — ikke kitsch, ikke provokerende bare for at provokere — så ville jeg klikke videre. Det visuelle betyder enormt meget for mig. Hvis det ligner en wellness-retreat mere end en dating-side, så er jeg inde. Hvis der bare er ét billede der føles "klamt", er jeg væk igen.</p>
+
+      <p>Jeg ville nok ikke dele det med min partner med det samme. Først ville jeg selv undersøge det. Forstå hvad det egentlig er. Mærke efter om det er noget, der kunne rumme os begge — eller om det bare er endnu et sted, hvor jeg ender med at føle mig alene med min nysgerrighed.</p>
+    </div>
+
+    <h3>Sofie</h3>
+
+    <div class="persona-block">
+      <p>Ærligt? Jeg tror jeg ville støde på det via en artikel eller en podcast om parforhold. Måske en af de der "Sådan holder I gnisten" artikler i ALT for damerne eller Femina. Eller en Instagram-reklame, hvis den var lavet rigtigt — altså ikke med cheesy stockfotos af et par i undertøj, men mere den der nordiske, rene æstetik. Tænk stearinlys, linned, varme farver. Noget der ligner en wellness-retreat mere end en dating-side.</p>
+
+      <p>Min umiddelbare reaktion ville være en blanding af nysgerrighed og nervøsitet. Jeg ville tænke: "Hmm, det ser faktisk... seriøst ud?" Men jeg ville IKKE klikke hvis min mand sad ved siden af. Det ville jeg gøre alene først, i min egen tid, for at vurdere om det var noget jeg overhovedet turde bringe op.</p>
+
+      <p>Og her er det afgørende: Hvis landingssiden havde bare ét element der føltes "skummelt" — dårlig grafik, for eksplicitte billeder, en tone der mindede om swinger-sider — så ville jeg lukke fanen øjeblikkeligt. Og aldrig vende tilbage.</p>
+
+      <blockquote><p>Det skal føles som noget jeg bevidst vælger. Som et kursus i nærvær. Ikke som noget jeg er "faldet i" og skal skjule i min browserhistorik.</p></blockquote>
+    </div>
+
+    <h3>Line &amp; Kasper</h3>
+
+    <div class="persona-block">
+      <p><span class="speaker">Line:</span> Jeg tror jeg ville se det på Instagram. Måske en reel eller et opslag der popper op i min explore-side — noget æstetisk, lidt mystisk, med et par der ser afslappede ud. Ikke noget vulgært. Jeg ville stoppe op fordi det ser... anderledes ud? Ikke som de der sketchy swinger-sider man hører om. Mere som noget der kunne være en wellness-retreat. Og det visuelle er ALT for mig — ligner det noget fra 2005 med dårlige stockfotos, er vi væk med det samme. Men den der nordiske, rene stil? Så ville jeg tænke "okay, det her er for folk som os."</p>
+    </div>
+
+    <div class="persona-block">
+      <p><span class="speaker">Kasper:</span> Jeg ville nok ikke finde det selv, ærligt talt. Det ville være Line der sendte mig et link med "se det her" og et par emojis. Og så ville jeg åbne det lidt skeptisk — okay, hvad er det her for noget? Men hvis siden ser ordentlig og professionel ud, ville jeg læse videre. Og overskriften skal ramme rigtigt. Noget med nysgerrighed eller at udforske sammen. Ikke noget med "sæt gang i sexlivet" — det ville jeg lukke ned med det samme. Vi er ikke i krise. Vi er bare nysgerrige.</p>
+    </div>
+
+    <hr>
+
+    <!-- ===== SPØRGSMÅL 2 ===== -->
+    <h2>Spørgsmål 2: Hvad får jer til at overveje at oprette profil?</h2>
+
+    <h3>Anders &amp; Mette</h3>
+
+    <div class="persona-block">
+      <p><span class="speaker">Mette:</span> Det startede en aften hvor jeg scrollede Instagram og så en annonce. Jeg undersøgte siden først alene — læste alt om hvem der står bag, og da jeg så forbindelsen til Dansk Sexologisk Akademi, tænkte jeg: <em>okay, det her er seriøst.</em> Først derefter viste jeg det til Anders. Vi kiggede på hvilke events der fandtes, hvem der faciliterede dem, og om man kunne se andres profiler.</p>
+    </div>
+
+    <div class="persona-block">
+      <p><span class="speaker">Anders:</span> Mette viste mig siden en søndag aften efter ungerne var lagt. Mit første instinkt var skepsis — er det tantrasex-halløj? Men designet var rent, sproget var voksent. Vi talte om hvad vi egentlig ledte efter. Mette sagde "jeg savner at mærke at vi er mere end et team." Det ramte. Det var vigtigt for mig at forstå: <em>hvad forpligter vi os til her?</em></p>
+    </div>
+
+    <h3>Maria</h3>
+
+    <div class="persona-block">
+      <p>Det er nok en af de aftener hvor jeg ligger vågen og mærker en uro, jeg ikke helt kan placere. Ikke utilfredshed — mere en længsel. Jeg har læst om Glød et sted, og det rammer noget i mig. En fornemmelse af at der findes et rum hvor den del af mig, jeg normalt folder sammen og lægger væk, faktisk er velkommen.</p>
+
+      <p>Jeg ville helst oprette profilen sammen med min partner. Men jeg tøver, fordi jeg kender hans reaktion — han vil spørge "er jeg ikke nok?", og så skal jeg forklare noget, jeg selv stadig er ved at forstå. Det er ikke ham, der mangler. Det er mig, der vil dybere. Og den sætning er svær at sige uden at det lyder som en anklage.</p>
+
+      <blockquote><p>Jeg tøver også over hvad det betyder om mig. Er jeg ved at blive en af "dem"? Den tanke dukker op, selvom jeg ved den er urimelig. Jeg har brug for at platformen hjælper mig med at føle, at det her er normalt.</p></blockquote>
+    </div>
+
+    <h3>Sofie</h3>
+
+    <div class="persona-block">
+      <p>Det er kommet gradvist. Efter Oscar kom, blev vores parforhold sådan... funktionelt. Vi er gode til logistik, men vi rører næsten ikke ved hinanden mere. Jeg har talt med Jakob om det — forsøgte at gøre det afslappet, over et glas vin. Han var faktisk mere åben end jeg havde forventet.</p>
+
+      <p>Men vi snakkede mest i "det kunne da være spændende"-termer, ikke konkret. Jeg tøver over om det er os. Om vi er "typen". Og jeg er bange for at det åbner en dør vi ikke kan lukke igen. Hvad nu hvis han synes det er fantastisk og jeg hader det? Og helt ærligt — hvad hvis nogen fra Oscars vuggestue er der?</p>
+    </div>
+
+    <h3>Line &amp; Kasper</h3>
+
+    <div class="persona-block">
+      <p><span class="speaker">Line:</span> Det startede med en podcast vi lyttede til sammen. Kasper sendte mig et link til Glød bagefter, halvt i sjov. Men så begyndte vi faktisk at snakke om det. Jeg googlede "Glød erfaringer" og "Dansk Sexologisk Akademi" for at tjekke om det var seriøst. Jeg havde brug for at vide at det også var for par der bare er nysgerrige.</p>
+    </div>
+
+    <div class="persona-block">
+      <p><span class="speaker">Kasper:</span> Det der fik mig til at sende det til Line var at det virkede som noget man gør <em>sammen</em>, ikke noget den ene trækker den anden med til. Vi talte om hvor vores grænser går — ikke som en tung samtale, men mere "hvad kunne du tænke dig at prøve?". Det var faktisk en fed samtale i sig selv.</p>
+    </div>
+
+    <hr>
+
+    <!-- ===== SPØRGSMÅL 3 ===== -->
+    <h2>Spørgsmål 3: Profiloprettelse og aldersverificering via MitID</h2>
+
+    <h3>Anders &amp; Mette</h3>
+
+    <div class="persona-block">
+      <p><span class="speaker">Mette:</span> Profiloprettelsen føltes overraskende okay — det minder om at tilmelde sig en konference. Aldersverificering via MitID gav mig faktisk ro. Det betyder at alle er verificerede voksne. Jeg skrev at vi er "et nysgerrigt par der gerne vil genopdage nærvær." Generelt og neutralt. Intet der føltes som en kontaktannonce.</p>
+    </div>
+
+    <div class="persona-block">
+      <p><span class="speaker">Anders:</span> MitID-delen var det der overbeviste mig mest. Det signal siger: <em>vi screener folk.</em> Men jeg tænkte også: <em>kan nogen se at jeg har verificeret mig på en intimitetsplatform?</em> Det ville jeg gerne vide inden. Profilteksten skrev Mette mest. Jeg godkendte den. Intet der kunne misforstås af en kollega.</p>
+    </div>
+
+    <h3>Maria</h3>
+
+    <div class="persona-block">
+      <p>MitID-verificeringen ville berolige mig enormt. Det signalerer at der er voksne mennesker bag det her. Selve profiloprettelsen ville jeg bruge tid på. Hvad skriver man om sig selv i sådan et rum? Ærligt, men ikke blottende. Ikke et tydeligt billede i starten.</p>
+
+      <p>Og ja — jeg ville fortælle min partner. Det er ufravigeligt for mig. Jeg ville vise ham platformen og sige: "Jeg har fundet noget, jeg gerne vil udforske — helst sammen med dig." Ikke spørge om lov, men invitere ham ind.</p>
+
+      <blockquote><p>Det sværeste ville være hvis han sagde nej. Ikke et hårdt nej, men et tøvende "det er ikke lige mig." For så står jeg der alene med min nysgerrighed, og det er præcis den ensomhed, jeg prøver at komme væk fra.</p></blockquote>
+    </div>
+
+    <h3>Sofie</h3>
+
+    <div class="persona-block">
+      <p>MitID-verificeringen gør mig faktisk mere tryg. Det er lidt ligesom når man logger ind på sundhed.dk — man ved det er seriøst. Min profil holder jeg minimalistisk. Fornavn og alder, et billede hvor man kan se mig men som ikke lige dukker op på Google. Ingen nævning af barn eller arbejdsplads. Noget i retning af "par der vil genopdage nærheden" — ærligt men ikke for udleverende. Det skal ikke lyde desperat, men heller ikke som om vi bare keder os.</p>
+    </div>
+
+    <h3>Line &amp; Kasper</h3>
+
+    <div class="persona-block">
+      <p><span class="speaker">Line:</span> MitID signalerer at de tager sikkerhed alvorligt. Men hvad skriver man? Jeg ville ikke fremstå desperat. Jeg skrev noget neutralt om at vi er nysgerrige og åbne. Privatliv bekymrer mig — kan folk fra mit arbejde se mig derinde?</p>
+    </div>
+
+    <div class="persona-block">
+      <p><span class="speaker">Kasper:</span> MitID var fint, det tager to minutter. Vi uploadede ikke billede med det samme — ville først se hvad andre skrev. Jeg ville gerne have en indstilling hvor kun folk man matcher med kan se ens billede.</p>
+    </div>
+
+    <hr>
+
+    <!-- ===== SPØRGSMÅL 4 ===== -->
+    <h2>Spørgsmål 4: Første event — hvordan finder og vælger I?</h2>
+
+    <h3>Anders &amp; Mette</h3>
+
+    <div class="persona-block">
+      <p><span class="speaker">Mette:</span> Lav tærskel er alt. "Nærvær og berøring for par" ville tiltrække mig. Det skal føles som noget vi gør <em>sammen</em>, ikke <em>med andre</em>. Facilitatorens baggrund betyder alt — sexolog eller terapeut giver legitimitet. Ord som "vild," "grænseoverskridende" eller "erotisk leg" ville afskrække.</p>
+    </div>
+
+    <div class="persona-block">
+      <p><span class="speaker">Anders:</span> Jeg kiggede på det praktiske. Hvor mange deltager? Skal man performe foran andre? Kan man sige nej? "Du bestemmer dit tempo" var et must. Prisen skulle matche en god restaurantaften — det signalerer kvalitet. Gratis ville gøre mig <em>mere</em> skeptisk.</p>
+    </div>
+
+    <h3>Maria</h3>
+
+    <div class="persona-block">
+      <p>Jeg ville browse længe. Vælge noget i den bløde ende — sanselig nærvær, tantrisk åndedræt, fokus på parforholdet. Jeg ville foretrække at tage derhen med min partner. Hvis han ikke vil, ville jeg måske gå alene til noget rent kvindeligt.</p>
+
+      <p>Det der afskrækker er uklarhed. Hvis jeg ikke præcist kan forstå hvad der kommer til at ske, melder jeg fra. Vage formuleringer som "lad os se hvad aftenen bringer" er et stort rødt flag. Prisen spiller ind — for billigt føles useriøst, for dyrt føles ekskluderende.</p>
+    </div>
+
+    <h3>Sofie</h3>
+
+    <div class="persona-block">
+      <p>Jeg ville bruge lang tid på at browse. Det første event skal føles trygt — "begyndervenlig" eller "intro" i titlen. En sanselig workshop med struktur og en facilitator tiltrækker mig. Alt der nævner "ingen grænser", mørke rum, eller er for eksplicit ville skræmme mig væk. Også events uden tydelig beskrivelse af hvad der faktisk sker.</p>
+
+      <p>Det skal absolut være med Jakob. Jeg ville sende ham linket og skrive "hvad tænker du om den her?" — og så vente nervøst på hans svar.</p>
+    </div>
+
+    <h3>Line &amp; Kasper</h3>
+
+    <div class="persona-block">
+      <p><span class="speaker">Line:</span> Jeg ledte efter noget der eksplicit sagde "begyndervenligt." Tydelige rammer — hvad sker der, hvad forventes, hvad forventes IKKE. Billeder fra tidligere events hjalp. Alt der antydede gruppedynamik ville afskrække mig.</p>
+    </div>
+
+    <div class="persona-block">
+      <p><span class="speaker">Kasper:</span> Noget på 2-3 timer en lørdag eftermiddag virkede overskueligt — ikke en hel weekendworkshop som første oplevelse. Et intro-event til lavere pris ville gøre beslutningen nem. Anmeldelser eller testimonials fra andre par ville hjælpe enormt.</p>
+    </div>
+
+    <hr>
+
+    <!-- ===== SPØRGSMÅL 5 ===== -->
+    <h2>Spørgsmål 5: At købe billet og møde op</h2>
+
+    <h3>Anders &amp; Mette</h3>
+
+    <div class="persona-block">
+      <p><span class="speaker">Mette:</span> Billetten føltes som et statement — vi gør det her <em>sammen</em>. Min frygt: hvad hvis det er akavet? Hvad hvis vi kender nogen? Men håbet var stærkere: en aften hvor vi ser hinanden som andet end forældre. De første fem minutter i lokalet var det sværeste. Men varm stemning og en facilitator der tager imod — så lander det.</p>
+    </div>
+
+    <div class="persona-block">
+      <p><span class="speaker">Anders:</span> Jeg frygtede at føle mig malplaceret. At tænke "det her er ikke mig." Eller at andre par var langt foran os. Mit håb var simpelt: at det <em>ikke</em> var pinligt. Én god oplevelse åbner døren. Én dårlig lukker den permanent.</p>
+    </div>
+
+    <h3>Maria</h3>
+
+    <div class="persona-block">
+      <p>At købe billetten er det punkt, hvor det bliver virkeligt. Nervøsitet og en næsten euforisk fornemmelse af at gøre noget modigt. At møde op ville være det sværeste. Jeg ville ankomme lidt for tidligt, sidde i bilen. Scanne lokalet efter nogen der ligner mig.</p>
+
+      <blockquote><p>Min frygt er at føle mig malplaceret. At alle andre virker mere erfarne. Mit håb er at mærke en lettelse. At der er andre der ligner mig — mennesker der søger noget mere uden at der er noget galt med dem. "Jeg er ikke alene med det her."</p></blockquote>
+    </div>
+
+    <h3>Sofie</h3>
+
+    <div class="persona-block">
+      <p>At købe billetten er et kæmpe skridt. Jeg ville have billetten i kurven tre gange før jeg betaler. Og så tjekke refund-politikken. Selve aftenen ville jeg bruge alt for lang tid på at vælge tøj. Vi ville sidde i bilen udenfor og sige "vi kan stadig køre hjem".</p>
+
+      <p>Min største frygt er at føle mig malplaceret. At alle andre virker erfarne og afslappede, og vi står der som to nervøse gymnasieelever. Og helt konkret: at møde nogen vi kender. Den tanke giver mig fysisk ubehag.</p>
+    </div>
+
+    <h3>Line &amp; Kasper</h3>
+
+    <div class="persona-block">
+      <p><span class="speaker">Line:</span> Frygten var: hvad nu hvis vi er de mest usikre? Hvad nu hvis der er en forventning om at gå længere end vi er klar til? Håbet var at finde et rum hvor vi kunne være nysgerrige sammen uden pres. Det var vigtigt at blive taget imod af en vært.</p>
+    </div>
+
+    <div class="persona-block">
+      <p><span class="speaker">Kasper:</span> Fra billet til fremmøde gik der næsten en uge hvor vi overvejede at aflyse. Min frygt var social akavethed — smalltalk med fremmede om intimitet. Jeg håbede på at rammerne var så trygge at vi bare kunne være os selv. Og at der var en form for icebreaker.</p>
+    </div>
+
+    <hr>
+
+    <!-- ===== SPØRGSMÅL 6 ===== -->
+    <h2>Spørgsmål 6: Sociale funktioner efter eventet</h2>
+
+    <h3>Anders &amp; Mette</h3>
+
+    <div class="persona-block">
+      <p><span class="speaker">Mette:</span> Jeg ville kigge på profiler af nysgerrighed — "hvem var parret ved siden af os?" Men ikke skrive til nogen med det samme. Et simpelt "dejligt at møde jer" ville være fint. Det føles naturligt hvis det er rammesat som netværk, ikke dating.</p>
+    </div>
+
+    <div class="persona-block">
+      <p><span class="speaker">Anders:</span> Jeg ville bruge det meget forsigtigt. Beskeder fra fremmede trigger min vagtsomhed — "er det ved at blive swingeragtigt?" Platformen skal kommunikere krystalklart at beskeder handler om community, ikke private møder.</p>
+    </div>
+
+    <h3>Maria</h3>
+
+    <div class="persona-block">
+      <p>Her bliver det komplekst. Private beskeder med fremmede mænd ville jeg holde mig fra. Min lakmustest: "Ville jeg vise den her besked til min partner?"</p>
+
+      <p>Jeg kunne godt se mig selv bruge platformens sociale lag til at finde andre kvinder eller par at reflektere med. Gruppefora, temabaserede samtaler, en "efter-event"-tråd. Platformen kunne hjælpe ved at designe de sociale funktioner så de opmuntrer til fællesskab frem for en-til-en-jagt.</p>
+    </div>
+
+    <h3>Sofie</h3>
+
+    <div class="persona-block">
+      <p>Hvis aftenen var god, kunne jeg connecte med et par vi havde god kemi med — lidt som efter et godt middagsselskab. Men beskeder fra fremmede? Grænseoverskridende. Især fra enkeltpersoner. Hvis min indbakke lignede en dating-app ville jeg lukke den med det samme.</p>
+
+      <p>Jeg ville være forsigtig med skriftlig interaktion. Aftenen var intim og i nuet — det der bliver skrevet kan screenshottes. Korte, venlige beskeder, ja. Lange samtaler om hvad vi oplevede? Nej tak.</p>
+    </div>
+
+    <h3>Line &amp; Kasper</h3>
+
+    <div class="persona-block">
+      <p><span class="speaker">Line:</span> Hvis der var et par vi klikede med, ville det være fedt at skrive "hey, det var hyggeligt" uden at udveksle telefonnumre. Men cold messages fra fremmede ville være weird.</p>
+    </div>
+
+    <div class="persona-block">
+      <p><span class="speaker">Kasper:</span> Connections med folk vi faktisk mødte er fint. Men det vigtigste er tydelige regler — fx at man kun kan skrive til folk man har mødt til et event. Ellers bliver det en datingapp, og det ville vi begge droppe.</p>
+    </div>
+
+    <hr>
+
+    <!-- ===== SPØRGSMÅL 7 ===== -->
+    <h2>Spørgsmål 7: Komme igen vs. forlade for altid</h2>
+
+    <h3>Anders &amp; Mette</h3>
+
+    <div class="persona-block">
+      <p><span class="speaker">Mette:</span> Vi kommer igen hvis vi kører hjem og taler i bilen hele vejen. Hvis vi lå i sengen og sagde "hvornår er det næste?" Jeg ville forlade platformen hvis tonen ændrede sig — fra udviklingsrum til hookup-platform. Eller pres til at gå længere.</p>
+    </div>
+
+    <div class="persona-block">
+      <p><span class="speaker">Anders:</span> Jeg kommer igen hvis oplevelsen matcher løftet. Trygt, voksent, professionelt. Og hvis Mette lyste op. Forlade permanent ved: 1) Datalæk. 2) Grænseoverskridende adfærd uden at facilitator griber ind. 3) Push mod eksplicit seksuelle events. <strong>Ét tillidsbrud, og vi er væk.</strong></p>
+    </div>
+
+    <h3>Maria</h3>
+
+    <div class="persona-block">
+      <p>Jeg ville komme igen hvis det første event gav mig en oplevelse af at blive set. Af mig selv. Og for fællesskabet — hvis jeg fandt andre kvinder der kæmper med det samme.</p>
+
+      <blockquote><p>Forlade for altid: Hvis det i virkeligheden var en dating-platform i forklædning. Hvis tonen skiftede fra udvikling til jagt. Hvis facilitatorerne var uprofessionelle. <strong>Tillid er ekstremt skrøbeligt når man har gjort sig sårbar.</strong></p></blockquote>
+    </div>
+
+    <h3>Sofie</h3>
+
+    <div class="persona-block">
+      <p>Komme igen hvis: vi kørte hjem og følte os tættere. Hvis eventet var velorganiseret og vi mødte andre par der lignede os — normale mennesker.</p>
+
+      <p>Forlade for altid: hvis vores grænser blev overskredet og ingen greb ind. Hvis vores data blev lækket. Eller hvis platformen sendte notifikationer eller mails der kunne ses af andre. <strong>Et enkelt slip i diskretionen, og jeg er væk. Ingen anden chance.</strong></p>
+    </div>
+
+    <h3>Line &amp; Kasper</h3>
+
+    <div class="persona-block">
+      <p><span class="speaker">Line:</span> Vi kommer igen hvis vi gik derfra med en følelse af "det var faktisk fedt." Nye eventformater holder os interesserede. Forlade: hvis det blev en lukket klike af erfarne folk der kiggede ned på nybegyndere.</p>
+    </div>
+
+    <div class="persona-block">
+      <p><span class="speaker">Kasper:</span> Genbesøg handler om fremdrift. Progressionsspor eller anbefalinger ville være fedt. Farvel for altid: dårlig oplevelse uden opfølgning. Hvis prisen steg uden at værdien fulgte med. Eller hvis det føltes som en forpligtelse.</p>
+    </div>
+
+    <hr>
+
+    <!-- ===== SPØRGSMÅL 8 ===== -->
+    <h2>Spørgsmål 8: Hvad ville I sige til en ven?</h2>
+
+    <h3>Anders &amp; Mette</h3>
+
+    <div class="persona-block">
+      <p><span class="speaker">Mette:</span> "Det er en platform for par der vil investere i deres forhold. Ikke terapi, men heller ikke fest. Tænk en oplevelses-aften hvor I faktisk <em>ser</em> hinanden igen. Sexologer involveret, verificeret og trygt. Vi prøvede det, og vi talte mere den aften end vi har gjort i måneder."</p>
+    </div>
+
+    <div class="persona-block">
+      <p><span class="speaker">Anders:</span> "Events for par. Professionelt, ikke plat. Tænk wellness, bare for jeres relation." Jeg ville <em>ikke</em> sige "intimitetsplatform" — det lyder for loaded. "Oplevelser for par."</p>
+    </div>
+
+    <h3>Maria</h3>
+
+    <div class="persona-block">
+      <blockquote>
+        <p>"Det er et sted hvor man kan udforske den del af sig selv, man normalt ikke taler om over kaffen." Ikke en swinger-ting. Mere som personlig udvikling — bare for den del af dig der handler om lyst, nærhed og krop.</p>
+        <p>"Hvis du nogensinde har ligget vågen og mærket at der mangler noget — ikke i dit forhold, men i dig selv — så er det værd at kigge på."</p>
+      </blockquote>
+    </div>
+
+    <h3>Sofie</h3>
+
+    <div class="persona-block">
+      <p>Til min tætteste veninde: "Det er en dansk platform for par der vil udforske nærvær og intimitet. Tænk wellness-oplevelse, bare for parforholdet." Til andre: noget mere vagt, og så skifte emne.</p>
+
+      <p>Jeg ville aldrig sige det i en større gruppe. Og altid frame det som noget positivt og bevidst — ikke som noget vi "havde brug for." <strong>For det er det heller ikke. Det er noget vi har valgt.</strong></p>
+    </div>
+
+    <h3>Line &amp; Kasper</h3>
+
+    <div class="persona-block">
+      <p><span class="speaker">Line:</span> "Workshops og oplevelser for par, ikke swingerklub. Drevet af sexologer, mega trygt. Det handler mere om at lære sig selv og hinanden at kende end om sex."</p>
+    </div>
+
+    <div class="persona-block">
+      <p><span class="speaker">Kasper:</span> "Wellness møder samtale om intimitet. Alle er verificerede via MitID, så der er ingen creeps."</p>
+    </div>
+
+    <hr>
+
+    <!-- ===== NØGLEINDSIGTER ===== -->
+    <div class="section-card">
+      <h2>Nøgleindsigter på tværs af personas</h2>
+
+      <h3>Fælles mønstre</h3>
+
+      <ol>
+        <li><strong>Kvinden er driver</strong> — i alle fire tilfælde er det kvinden der finder Glød først og introducerer partneren</li>
+        <li><strong>Æstetik er afgørende</strong> — ét "skummelt" element, og de er væk. Nordisk wellness-æstetik er det der åbner døren</li>
+        <li><strong>MitID-verificering skaber tillid</strong> — alle fire ser det som et positivt signal, ikke en barriere</li>
+        <li><strong>"Vi er ikke i krise"</strong> — alle insisterer på at deres nysgerrighed er et aktivt valg, ikke et symptom</li>
+        <li><strong>Facilitatorens baggrund legitimerer</strong> — sexolog/terapeut-titlen er afgørende for troværdighed</li>
+        <li><strong>Ét tillidsbrud = permanent farvel</strong> — ingen personas giver anden chance ved datalæk, pres, eller grænseoverskridelse</li>
+        <li><strong>Sociale funktioner er et minefelt</strong> — alle er skeptiske overfor beskeder fra fremmede. Community ja, dating-dynamik nej</li>
+      </ol>
+    </div>
+
+    <div class="section-card">
+      <h2>Forskelle</h2>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Tema</th>
+            <th>Anders &amp; Mette</th>
+            <th>Maria</th>
+            <th>Sofie</th>
+            <th>Line &amp; Kasper</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Initiativ</strong></td>
+            <td>Mette driver, Anders godkender</td>
+            <td>Maria tager skridt alene</td>
+            <td>Sofie bringer det op over vin</td>
+            <td>Line sender link, de beslutter sammen</td>
+          </tr>
+          <tr>
+            <td><strong>Største frygt</strong></td>
+            <td>At skade relationen</td>
+            <td>At føle sig alene med det</td>
+            <td>At blive genkendt</td>
+            <td>At være de mest usikre</td>
+          </tr>
+          <tr>
+            <td><strong>Pris-sensitivitet</strong></td>
+            <td>Lav — kvalitet koster</td>
+            <td>Moderat — fair pris</td>
+            <td>Moderat — tjekker refund</td>
+            <td>Høj — intro-pris vigtigt</td>
+          </tr>
+          <tr>
+            <td><strong>Solo-deltagelse</strong></td>
+            <td>Nej, altid sammen</td>
+            <td>Ja, kvindelige events</td>
+            <td>Nej, altid med manden</td>
+            <td>Nej, altid sammen</td>
+          </tr>
+          <tr>
+            <td><strong>Sociale funktioner</strong></td>
+            <td>Forsigtig curiosity</td>
+            <td>Fællesskab, ikke en-til-en</td>
+            <td>Kort og diskret</td>
+            <td>Kun folk man har mødt</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section-card">
+      <h2>Konkrete detaljer der overraskede</h2>
+
+      <ul>
+        <li><strong>Kontoudtog</strong> (Sofie): "GLØD APS EVENT på et fælles dankort ville give mig hjertebanken. Det skal stå som noget neutralt."</li>
+        <li><strong>Billetten i kurven tre gange</strong> (Sofie): Hun ville åbne og lukke fanen flere gange før køb. Refund-politik er afgørende.</li>
+        <li><strong>Coverstory til babysitteren</strong> (Sofie): Praktiske bekymringer om at forklare hvor man tager hen.</li>
+        <li><strong>Profil-templates</strong> (Kasper): "Jeg ville ønske der var eksempler — 'andre par skriver typisk...'"</li>
+        <li><strong>Prispunkt</strong> (Kasper): "Et intro-event til 400-600 kr. ville være en no-brainer. 2500 kr. for noget vi ikke kender? Nej."</li>
+        <li><strong>Google Street View</strong> (Sofie): Hun ville google lokationen, se parkeringsmuligheder, reducere alt ukendt.</li>
+        <li><strong>Notifikationer</strong> (Sofie): "Oscar sidder på mit skød og spiller med min telefon. Der skal IKKE stå 'ny besked fra SanseParret' på låseskærmen."</li>
+        <li><strong>Lakmusprøven</strong> (Maria): "Kan den her besked tåle dagslys? Ville jeg vise den til min partner?"</li>
+        <li><strong>"Det her er ikke Duolingo"</strong> (Sofie): Push-notifikationer, badges og gamification er en dealbreaker. "Det er mit parforhold. Behandl det med værdighed."</li>
+        <li><strong>Moren</strong> (Sofie): "Min mor: ingenting. Aldrig." — diskretion har lag.</li>
+        <li><strong>Samtalen som produkt</strong> (Line &amp; Kasper): "Det var samtalen der solgte os, ikke hjemmesiden." — Glød faciliterer parsamtaler allerede før event.</li>
+      </ul>
+    </div>
+
+    <div class="section-card">
+      <h2>Design-implikationer</h2>
+
+      <ol>
+        <li><strong>Onboarding skal signalere normalitet</strong> — "Du er ikke mærkelig. Du er nysgerrig."</li>
+        <li><strong>Event-beskrivelser skal være krystalklare</strong> — hvad sker, hvad forventes, hvad forventes IKKE</li>
+        <li><strong>"Begyndervenlig" som eksplicit kategori</strong> — alle fire søger lav tærskel</li>
+        <li><strong>Privatliv-kontroller er kritiske</strong> — hvem ser min profil? Kan kolleger finde mig? Synlighedsindstillinger er et must.</li>
+        <li><strong>Sociale funktioner bør begrænses</strong> — kun connections med folk man har mødt til events. Ingen cold messages.</li>
+        <li><strong>Refund-politik synligt</strong> — Sofie tjekker den. Andre tænker det.</li>
+        <li><strong>Velkomst ved fremmøde er afgørende</strong> — de første 5 minutter bestemmer alt. "Er det jeres første gang?"</li>
+        <li><strong>Progressionsspor</strong> — Line &amp; Kasper vil have nye formater og anbefalinger ("I prøvede X, måske er Y næste skridt")</li>
+        <li><strong>Kontoudtog skal være neutralt</strong> — ikke "GLØD" eller noget genkendeligt</li>
+        <li><strong>Ingen gamification</strong> — ingen badges, streaks eller push-notifikationer. Behandl emnet med værdighed.</li>
+        <li><strong>Profil-eksempler</strong> — vis hvad andre skriver for at sænke tærsklen</li>
+        <li><strong>Intro-priser</strong> — 400-600 kr. for første event er sweet spot for yngre par</li>
+        <li><strong>Opfølgningsmail efter event</strong> — varme ord og refleksionsspørgsmål, ikke "book næste event nu"</li>
+      </ol>
+    </div>
+
+    <!-- ===== FOOTER ===== -->
+    <footer class="doc-footer">
+      Glød — User Journey Paneldebat &middot; 13. april 2026<br>
+      AI-simulerede persona-interviews &middot; Til intern brug
+    </footer>
+
+  </div>
+</body>
+</html>

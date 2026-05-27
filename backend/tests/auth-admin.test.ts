@@ -38,11 +38,13 @@ function createAppWithAuth(authService: AuthService | undefined) {
       sendWaitlistConfirm: async () => undefined,
       sendWaitlistWelcome: async () => undefined,
       sendPartnerInterestConfirm: async () => undefined,
-      sendPartnerInterestReceived: async () => undefined
+      sendPartnerInterestReceived: async () => undefined,
+      sendInterestSignal: async () => undefined,
+      sendNewMessage: async () => undefined
     },
     rateLimitEnabled: false,
-    corsOrigins: ["http://localhost:4563"],
-    appUrl: "http://localhost:4563",
+    corsOrigins: ["http://localhost:39563"],
+    appUrl: "http://localhost:39563",
     waitlistConfirmPath: "/waitlist/confirm",
     authService
   });

@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:4564";
+const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:39564";
 
 const ROLE_OPTIONS = [
   "Forening/organisation",
@@ -29,7 +29,7 @@ const ROLE_OPTIONS = [
 const INTEREST_OPTIONS = [
   "Oprette events",
   "Nå nye deltagere",
-  "Styrke trygge rammer",
+  "Styrke rammer for samtykke og respekt",
   "Samarbejde om platformen"
 ] as const;
 

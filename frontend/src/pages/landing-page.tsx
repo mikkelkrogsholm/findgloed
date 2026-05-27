@@ -27,7 +27,7 @@ type WaitlistError = {
   message?: string;
 };
 
-const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:4564";
+const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:39564";
 
 export function LandingPage() {
   const [email, setEmail] = useState("");
@@ -87,13 +87,16 @@ export function LandingPage() {
         animate="visible"
         variants={revealVariants(motionMode, "hero")}
       >
-        <p className="noxus-kicker kicker-text mb-5 text-xs">Mød mennesker i virkeligheden først</p>
+        <p className="noxus-kicker kicker-text mb-5 text-xs">Voksne møder voksne i virkeligheden først</p>
         <h2 className="noxus-title display-text mb-6 text-4xl leading-tight md:text-6xl xl:text-7xl">
-          Et trygt sted for nysgerrige voksne.
+          For voksne der vil mere end at swipe.
         </h2>
         <p className="body-text max-w-xl text-lg leading-relaxed md:text-[1.15rem]">
-          Glød er for dig, der vil møde mennesker gennem oplevelser - ikke swipe-kultur. Vi starter med events i
-          samarbejde med Dansk Sexologisk Akademi.
+          Glød er for dig, der vil møde andre voksne gennem virkelige aftener — ikke gennem swipes. Vi starter med
+          events i samarbejde med Dansk Sexologisk Akademi.
+        </p>
+        <p className="body-text-muted mt-4 max-w-xl text-sm leading-relaxed">
+          Vi bygger til to roller: den der inviterer og den der bestemmer tempoet. Begge er ligeværdige.
         </p>
         <motion.div
           className="mt-8 flex flex-wrap gap-3 text-sm"
@@ -106,7 +109,7 @@ export function LandingPage() {
             variants={{ ...revealVariants(motionMode, "item"), ...pillVariants }}
             whileHover="hover"
           >
-            MitID-verificeret adgang
+            Manuelt verificeret adgang
           </motion.span>
           <motion.span
             className="glass-pill hover-glow rounded-full px-4 py-2"
@@ -146,7 +149,7 @@ export function LandingPage() {
                     <div className="space-y-2">
                       <p className="noxus-kicker kicker-text mb-2 text-[0.65rem]">Kun relevante opdateringer</p>
                       <p className="body-text-muted text-sm leading-relaxed">
-                        Skriv dig på ventelisten. Du får besked om lancering, early access og kommende events. Ingen
+                        Skriv dig på ventelisten. Du får besked om lancering, tidlig adgang og kommende events. Ingen
                         støj.
                       </p>
                       <a href={appConfig.routes.privacy} className="link-inline text-sm">
@@ -172,7 +175,15 @@ export function LandingPage() {
                           onCheckedChange={(value) => setAcceptedTermsPrivacy(Boolean(value))}
                         />
                         <Label htmlFor="terms_privacy" className="body-text text-sm leading-relaxed">
-                          Jeg har læst og accepterer handelsbetingelserne og persondatapolitikken.
+                          Jeg har læst og accepterer{" "}
+                          <a className="link-inline" href={appConfig.routes.terms}>
+                            handelsbetingelserne
+                          </a>{" "}
+                          og{" "}
+                          <a className="link-inline" href={appConfig.routes.privacy}>
+                            persondatapolitikken
+                          </a>
+                          .
                         </Label>
                       </div>
 
@@ -183,7 +194,7 @@ export function LandingPage() {
                           onCheckedChange={(value) => setMarketingOptIn(Boolean(value))}
                         />
                         <Label htmlFor="marketing_opt_in" className="body-text text-sm leading-relaxed">
-                          Ja tak - send mig eksklusive invites, nyheder og updates fra Glød.
+                          Ja tak — send mig eksklusive invitationer, nyheder og opdateringer fra Glød.
                         </Label>
                       </div>
                     </div>

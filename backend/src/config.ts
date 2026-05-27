@@ -19,6 +19,17 @@ export type Config = {
   rateLimitWaitlistWindowSeconds: number;
   rateLimitConfirmMax: number;
   rateLimitConfirmWindowSeconds: number;
+  // Issue B13: per-scope rate-limits for login/messaging/upload/etc.
+  rateLimitLoginMax: number;
+  rateLimitLoginWindowSeconds: number;
+  rateLimitMessageMax: number;
+  rateLimitMessageWindowSeconds: number;
+  rateLimitInterestMax: number;
+  rateLimitInterestWindowSeconds: number;
+  rateLimitUploadMax: number;
+  rateLimitUploadWindowSeconds: number;
+  rateLimitSignupMax: number;
+  rateLimitSignupWindowSeconds: number;
   redisUrl: string;
   dbHost: string;
   dbPort: number;
@@ -30,10 +41,17 @@ export type Config = {
   resendApiKey: string;
   resendFromEmail: string;
   supportEmail: string;
+  // Navngiven dataansvarlig — påkrævet under GDPR-konsensus (issue A19).
+  // Bruges i email-signaturer og kan vises på privacy-page.
+  dataControllerName: string;
+  dataControllerEmail: string;
   betterAuthSecret: string;
   adminEmails: string;
   superAdminEmail: string;
   superAdminPassword: string;
+  // Issue A18: bruges af /api/webhooks/stripe til at validere Stripe-Signature.
+  // Hvis tom: webhook-endpointet returnerer 501 NOT_IMPLEMENTED.
+  stripeWebhookSecret: string;
 };
 
 function required(name: string, fallback?: string): string {
@@ -70,6 +88,28 @@ function parseOrigins(): string[] {
     .filter(Boolean);
 }
 
+// Issue B14: Production-CORS skal aldrig acceptere localhost/loopback eller
+// wildcard. Hvis fx ".env" ikke er sat korrekt på serveren, og en udvikler
+// glemmer at fjerne sin lokale origin, ville produktion ende med en åben
+// dør. Vi validerer derfor strikt — kast hellere fejl ved boot end at
+// servere requests fra ukendte origins.
+export function validateProductionOrigins(origins: string[]): void {
+  const blockedSubstrings = ["localhost", "127.0.0.1", "0.0.0.0"];
+  for (const origin of origins) {
+    if (origin === "*") {
+      throw new Error(`CORS_ORIGINS må ikke indeholde wildcard "*" i production: ${origin}`);
+    }
+    const lower = origin.toLowerCase();
+    for (const blocked of blockedSubstrings) {
+      if (lower.includes(blocked)) {
+        throw new Error(
+          `CORS_ORIGINS må ikke indeholde "${blocked}" i production: ${origin}`
+        );
+      }
+    }
+  }
+}
+
 export function readConfig(): Config {
   const runtimeEnv = (process.env.NODE_ENV ?? process.env.APP_ENV ?? "development").toLowerCase();
   const isProduction = runtimeEnv === "production";
@@ -80,7 +120,11 @@ export function readConfig(): Config {
     throw new Error("CORS_ORIGINS must be configured in production");
   }
 
-  const corsOrigins = parsedOrigins.length > 0 ? parsedOrigins : [process.env.APP_URL ?? "http://localhost:4563"];
+  if (isProduction) {
+    validateProductionOrigins(parsedOrigins);
+  }
+
+  const corsOrigins = parsedOrigins.length > 0 ? parsedOrigins : [process.env.APP_URL ?? "http://localhost:39563"];
   const betterAuthSecret = process.env.BETTER_AUTH_SECRET ?? process.env.JWT_SECRET ?? "";
 
   if (isProduction && betterAuthSecret.length === 0) {
@@ -96,8 +140,8 @@ export function readConfig(): Config {
     trustProxy: parseBoolean(process.env.TRUST_PROXY, false),
     enableHsts: parseBoolean(process.env.ENABLE_HSTS, isProduction),
     hstsMaxAgeSeconds: parseInteger(process.env.HSTS_MAX_AGE_SECONDS, 31_536_000),
-    appUrl: process.env.APP_URL ?? "http://localhost:4563",
-    apiUrl: process.env.API_URL ?? "http://localhost:4564",
+    appUrl: process.env.APP_URL ?? "http://localhost:39563",
+    apiUrl: process.env.API_URL ?? "http://localhost:39564",
     waitlistConfirmPath: process.env.WAITLIST_CONFIRM_PATH ?? "/waitlist/confirm",
     partnerConfirmPath: process.env.PARTNER_CONFIRM_PATH ?? "/partner/confirm",
     waitlistTokenTtlHours: parseInteger(process.env.WAITLIST_CONFIRM_TOKEN_TTL_HOURS, 72),
@@ -108,6 +152,16 @@ export function readConfig(): Config {
     rateLimitWaitlistWindowSeconds: parseInteger(process.env.RATE_LIMIT_WAITLIST_WINDOW_SECONDS, 60),
     rateLimitConfirmMax: parseInteger(process.env.RATE_LIMIT_CONFIRM_MAX, 10),
     rateLimitConfirmWindowSeconds: parseInteger(process.env.RATE_LIMIT_CONFIRM_WINDOW_SECONDS, 60),
+    rateLimitLoginMax: parseInteger(process.env.RATE_LIMIT_LOGIN_MAX, 10),
+    rateLimitLoginWindowSeconds: parseInteger(process.env.RATE_LIMIT_LOGIN_WINDOW_SECONDS, 60),
+    rateLimitMessageMax: parseInteger(process.env.RATE_LIMIT_MESSAGE_MAX, 30),
+    rateLimitMessageWindowSeconds: parseInteger(process.env.RATE_LIMIT_MESSAGE_WINDOW_SECONDS, 60),
+    rateLimitInterestMax: parseInteger(process.env.RATE_LIMIT_INTEREST_MAX, 20),
+    rateLimitInterestWindowSeconds: parseInteger(process.env.RATE_LIMIT_INTEREST_WINDOW_SECONDS, 60),
+    rateLimitUploadMax: parseInteger(process.env.RATE_LIMIT_UPLOAD_MAX, 10),
+    rateLimitUploadWindowSeconds: parseInteger(process.env.RATE_LIMIT_UPLOAD_WINDOW_SECONDS, 60),
+    rateLimitSignupMax: parseInteger(process.env.RATE_LIMIT_SIGNUP_MAX, 5),
+    rateLimitSignupWindowSeconds: parseInteger(process.env.RATE_LIMIT_SIGNUP_WINDOW_SECONDS, 3600),
     redisUrl: process.env.REDIS_URL ?? "redis://redis:6379",
     dbHost: required("DB_HOST", "localhost"),
     dbPort: Number(process.env.DB_PORT ?? 5432),
@@ -119,9 +173,12 @@ export function readConfig(): Config {
     resendApiKey: process.env.RESEND_API_KEY ?? "",
     resendFromEmail: process.env.RESEND_FROM_EMAIL ?? "",
     supportEmail: process.env.SUPPORT_EMAIL ?? "",
+    dataControllerName: process.env.DATA_CONTROLLER_NAME ?? "Mikkel Freltoft Krogsholm",
+    dataControllerEmail: process.env.DATA_CONTROLLER_EMAIL ?? "mikkel@findgloed.dk",
     betterAuthSecret,
     adminEmails: process.env.ADMIN_EMAILS ?? "",
     superAdminEmail: process.env.SUPERADMIN_EMAIL ?? "",
-    superAdminPassword: process.env.SUPERADMIN_PASSWORD ?? ""
+    superAdminPassword: process.env.SUPERADMIN_PASSWORD ?? "",
+    stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET ?? ""
   };
 }

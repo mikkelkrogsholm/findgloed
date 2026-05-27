@@ -51,6 +51,22 @@ describe("App routing", () => {
     expect(document.title).toBe("Glød - Log ind");
   });
 
+  it("renders code of conduct page on /code-of-conduct", () => {
+    window.history.pushState({}, "", "/code-of-conduct");
+    render(<App />);
+
+    expect(screen.getByRole("heading", { name: "Code of conduct", level: 1 })).toBeInTheDocument();
+    expect(document.title).toBe("Glød - Code of conduct");
+  });
+
+  it("renders terms page on /terms", () => {
+    window.history.pushState({}, "", "/terms");
+    render(<App />);
+
+    expect(screen.getByRole("heading", { name: "Handelsbetingelser", level: 1 })).toBeInTheDocument();
+    expect(document.title).toBe("Glød - Handelsbetingelser");
+  });
+
   it("renders admin page on /admin", () => {
     vi.stubGlobal(
       "fetch",
@@ -64,7 +80,9 @@ describe("App routing", () => {
     window.history.pushState({}, "", "/admin");
     render(<App />);
 
-    expect(screen.getByRole("heading", { name: "Admin-overblik: Tilmeldte" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Tilmeldte" })
+    ).toBeInTheDocument();
     expect(document.title).toBe("Glød - Admin");
   });
 });

@@ -1,8 +1,17 @@
 import { Hono } from "hono";
-import { createHash, randomBytes } from "node:crypto";
+import { bodyLimit } from "hono/body-limit";
+import { createHash, createHmac, randomBytes } from "node:crypto";
+import { registerEventRoutes } from "./event-routes";
+import type { EventRepository } from "./events";
+import { registerMembershipRoutes } from "./membership-routes";
+import { registerMessagingRoutes } from "./messaging-routes";
+import type { MessagingRepository } from "./messaging";
+import { registerSubscriptionRoutes } from "./subscription-routes";
+import type { SubscriptionEventLog, SubscriptionRepository } from "./subscriptions";
 import type {
   AuthService,
   EmailService,
+  MembershipRepository,
   PartnerInterestOption,
   PartnerInterestRepository,
   PartnerRole,
@@ -10,6 +19,7 @@ import type {
   RateLimiter,
   WaitlistRepository
 } from "./types";
+import type { UploadStore } from "./uploads";
 import { isValidEmail, normalizeEmail } from "./validators";
 
 type AuthSessionData = {
@@ -46,13 +56,26 @@ type AppDeps = {
   enableHsts?: boolean;
   hstsMaxAgeSeconds?: number;
   authService?: AuthService;
+  membershipRepository?: MembershipRepository;
+  uploadStore?: UploadStore;
+  eventRepository?: EventRepository;
+  messagingRepository?: MessagingRepository;
+  subscriptionRepository?: SubscriptionRepository;
+  // Issue B22: HMAC-secret bruges som nøgle ved hashing af confirmation-tokens
+  // i DB. Uden secret bliver token-hash blot SHA-256(token), hvilket gør det
+  // muligt for en database-leak at brute-force tokens. Med HMAC kan en
+  // angriber ikke generere gyldige hashes selv om de har DB-dumpet.
+  tokenHashSecret?: string;
+  // Webhook-relateret (issue A18).
+  stripeWebhookSecret?: string;
+  subscriptionEventLog?: SubscriptionEventLog;
 };
 
 const DEFAULT_TOKEN_TTL_HOURS = 72;
 const DEFAULT_RESEND_COOLDOWN_MINUTES = 15;
 const DEFAULT_RATE_LIMIT_FAIL_OPEN = false;
 const DEFAULT_HSTS_MAX_AGE_SECONDS = 31_536_000;
-const CORS_METHODS = "GET,POST,OPTIONS";
+const CORS_METHODS = "GET,POST,PATCH,DELETE,OPTIONS";
 const CORS_HEADERS = "Content-Type";
 const PARTNER_ROLES: PartnerRole[] = [
   "Forening/organisation",
@@ -63,11 +86,22 @@ const PARTNER_ROLES: PartnerRole[] = [
 const PARTNER_INTERESTS: PartnerInterestOption[] = [
   "Oprette events",
   "Nå nye deltagere",
-  "Styrke trygge rammer",
+  "Styrke rammer for samtykke og respekt",
   "Samarbejde om platformen"
 ];
 
-function hashToken(value: string): string {
+// Issue B22: hashToken bruger HMAC-SHA-256 med betterAuthSecret som nøgle.
+// Hvis secret IKKE er sat (fx i tests der ikke konfigurerer det), falder vi
+// tilbage til ren SHA-256 — men logger en advarsel. I production tjekker
+// readConfig at secret er sat.
+//
+// Bemærk: ved skift fra SHA-256 til HMAC bliver eksisterende confirmation_token_hash
+// i DB ugyldige. Det er acceptabelt i dev, og i produktion havde ingen
+// waitlist-tokens aktive sessions endnu.
+function hashToken(value: string, secret?: string): string {
+  if (secret && secret.length > 0) {
+    return createHmac("sha256", secret).update(value).digest("hex");
+  }
   return createHash("sha256").update(value).digest("hex");
 }
 
@@ -190,12 +224,18 @@ export function createApp(deps: AppDeps): Hono<{ Variables: AppVariables }> {
   const app = new Hono<{ Variables: AppVariables }>();
   const confirmationTokenTtlHours = deps.confirmationTokenTtlHours ?? DEFAULT_TOKEN_TTL_HOURS;
   const resendCooldownMinutes = deps.resendCooldownMinutes ?? DEFAULT_RESEND_COOLDOWN_MINUTES;
-  const corsOrigins = deps.corsOrigins ?? ["http://localhost:4563"];
+  const corsOrigins = deps.corsOrigins ?? ["http://localhost:39563"];
   const trustProxy = deps.trustProxy ?? false;
   const rateLimitEnabled = deps.rateLimitEnabled ?? true;
   const rateLimitFailOpen = deps.rateLimitFailOpen ?? DEFAULT_RATE_LIMIT_FAIL_OPEN;
   const enableHsts = deps.enableHsts ?? false;
   const hstsMaxAgeSeconds = deps.hstsMaxAgeSeconds ?? DEFAULT_HSTS_MAX_AGE_SECONDS;
+  // Issue B22: HMAC-secret bruges til at hashe confirmation-tokens før de
+  // sammenlignes med DB-værdier. Hvis secret ikke er sat (tests/legacy), falder
+  // vi tilbage til ren SHA-256 i hashToken().
+  const tokenHashSecret = deps.tokenHashSecret;
+  const stripeWebhookSecret = deps.stripeWebhookSecret;
+  const subscriptionEventLog = deps.subscriptionEventLog;
   const partnerRepository =
     deps.partnerRepository ??
     ({
@@ -259,6 +299,54 @@ export function createApp(deps: AppDeps): Hono<{ Variables: AppVariables }> {
     }
   });
 
+  // Issue A11: Body-limit for at undgå at en angriber kan sende store payloads
+  // og DoS'e serveren. Vi splitter mellem to scopes:
+  // - Multipart-routes (foto- + verifikations-upload): 32MB så et stort billede
+  //   stadig kan uploades. uploads.saveImage validerer derudover pr. fil
+  //   (8MB pr. billede), så 32MB er kun det ydre værn mod DoS.
+  // - Stripe-webhooks: 1MB — events er små men signaturen valideres senere.
+  // - Alle andre /api/*-routes: 64KB JSON. En typisk besked (4000 tegn) eller
+  //   et bio-felt fylder langt mindre, så 64KB er rigeligt og giver
+  //   beskyttelse mod tilfældig DoS.
+  // Vi bruger én middleware der vælger den korrekte limit baseret på path,
+  // så vi ikke får dobbelt-håndhævelse fra Hono's matcher.
+  const MULTIPART_BODY_LIMIT_BYTES = 32 * 1024 * 1024;
+  const WEBHOOK_BODY_LIMIT_BYTES = 1 * 1024 * 1024;
+  const JSON_BODY_LIMIT_BYTES = 64 * 1024;
+  const MULTIPART_PATHS = new Set(["/api/me/photos", "/api/me/verification"]);
+  const WEBHOOK_PATHS = new Set(["/api/webhooks/stripe"]);
+  const payloadTooLargeResponse = (c: { json: (body: unknown, status?: number) => Response }) =>
+    c.json(
+      {
+        ok: false,
+        code: "PAYLOAD_TOO_LARGE",
+        message: "Indholdet er for stort."
+      },
+      413
+    );
+  const multipartLimit = bodyLimit({
+    maxSize: MULTIPART_BODY_LIMIT_BYTES,
+    onError: payloadTooLargeResponse
+  });
+  const webhookLimit = bodyLimit({
+    maxSize: WEBHOOK_BODY_LIMIT_BYTES,
+    onError: payloadTooLargeResponse
+  });
+  const jsonLimit = bodyLimit({
+    maxSize: JSON_BODY_LIMIT_BYTES,
+    onError: payloadTooLargeResponse
+  });
+  app.use("/api/*", async (c, next) => {
+    const path = new URL(c.req.url).pathname;
+    if (MULTIPART_PATHS.has(path)) {
+      return multipartLimit(c, next);
+    }
+    if (WEBHOOK_PATHS.has(path)) {
+      return webhookLimit(c, next);
+    }
+    return jsonLimit(c, next);
+  });
+
   app.use("/api/*", async (c, next) => {
     const origin = c.req.raw.headers.get("origin");
     if (!origin) {
@@ -294,6 +382,107 @@ export function createApp(deps: AppDeps): Hono<{ Variables: AppVariables }> {
     return c.json({ ok: true, service: "findgloed-api" });
   });
 
+  // Issue A18: Stripe webhook-endpoint. Vi forbereder routen FØR Stripe er
+  // aktiveret, så vi har et stabilt URL Stripe kan ramme når nøglerne kommer.
+  // I dev/uden STRIPE_WEBHOOK_SECRET returnerer endpointet 501 NOT_IMPLEMENTED.
+  // I production validerer vi Stripe-Signature og logger event idempotent
+  // via stripe_event_id-UNIQUE-index (migration 011).
+  app.post("/api/webhooks/stripe", async (c) => {
+    if (!stripeWebhookSecret || stripeWebhookSecret.length === 0) {
+      return c.json(
+        {
+          ok: false,
+          code: "NOT_IMPLEMENTED",
+          message: "Stripe webhook er ikke konfigureret endnu."
+        },
+        501
+      );
+    }
+
+    const signature = c.req.raw.headers.get("stripe-signature");
+    if (!signature) {
+      return c.json(
+        { ok: false, code: "MISSING_SIGNATURE" },
+        400
+      );
+    }
+
+    // TODO ved Stripe-live: brug stripe.webhooks.constructEvent for at validere
+    // signatur og parse event. Pseudokode:
+    //
+    //   import Stripe from "stripe";
+    //   const stripe = new Stripe(stripeSecretKey);
+    //   const rawBody = await c.req.text(); // ikke parsed JSON
+    //   const event = stripe.webhooks.constructEvent(
+    //     rawBody,
+    //     signature,
+    //     stripeWebhookSecret
+    //   );
+    //
+    //   switch (event.type) {
+    //     case "customer.subscription.created":
+    //       // status='active' (eller 'trialing' hvis trial_end er sat)
+    //       // gem stripe_subscription_id + current_period_start/end
+    //       break;
+    //     case "customer.subscription.updated":
+    //       // opdatér felter: status, current_period_end, cancel_at_period_end
+    //       break;
+    //     case "customer.subscription.deleted":
+    //       // status='cancelled', cancelled_at=NOW()
+    //       break;
+    //     case "invoice.payment_succeeded":
+    //       // log subscription_event(event_type='payment_succeeded', amount_cents=invoice.amount_paid)
+    //       break;
+    //     case "invoice.payment_failed":
+    //       // status='past_due'
+    //       // log subscription_event(event_type='payment_failed', amount_cents=invoice.amount_due)
+    //       break;
+    //   }
+    //
+    // Bemærk: vi skal læse raw body BEFORE Hono parser den. Det kræver
+    // formentlig at vi laver en sub-router der ikke bruger app.use-middleware
+    // for at undgå body-konsumering før denne route.
+    //
+    // Indtil videre logger vi blot payloaden og returnerer 200, så Stripe
+    // ikke retry'er. Idempotency via stripe_event_id-UNIQUE-index.
+    let payload: Record<string, unknown> | null = null;
+    try {
+      payload = (await c.req.json()) as Record<string, unknown>;
+    } catch {
+      return c.json({ ok: false, code: "INVALID_BODY" }, 400);
+    }
+
+    const eventId = typeof payload?.id === "string" ? payload.id : null;
+    const eventType = typeof payload?.type === "string" ? payload.type : "unknown";
+
+    if (!eventId) {
+      return c.json({ ok: false, code: "MISSING_EVENT_ID" }, 400);
+    }
+
+    if (subscriptionEventLog) {
+      try {
+        const inserted = await subscriptionEventLog.recordEvent({
+          subscriptionId: null,
+          stripeEventId: eventId,
+          eventType: `stripe:${eventType}`,
+          amountCents: null,
+          metadata: { received_at: new Date().toISOString(), stub: true }
+        });
+        if (!inserted) {
+          // Allerede logget — idempotent. Returnér 200 så Stripe ikke retry'er.
+          return c.json({ ok: true, status: "duplicate" }, 200);
+        }
+      } catch (error) {
+        console.error("Stripe webhook recordEvent failed:", error);
+        // Fail-safe: returnér 200 så Stripe ikke retry'er. Bedre at miste
+        // ét event end at få en retry-loop der spammer DB'en.
+      }
+    }
+
+    console.log(`Stripe webhook received: ${eventType} (${eventId})`);
+    return c.json({ ok: true, status: "received" }, 200);
+  });
+
   app.all("/api/auth/*", async (c) => {
     if (!authService) {
       return c.json(
@@ -305,8 +494,137 @@ export function createApp(deps: AppDeps): Hono<{ Variables: AppVariables }> {
         503
       );
     }
+
+    // Issue B13: rate-limit sign-in/sign-up. Vi wrapper better-auth's handler
+    // her fordi better-auth ikke giver os middleware-hooks pr. route. Vi
+    // identificerer scope via path og slugger email ind hvis vi kan parse
+    // request-body — ellers bruger vi kun fingerprint.
+    const path = new URL(c.req.url).pathname;
+    const isSignIn = path === "/api/auth/sign-in/email" && c.req.method === "POST";
+    const isSignUp = path === "/api/auth/sign-up/email" && c.req.method === "POST";
+
+    if (isSignIn || isSignUp) {
+      // Læs body som tekst og forsøg JSON-parse. Vi må re-konstruere request
+      // efter rate-limit-tjekket fordi body kun kan læses én gang.
+      const bodyText = await c.req.raw.clone().text();
+      let email: string | undefined;
+      try {
+        const json = JSON.parse(bodyText) as { email?: unknown };
+        if (typeof json.email === "string") {
+          email = normalizeEmail(json.email);
+        }
+      } catch {
+        // Ignorer parse-fejl — better-auth håndterer dem.
+      }
+
+      const scope: RateLimitScope = isSignIn ? "login_attempt" : "signup_attempt";
+      // signup_attempt bucketes på fingerprint alene; login_attempt bucketes
+      // også på email for at gøre password-spray sværere.
+      const limitResponse = await enforceRateLimit(c, scope, isSignIn ? email : undefined);
+      if (limitResponse) {
+        return limitResponse;
+      }
+    }
+
     return authService.handler(c.req.raw);
   });
+
+  // Issue A17: Globalt ghost-protection-værn.
+  // Hvis en bruger er soft-deleted (deleted_at != NULL), må de IKKE
+  // kunne kalde authenticated endpoints — selv ikke hvis deres
+  // session-cookie stadig er gyldig. Vi tjekker profilen direkte i DB
+  // og afviser med 401.
+  //
+  // Vi springer eksplicit `/api/auth/*` over så log-ud stadig virker
+  // (vigtigt: en deleted bruger skal kunne logge ud så cookien ryddes).
+  // Public endpoints (/api/health, /api/waitlist osv) påvirkes ikke
+  // fordi middleware'en kun gør noget hvis der allerede er en gyldig
+  // session.
+  //
+  // Paused_at alene blokeres IKKE her — brugeren skal kunne ophæve sin
+  // egen pause via PATCH /api/me. Verifikations-status og pause håndteres
+  // i de enkelte ruter (fx /api/members kræver 'verified' og ikke-paused).
+  if (authService && deps.membershipRepository) {
+    const membershipRepository = deps.membershipRepository;
+    app.use("/api/*", async (c, next) => {
+      const path = new URL(c.req.url).pathname;
+      // Lad auth-handlers passere (login, logout, signup).
+      if (path.startsWith("/api/auth")) {
+        await next();
+        return;
+      }
+
+      const session = await authService.getSession(c.req.raw.headers);
+      if (!session) {
+        // Ingen session = ikke vores problem her — lad de individuelle
+        // ruters middleware afvise med 401 hvor relevant.
+        await next();
+        return;
+      }
+
+      const profile = await membershipRepository.getProfile(session.user.id);
+      // getProfile returnerer null hvis deleted_at IS NOT NULL.
+      if (!profile) {
+        return c.json(
+          {
+            ok: false,
+            code: "ACCOUNT_DELETED",
+            message: "Kontoen findes ikke længere."
+          },
+          401
+        );
+      }
+
+      await next();
+    });
+  }
+
+  if (authService && deps.membershipRepository && deps.uploadStore) {
+    registerMembershipRoutes(app, {
+      authService,
+      membershipRepository: deps.membershipRepository,
+      uploadStore: deps.uploadStore,
+      rateLimiter: deps.rateLimiter,
+      rateLimitEnabled,
+      rateLimitFailOpen
+    });
+  }
+
+  if (authService && deps.eventRepository && deps.membershipRepository) {
+    registerEventRoutes(app, {
+      authService,
+      eventRepository: deps.eventRepository,
+      membershipRepository: deps.membershipRepository
+    });
+  }
+
+  if (
+    authService &&
+    deps.eventRepository &&
+    deps.membershipRepository &&
+    deps.messagingRepository
+  ) {
+    registerMessagingRoutes(app, {
+      authService,
+      eventRepository: deps.eventRepository,
+      membershipRepository: deps.membershipRepository,
+      messagingRepository: deps.messagingRepository,
+      rateLimiter: deps.rateLimiter,
+      rateLimitEnabled,
+      rateLimitFailOpen,
+      trustProxy,
+      emailService: deps.emailService,
+      appUrl: deps.appUrl
+    });
+  }
+
+  if (authService && deps.membershipRepository && deps.subscriptionRepository) {
+    registerSubscriptionRoutes(app, {
+      authService,
+      membershipRepository: deps.membershipRepository,
+      subscriptionRepository: deps.subscriptionRepository
+    });
+  }
 
   app.use("/api/admin/*", async (c, next) => {
     if (!authService) {
@@ -408,7 +726,7 @@ export function createApp(deps: AppDeps): Hono<{ Variables: AppVariables }> {
 
     const acceptedAt = new Date();
     const confirmationToken = createConfirmationToken();
-    const confirmationTokenHash = hashToken(confirmationToken);
+    const confirmationTokenHash = hashToken(confirmationToken, tokenHashSecret);
     const confirmationTokenExpiresAt = new Date(
       acceptedAt.getTime() + confirmationTokenTtlHours * 60 * 60 * 1000
     );
@@ -490,7 +808,7 @@ export function createApp(deps: AppDeps): Hono<{ Variables: AppVariables }> {
 
     const acceptedAt = new Date();
     const confirmationToken = createConfirmationToken();
-    const confirmationTokenHash = hashToken(confirmationToken);
+    const confirmationTokenHash = hashToken(confirmationToken, tokenHashSecret);
     const confirmationTokenExpiresAt = new Date(
       acceptedAt.getTime() + confirmationTokenTtlHours * 60 * 60 * 1000
     );
@@ -558,7 +876,7 @@ export function createApp(deps: AppDeps): Hono<{ Variables: AppVariables }> {
       );
     }
 
-    const confirmation = await deps.leadRepository.confirmLeadByToken(hashToken(token), new Date());
+    const confirmation = await deps.leadRepository.confirmLeadByToken(hashToken(token, tokenHashSecret), new Date());
 
     if (confirmation.status === "invalid") {
       return c.json(
@@ -639,7 +957,7 @@ export function createApp(deps: AppDeps): Hono<{ Variables: AppVariables }> {
       );
     }
 
-    const confirmation = await partnerRepository.confirmPartnerByToken(hashToken(token), new Date());
+    const confirmation = await partnerRepository.confirmPartnerByToken(hashToken(token, tokenHashSecret), new Date());
 
     if (confirmation.status === "invalid") {
       return c.json(

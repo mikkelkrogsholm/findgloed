@@ -39,12 +39,12 @@ Project-specific operating rules for AI coding agents working in this repository
 - Keep local setup reproducible with **Docker Compose**. Always start the environment using `docker compose up -d`.
 - **CRITICAL:** Run ALL services (frontend/app, backend/api, db, redis) via Docker containers. Starting the frontend natively on the host via `bun run dev` (e.g., on port `5173`) will cause CORS and connection errors unless explicitly added to `CORS_ORIGINS` in `.env`.
 - Use nonstandard local ports based on GLOD mapping:
-  - `4563` app (Frontend web interface - accessed via browser)
-  - `4564` api (Backend API)
-  - `4565` postgres
-  - `4566` redis
-  - `4567` maildev
-  - `4568` adminer
+  - `39563` app (Frontend web interface - accessed via browser)
+  - `39564` api (Backend API)
+  - `39565` postgres
+  - `39566` redis
+  - `39567` maildev
+  - `39568` adminer
 
 ## Test Credentials
 - Local Superadmin: `mikkelkrogsholm@gmail.com`
@@ -76,7 +76,7 @@ Project-specific operating rules for AI coding agents working in this repository
 
 ## Design playground policy
 - Design page entry: `/Users/mikkelfreltoftkrogsholm/Projekter/findgloed/frontend/design.html`
-- Local URL: `http://localhost:4563/design.html`
+- Local URL: `http://localhost:39563/design.html`
 - Route and feature flag config: `/Users/mikkelfreltoftkrogsholm/Projekter/findgloed/frontend/src/config/app-config.ts`
 - Feature flag: `VITE_ENABLE_DESIGN_PAGE`
 - Keep design page enabled locally, disabled in production by default.

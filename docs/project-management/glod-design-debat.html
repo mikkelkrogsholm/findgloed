@@ -1,0 +1,1169 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Glød — Design-paneldebat</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* ===== Base Reset & Typography ===== */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --terracotta: #B85B43;
+      --terracotta-light: rgba(184, 91, 67, 0.12);
+      --terracotta-mid: rgba(184, 91, 67, 0.2);
+      --creme: #F7EEE1;
+      --creme-light: #FDF8F3;
+      --sand: #EDDCC6;
+      --sand-light: #F3E8D6;
+      --moerkebrun: #3E312F;
+      --moerkebrun-sec: rgba(62, 49, 47, 0.86);
+      --moerkebrun-tert: rgba(62, 49, 47, 0.68);
+      --teal: #3C7380;
+      --teal-light: rgba(60, 115, 128, 0.12);
+      --teal-border: rgba(60, 115, 128, 0.22);
+      --white-glass: rgba(255, 255, 255, 0.58);
+      --radius: 1.45rem;
+      --radius-sm: 0.75rem;
+    }
+
+    html {
+      font-size: 15px;
+    }
+
+    body {
+      font-family: 'Manrope', 'Segoe UI', sans-serif;
+      color: var(--moerkebrun);
+      background: var(--creme);
+      line-height: 1.7;
+      padding: 2rem;
+    }
+
+    .page-wrapper {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    /* ===== Header ===== */
+    .doc-header {
+      text-align: center;
+      margin-bottom: 3rem;
+      padding: 2.5rem 2rem 2rem;
+      background: linear-gradient(155deg, rgba(255, 255, 255, 0.36), rgba(255, 255, 255, 0.08));
+      backdrop-filter: blur(28px);
+      border: 1px solid var(--teal-border);
+      border-radius: var(--radius);
+      box-shadow: 0 16px 42px rgba(62, 49, 47, 0.08);
+    }
+
+    .logo {
+      font-family: 'Playfair Display', serif;
+      font-size: 2.4rem;
+      font-weight: 700;
+      color: var(--terracotta);
+      letter-spacing: 0.06em;
+      margin-bottom: 0.3rem;
+    }
+
+    .doc-header h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.6rem;
+      font-weight: 600;
+      color: var(--moerkebrun);
+      margin-top: 0.6rem;
+      letter-spacing: 0.015em;
+    }
+
+    .header-line {
+      width: 80px;
+      height: 3px;
+      background: var(--terracotta);
+      border-radius: 2px;
+      margin: 1rem auto 0.8rem;
+    }
+
+    .doc-meta {
+      font-size: 0.9rem;
+      color: var(--moerkebrun-sec);
+    }
+
+    .doc-meta span {
+      display: block;
+      margin-bottom: 0.2rem;
+    }
+
+    /* ===== Headings ===== */
+    h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.35rem;
+      font-weight: 600;
+      color: var(--moerkebrun);
+      margin-top: 2.5rem;
+      margin-bottom: 0.8rem;
+      padding-bottom: 0.4rem;
+      border-bottom: 2px solid var(--terracotta-mid);
+      letter-spacing: 0.015em;
+    }
+
+    h3 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--terracotta);
+      margin-top: 1.8rem;
+      margin-bottom: 0.5rem;
+    }
+
+    h4 {
+      font-family: 'Manrope', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--moerkebrun);
+      margin-top: 1.4rem;
+      margin-bottom: 0.4rem;
+    }
+
+    /* ===== Paragraphs & Lists ===== */
+    p {
+      margin-bottom: 0.8rem;
+    }
+
+    ul, ol {
+      margin-bottom: 0.8rem;
+      padding-left: 1.5rem;
+    }
+
+    li {
+      margin-bottom: 0.35rem;
+    }
+
+    strong {
+      font-weight: 600;
+    }
+
+    em {
+      font-style: italic;
+    }
+
+    a {
+      color: var(--teal);
+      text-decoration: underline;
+      text-decoration-color: rgba(60, 115, 128, 0.45);
+      text-underline-offset: 2px;
+    }
+
+    hr {
+      border: none;
+      border-top: 1px solid var(--sand);
+      margin: 2rem 0;
+    }
+
+    /* ===== Tables ===== */
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      margin: 1rem 0 1.5rem;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      border: 1px solid var(--teal-border);
+      font-size: 0.9rem;
+    }
+
+    thead th {
+      background: var(--terracotta);
+      color: var(--creme-light);
+      font-family: 'Manrope', sans-serif;
+      font-weight: 600;
+      font-size: 0.85rem;
+      text-align: left;
+      padding: 0.7rem 0.9rem;
+      letter-spacing: 0.02em;
+    }
+
+    tbody td {
+      padding: 0.6rem 0.9rem;
+      border-top: 1px solid rgba(237, 220, 198, 0.6);
+      vertical-align: top;
+    }
+
+    tbody tr:nth-child(odd) {
+      background: var(--creme-light);
+    }
+
+    tbody tr:nth-child(even) {
+      background: var(--sand-light);
+    }
+
+    /* ===== Blockquotes ===== */
+    blockquote {
+      border-left: 3px solid var(--terracotta);
+      background: var(--terracotta-light);
+      padding: 0.8rem 1.2rem;
+      margin: 0.8rem 0;
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      font-style: italic;
+      color: var(--moerkebrun-sec);
+    }
+
+    blockquote p {
+      margin-bottom: 0.3rem;
+    }
+
+    blockquote p:last-child {
+      margin-bottom: 0;
+    }
+
+    /* ===== Section Cards ===== */
+    .section-card {
+      background: var(--white-glass);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--teal-border);
+      border-radius: var(--radius);
+      padding: 1.5rem 2rem;
+      margin: 1.5rem 0;
+      box-shadow: 0 8px 24px rgba(62, 49, 47, 0.06);
+    }
+
+    .section-card h2 {
+      margin-top: 0;
+    }
+
+    /* ===== Tips Box ===== */
+    .tips-box {
+      background: var(--teal-light);
+      border: 1px solid var(--teal-border);
+      border-radius: var(--radius-sm);
+      padding: 1rem 1.3rem;
+      margin: 1rem 0;
+    }
+
+    .tips-box p {
+      margin-bottom: 0.4rem;
+    }
+
+    .tips-box p:last-child {
+      margin-bottom: 0;
+    }
+
+    /* ===== Speaker label ===== */
+    .speaker {
+      font-weight: 700;
+      color: var(--terracotta);
+    }
+
+    /* ===== Persona dialogue block ===== */
+    .persona-block {
+      margin-bottom: 1.2rem;
+    }
+
+    /* ===== Footer ===== */
+    .doc-footer {
+      text-align: center;
+      margin-top: 3rem;
+      padding: 1.2rem;
+      font-size: 0.8rem;
+      color: var(--moerkebrun-tert);
+      border-top: 1px solid var(--sand);
+    }
+
+    /* ===== Print Styles ===== */
+    @media print {
+      @page {
+        size: A4;
+        margin: 18mm 16mm;
+      }
+
+      html {
+        font-size: 12px;
+      }
+
+      body {
+        background: white;
+        padding: 0;
+        color: #333;
+      }
+
+      .page-wrapper {
+        max-width: 100%;
+      }
+
+      .doc-header,
+      .section-card,
+      .tips-box {
+        background: none;
+        backdrop-filter: none;
+        box-shadow: none;
+        border-color: #ccc;
+      }
+
+      h2 {
+        border-bottom-color: var(--terracotta);
+      }
+
+      thead th {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        background: var(--terracotta) !important;
+        color: white !important;
+      }
+
+      tbody tr:nth-child(odd) {
+        background: #faf6f2 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      tbody tr:nth-child(even) {
+        background: #f0e8da !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      table {
+        page-break-inside: auto;
+      }
+
+      tr {
+        page-break-inside: avoid;
+      }
+
+      .section-card,
+      .tips-box {
+        page-break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-wrapper">
+
+    <!-- ===== HEADER ===== -->
+    <header class="doc-header">
+      <div class="logo">Glød</div>
+      <h1>Design-paneldebat</h1>
+      <div class="header-line"></div>
+      <div class="doc-meta">
+        <span><strong>Dato:</strong> 3. maj 2026</span>
+        <span><strong>Metode:</strong> AI-simuleret paneldebat med 8 personas. Hver persona kender kun sin egen beskrivelse og en bruger-venlig beskrivelse af Glød — ingen kode, ingen tekniske detaljer.</span>
+        <span><strong>Formål:</strong> Designgrundlag for Glød — hvad skal der være på platformen? Hvad skal det hedde? Hvor er uenighederne? Hvilke beslutninger skal træffes?</span>
+      </div>
+    </header>
+
+    <!-- ===== TIL LÆSEREN ===== -->
+    <div class="tips-box">
+      <p><strong>Til læseren:</strong> Det her er ikke en konsensus. Det er en debat hvor 8 stemmer trækker i forskellige retninger. De vigtigste indsigter ligger i uenighederne — hvor I som platform skal vælge side eller finde en løsning der respekterer begge.</p>
+    </div>
+
+    <hr>
+
+    <!-- ===== DELTAGERE ===== -->
+    <h2>Deltagere</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Persona</th>
+          <th>Profil</th>
+          <th>Position</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Anders &amp; Mette</strong></td>
+          <td>32–38 år, etableret par, små børn</td>
+          <td>Forsigtigt-nysgerrig — voksen mellemvej</td>
+        </tr>
+        <tr>
+          <td><strong>Maria</strong></td>
+          <td>30–40 år, reflekteret kvinde i parforhold</td>
+          <td>Driver — vil have begge dele samtidigt</td>
+        </tr>
+        <tr>
+          <td><strong>Sofie</strong></td>
+          <td>32 år, marketing, gift 8 år, barn på 2</td>
+          <td>Vanilla-nysgerrig — wellness-tendens</td>
+        </tr>
+        <tr>
+          <td><strong>Line &amp; Kasper</strong></td>
+          <td>25–33 år, tidligt parforhold, uden børn</td>
+          <td>Begynder-segment — vil have lav tærskel</td>
+        </tr>
+        <tr>
+          <td><strong>Thomas</strong></td>
+          <td>40–52 år, single/skilt</td>
+          <td>Lyst-driven — vil have erotik uden polering</td>
+        </tr>
+        <tr>
+          <td><strong>Frederik</strong></td>
+          <td>28–38 år, single</td>
+          <td>Sex-positiv — vil have mixed events og lige behandling</td>
+        </tr>
+        <tr>
+          <td><strong>Camilla &amp; Martin</strong></td>
+          <td>33–45 år, etableret par uden problem</td>
+          <td>Lyst-drevet par — vil behandles som voksne med appetit</td>
+        </tr>
+        <tr>
+          <td><strong>Henrik &amp; Louise</strong></td>
+          <td>35–48 år, mand-drevet par</td>
+          <td>Inverteret dynamik — Henrik inviterer, Louise styrer tempo</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <hr>
+
+    <!-- ===== SPØRGSMÅL 1 ===== -->
+    <h2>Spørgsmål 1: Forsiden — hvad ser man det første sekund?</h2>
+
+    <h3>Konsensus</h3>
+
+    <p>Ingen ren porno. Ingen yoga-retreat. Ingen stockfoto-grin.</p>
+
+    <p>Stemningsbillede: dæmpet lys, antydning af krop, ikke akt. <strong>En hånd på en ryg, et nakkeparti, et glas vin, halvprofiler i halvmørke</strong> — det går igen i 7 ud af 8 svar.</p>
+
+    <h3>Spektret af forslag</h3>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Persona</th>
+          <th>Vision</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Sofie</strong></td>
+          <td>"Et godt hotel eller velkurateret magasin. Stearinlys, linned, varme farver."</td>
+        </tr>
+        <tr>
+          <td><strong>Line &amp; Kasper</strong></td>
+          <td>"Et par der griner og holder i hånd. Folk som os."</td>
+        </tr>
+        <tr>
+          <td><strong>Anders &amp; Mette</strong></td>
+          <td>"Et par der holder om hinanden — påklædte, set bagfra. Sexologisk Akademi-logo over folden."</td>
+        </tr>
+        <tr>
+          <td><strong>Maria</strong></td>
+          <td>"Hænder der mødes, et nakkeparti, lys gennem en sprække. Antydning, ikke akt."</td>
+        </tr>
+        <tr>
+          <td><strong>Henrik &amp; Louise</strong></td>
+          <td>"Som at åbne døren til en hotelbar i en stor by — stemning, mørke, hvisken."</td>
+        </tr>
+        <tr>
+          <td><strong>Frederik</strong></td>
+          <td>"Hånd på ryg, blik over et glas vin. Voksen sensualitet."</td>
+        </tr>
+        <tr>
+          <td><strong>Camilla &amp; Martin</strong></td>
+          <td>"Mørke toner, varmt lys, et glimt af hud. Ikke et stockfoto-par der griner ved morgenmaden."</td>
+        </tr>
+        <tr>
+          <td><strong>Thomas</strong></td>
+          <td>"Sort baggrund. Helmut Newton, ikke Instagram-wellness. En nakke, en hånd der griber et lår, en mund tæt på en hals."</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Den centrale uenighed</h3>
+
+    <blockquote>
+      <p><strong>Sofie:</strong> "Jeg skal kunne åbne forsiden ved siden af min mand uden at blive rød i hovedet."</p>
+      <p><strong>Thomas:</strong> "Hvis det kan hænge på et hospitals-venteværelse er det forkert."</p>
+    </blockquote>
+
+    <p><strong>Beslutning du skal tage:</strong> Hvor erotisk må forsiden være? Sofies grænse vs. Thomas' grænse er 30 cm fra hinanden men ligger i to forskellige verdener.</p>
+
+    <h3>Tekstforslag fra panelet</h3>
+
+    <ul>
+      <li><em>"Et rum for jer, der vil tættere på hinanden."</em> (Mette)</li>
+      <li><em>"Et sted at udforske lyst, nærvær og nysgerrighed. Sammen eller alene."</em> (Maria)</li>
+      <li><em>"For dem der vil mere."</em> (Camilla &amp; Martin)</li>
+      <li><em>"Lyst, nærvær, mennesker. Events for dig der tør."</em> (Frederik)</li>
+      <li><em>"Lyst. Mørke. Mennesker."</em> (Thomas)</li>
+    </ul>
+
+    <hr>
+
+    <!-- ===== SPØRGSMÅL 2 ===== -->
+    <h2>Spørgsmål 2: Tone og sprog</h2>
+
+    <h3>Den store uenighed</h3>
+
+    <p>Det her er hvor panelet splittes mest. Tre grupperinger:</p>
+
+    <h4>Gruppe A — Wellness-mellemvej (Sofie, Line &amp; Kasper, Anders &amp; Mette)</h4>
+    <ul>
+      <li>Hverken ren wellness eller ren erotik</li>
+      <li>Voksent, sanseligt, lidt litterært</li>
+      <li><em>"Tonen som en god ven der har styr på det — ikke en coach, ikke en pornoredaktør."</em> (Sofie)</li>
+    </ul>
+
+    <h4>Gruppe B — Voksen sensualitet (Maria, Frederik)</h4>
+    <ul>
+      <li>Tryghed OG spænding samtidigt — ikke enten-eller</li>
+      <li>Voksen, direkte, sanselig</li>
+      <li><em>"Det er ikke et enten-eller, og det er præcis dér de fleste danske platforme fejler."</em> (Frederik)</li>
+    </ul>
+
+    <h4>Gruppe C — Erotik først (Thomas, Camilla &amp; Martin)</h4>
+    <ul>
+      <li>Erotik er produktet, tryghed er en hygiejnefaktor</li>
+      <li>Skriv som et erotisk magasin</li>
+      <li><em>"Tryghed er bare en forudsætning, ikke en salgsvare."</em> (Thomas)</li>
+    </ul>
+
+    <h3>Konsensus om ord-bandlysning</h3>
+
+    <p>Disse ord vil <strong>ALLE 8 personas</strong> undgå:</p>
+
+    <ul>
+      <li>"Krydre", "spice things up", "krydre dit forhold"</li>
+      <li>"Heling", "rejse", "din indre rejse"</li>
+      <li>"Sårbarhed" (som hovedord)</li>
+      <li>"Swinger", "swingerklub"</li>
+      <li>"Hardcore", "kink" (som primær framing)</li>
+      <li>"Frække par søger"</li>
+    </ul>
+
+    <h3>Konsensus om accepterede ord</h3>
+
+    <ul>
+      <li>Lyst, begær, nærvær, intimitet, sanselighed</li>
+      <li>Voksen, mennesker, leg, mod</li>
+      <li>Nysgerrighed, udforskning (som koncept, ikke som imperativ)</li>
+    </ul>
+
+    <h3>Den uafgjorte sag</h3>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Ord</th>
+          <th>Grupperinger der kan lide</th>
+          <th>Grupperinger der hader</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Tantra / tantrisk</strong></td>
+          <td>(Sofie, Line &amp; Kasper henter det)</td>
+          <td>Thomas, Camilla &amp; Martin: dealbreaker</td>
+        </tr>
+        <tr>
+          <td><strong>Wellness</strong></td>
+          <td>Sofie OK</td>
+          <td>Camilla &amp; Martin, Thomas: dealbreaker</td>
+        </tr>
+        <tr>
+          <td><strong>Trygt rum</strong></td>
+          <td>Sofie, Anders &amp; Mette, Line &amp; Kasper</td>
+          <td>Frederik: "sig det én gang, vis det resten af tiden"</td>
+        </tr>
+        <tr>
+          <td><strong>Selvudvikling</strong></td>
+          <td>Maria</td>
+          <td>Frederik: "jeg er ikke i stykker"</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <hr>
+
+    <!-- ===== SPØRGSMÅL 3 ===== -->
+    <h2>Spørgsmål 3: Profil og verificering</h2>
+
+    <h3>Konsensus (8 ud af 8)</h3>
+
+    <ul>
+      <li><strong>MitID/ID-verificering bag kulisserne — obligatorisk.</strong> Det er den eneste reelle filtreringsmekanisme.</li>
+      <li><strong>Verifikation aldrig synlig som detaljer udadtil</strong> — kun et "verificeret"-badge.</li>
+      <li><strong>Ingen Google-indeksering af profiler.</strong> Privat by-default.</li>
+      <li><strong>Par skal kunne have fælles profil.</strong> "Vi er ikke to singler." (Anders)</li>
+    </ul>
+
+    <h3>Hvor uenighederne ligger</h3>
+
+    <h4>Hvor synlig må man være?</h4>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Persona</th>
+          <th>Position</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Sofie, Line &amp; Kasper, Henrik &amp; Louise</strong></td>
+          <td>Aldrig ansigtsbilleder offentligt. Pseudonym + delvist billede. Lag-baseret synlighed.</td>
+        </tr>
+        <tr>
+          <td><strong>Anders &amp; Mette, Maria</strong></td>
+          <td>Ansigt fra skuldre og op, kun for verificerede der har skrevet sammen.</td>
+        </tr>
+        <tr>
+          <td><strong>Camilla &amp; Martin, Thomas, Frederik</strong></td>
+          <td>Ansigt + krop tilladt, valgfri eksponering. Brugeren styrer.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h4>Nøgenhed på profil?</h4>
+
+    <ul>
+      <li><strong>Aldrig</strong> (Sofie, Line &amp; Kasper, Anders &amp; Mette, Henrik &amp; Louise — Louise: dealbreaker)</li>
+      <li><strong>I private albums delt aktivt</strong> (Camilla &amp; Martin, Maria)</li>
+      <li><strong>Tilladt undtagen kønsdele</strong> (Thomas)</li>
+    </ul>
+
+    <h3>Den løsning panelet næsten samler sig om</h3>
+
+    <p><strong>Tre lag:</strong></p>
+
+    <ol>
+      <li><strong>Offentligt</strong> (alias, alder, region, kort tekst, ingen ansigt eller diskret stemningsbillede)</li>
+      <li><strong>Match-niveau</strong> (mere tekst, soft billeder, ansigt valgfrit)</li>
+      <li><strong>Privat-delt</strong> (alt — kontrolleret af brugeren)</li>
+    </ol>
+
+    <hr>
+
+    <!-- ===== SPØRGSMÅL 4 ===== -->
+    <h2>Spørgsmål 4: Events</h2>
+
+    <h3>Hvad ALLE er enige om</h3>
+
+    <ul>
+      <li><strong>Beskrivelser skal være krystalklare.</strong> Ingen "magisk aften". Konkret minut-for-minut, dresscode, antal pladser, hvad er IKKE en del af aftenen.</li>
+      <li><strong>Tilknytning til Dansk Sexologisk Akademi som signal.</strong></li>
+      <li><strong>Adresse først efter tilmelding.</strong></li>
+      <li><strong>2-4 timer for normale events, weekend for retreats.</strong></li>
+    </ul>
+
+    <h3>De fire store uenigheder</h3>
+
+    <h4>1. Mixed singles + par events?</h4>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Pro</th>
+          <th>Kontra</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Frederik:</strong> "Det mangler i Danmark. Det er hele grunden til at jeg ville bruge Glød."</td>
+          <td><strong>Mette:</strong> "Singles og par mixet = utryghed for mig."</td>
+        </tr>
+        <tr>
+          <td><strong>Maria:</strong> "Singles til singles, par til par, kun på tværs hvis begge har åbnet for det."</td>
+          <td><strong>Anders &amp; Mette:</strong> "Singles og par adskilt på de intime events."</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h4>2. Begynder-spor — eller ej?</h4>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Pro</th>
+          <th>Kontra</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Line &amp; Kasper (must-have!):</strong> "Et begynder-spor — tre-fire kuraterede første-events, en intro-guide, en FAQ."</td>
+          <td><strong>Camilla &amp; Martin:</strong> "Ingen begynder-framing. Behandl os som voksne med erfaring."</td>
+        </tr>
+        <tr>
+          <td><strong>Sofie, Anders &amp; Mette:</strong> Bløde events først.</td>
+          <td><strong>Thomas:</strong> "Eksklusivt fra dag ét."</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h4>3. Hvor eksplicitte må events blive?</h4>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Spektrum</th>
+          <th>Personas</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Aldrig play-parties</strong></td>
+          <td>Anders &amp; Mette ("ingen play parties, ingen swinger")</td>
+        </tr>
+        <tr>
+          <td><strong>Eksplicitte events findes — men separate</strong></td>
+          <td>Sofie, Line &amp; Kasper, Maria, Camilla &amp; Martin</td>
+        </tr>
+        <tr>
+          <td><strong>Eksplicitte events som kerneproduktet</strong></td>
+          <td>Thomas, Frederik</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h4>4. Antal events-typer</h4>
+
+    <p>Forslag fra Maria: en <strong>eksplicitets-skala fra 1-5</strong> der gør det muligt at filtrere uden at skulle læse mellem linjerne.</p>
+
+    <h3>Den fælles løsning der peger frem</h3>
+
+    <p><strong>3-niveau kategorisering</strong> (samlet fra Camilla &amp; Martin og Maria):</p>
+
+    <ol>
+      <li><strong>Sanseligt-socialt</strong> — påklædt, samtale, flirtende</li>
+      <li><strong>Sensuelt</strong> — afklædt eller delvist, intimt med partner men ikke mellem fremmede</li>
+      <li><strong>Eksplicit</strong> — alt går inden for samtykke</li>
+    </ol>
+
+    <p>Tydelig mærkning i listen. Brugeren filtrerer selv.</p>
+
+    <hr>
+
+    <!-- ===== SPØRGSMÅL 5 ===== -->
+    <h2>Spørgsmål 5: Sociale funktioner</h2>
+
+    <h3>Det panelet er ENIGT om</h3>
+
+    <ul>
+      <li><strong>Aldrig swipe-mekanik, aldrig "match", aldrig likes.</strong> Det dræber projektet (sagt af 7 ud af 8).</li>
+      <li><strong>Aldrig åben besked-indbakke.</strong> Ingen cold DM'er.</li>
+      <li><strong>Aldrig "online nu"-indikator.</strong></li>
+      <li><strong>Aldrig gamification — ingen badges, streaks, niveauer.</strong></li>
+    </ul>
+
+    <h3>Den centrale uenighed: hvem må skrive til hvem?</h3>
+
+    <blockquote>
+      <p><strong>Mette/Sofie:</strong> <em>"Beskeder kun mellem verificerede par der har været på samme event."</em></p>
+      <p><strong>Maria/Camilla &amp; Martin:</strong> <em>"Gensidigt match-signal før chat åbner."</em></p>
+      <p><strong>Frederik (vigtig nuance):</strong> <em>"Singles → singles og par. Par → par. Singles → par kun hvis paret har åbnet for det. Det stopper spam og gør kvinder trygge uden at gatekeepe singles ud helt."</em></p>
+      <p><strong>Thomas:</strong> <em>"Beskeder ja, men styret. Du kan skrive til folk på samme event eller efter gensidig like. Ingen fri Tinder-svømning — det bliver dickpic-helvede."</em></p>
+    </blockquote>
+
+    <h3>Hvad der peger på en løsning</h3>
+
+    <p><strong>Frederiks model</strong> (gradueret tilladelse):</p>
+    <ul>
+      <li>Singles ↔ singles: åben efter gensidig interesse</li>
+      <li>Par ↔ par: åben efter gensidig interesse</li>
+      <li>Singles → par: kun hvis paret har åbnet for det</li>
+      <li>Singles → par via gensidig event-tilmelding: åben</li>
+    </ul>
+
+    <p><strong>Plus fora/grupper</strong> (alle er enige):</p>
+    <ul>
+      <li>Modererede temabaserede grupper (par-only, singles 40+, første gang, langt forhold)</li>
+      <li>Lukket forum med Sexologisk Akademi-moderator</li>
+      <li>Per-event tråd før og efter (Anders &amp; Mette: <em>"skaber fællesskab uden at være kødmarked"</em>)</li>
+    </ul>
+
+    <hr>
+
+    <!-- ===== SPØRGSMÅL 6 ===== -->
+    <h2>Spørgsmål 6: Priser</h2>
+
+    <h3>Konsensus</h3>
+
+    <ul>
+      <li><strong>Medlemskab er en kvalitets-filter.</strong> Gratis = useriøst (alle 8).</li>
+      <li><strong>Par-pris &lt; 2x single-pris.</strong></li>
+      <li><strong>Ingen freemium med "betal for at skrive".</strong> "Det føles billigt og desperat" (Anders).</li>
+      <li><strong>Ingen skjulte gebyrer.</strong></li>
+      <li><strong>Events oveni medlemskab — accepteret af alle.</strong></li>
+    </ul>
+
+    <h3>Det reelle prispunkt — fra panelets forslag</h3>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Persona</th>
+          <th>Single</th>
+          <th>Par</th>
+          <th>Intro</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Line &amp; Kasper</strong></td>
+          <td>49–79 kr/md</td>
+          <td>79–129 kr/md</td>
+          <td>Gratis prøve</td>
+        </tr>
+        <tr>
+          <td><strong>Frederik</strong></td>
+          <td>99 kr/md</td>
+          <td>149 kr/md</td>
+          <td>14 dages gratis</td>
+        </tr>
+        <tr>
+          <td><strong>Maria</strong></td>
+          <td>99–149 kr/md</td>
+          <td>149–199 kr/md</td>
+          <td>Første md 49 kr</td>
+        </tr>
+        <tr>
+          <td><strong>Sofie</strong></td>
+          <td>149–199 kr/md</td>
+          <td>249–299 kr/md</td>
+          <td>Første md 49 kr</td>
+        </tr>
+        <tr>
+          <td><strong>Anders &amp; Mette</strong></td>
+          <td>149–199 kr/md</td>
+          <td>199–299 kr/md</td>
+          <td>Gratis prøvemåned u/profiladgang</td>
+        </tr>
+        <tr>
+          <td><strong>Thomas</strong></td>
+          <td>199 kr/md</td>
+          <td>299 kr/md</td>
+          <td>99 kr m/ét event</td>
+        </tr>
+        <tr>
+          <td><strong>Camilla &amp; Martin</strong></td>
+          <td>149 kr/md</td>
+          <td>199–299 kr/md</td>
+          <td>Halvpris md 1</td>
+        </tr>
+        <tr>
+          <td><strong>Henrik &amp; Louise</strong></td>
+          <td>149 kr/md</td>
+          <td>199 kr/md</td>
+          <td>49 kr md 1 ELLER ét gratis foredrag</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Median</h3>
+
+    <ul>
+      <li><strong>Single: 149 kr/md</strong></li>
+      <li><strong>Par: 199–249 kr/md</strong></li>
+      <li><strong>Events: 400–1500 kr (eksplicitte 1000–2500 kr)</strong></li>
+      <li><strong>Intro: 49 kr første måned ELLER 14 dages gratis kig</strong></li>
+    </ul>
+
+    <h3>Vigtigt fra Frederik</h3>
+
+    <blockquote>
+      <p><em>"Singles må ALDRIG betale væsentligt mere end par per person. Den straf kender jeg fra andre platforme, og det er ydmygende."</em></p>
+    </blockquote>
+
+    <hr>
+
+    <!-- ===== SPØRGSMÅL 7 ===== -->
+    <h2>Spørgsmål 7: Tillid og sikkerhed</h2>
+
+    <h3>Total konsensus (alle 8)</h3>
+
+    <ul>
+      <li>Reel ID-verificering på alle, krypteret, ikke synlig</li>
+      <li>Tilknytning til Dansk Sexologisk Akademi synligt fra forsiden</li>
+      <li>Navngiven ansvarlig person — ikke "support@"</li>
+      <li>Ét-klik sletning af alle data (og det skal faktisk slette)</li>
+      <li>GDPR i klart sprog, ikke jura</li>
+      <li>Diskret betaling — fakturanavn må ALDRIG afsløre indholdet</li>
+      <li>Synlige værter ved alle events</li>
+      <li>Klar samtykke-politik som <em>holdning</em>, ikke disclaimer</li>
+    </ul>
+
+    <h3>Specifikke dealbreakers</h3>
+
+    <ul>
+      <li><strong>Sofie:</strong> Tracking-pixels fra Meta/Google på følsomme sider</li>
+      <li><strong>Anders:</strong> "GLØD INTIMITET" som fakturanavn</li>
+      <li><strong>Maria:</strong> Useriøs moderation der lader fakes få lov</li>
+      <li><strong>Line &amp; Kasper:</strong> FOMO-popups, countdown-timere, aggressive upsells</li>
+      <li><strong>Thomas:</strong> Catfish — folk der dukker op uden at matche profilen</li>
+      <li><strong>Frederik:</strong> Hosts der er fraværende ved events</li>
+      <li><strong>Camilla &amp; Martin:</strong> Brugerbilleder i markedsføring, også "anonymiserede"</li>
+      <li><strong>Henrik &amp; Louise:</strong> Anonym ledelse, skjult ejerskab</li>
+    </ul>
+
+    <hr>
+
+    <!-- ===== SPØRGSMÅL 8 OG 9 ===== -->
+    <h2>Spørgsmål 8 og 9: Must-haves og dealbreakers</h2>
+
+    <h3>Hver personas must-have</h3>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Persona</th>
+          <th>Den ENE ting</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Anders</strong></td>
+          <td>Par-format som førsteklasses (ikke bilag til Mettes konto)</td>
+        </tr>
+        <tr>
+          <td><strong>Mette</strong></td>
+          <td>Reel sexolog-tilstedeværelse (ikke bare logo)</td>
+        </tr>
+        <tr>
+          <td><strong>Maria</strong></td>
+          <td>Reel ID-verificering — gennemført, ikke proforma</td>
+        </tr>
+        <tr>
+          <td><strong>Sofie</strong></td>
+          <td>Diskretion-by-design — anonymt udadtil, verificeret indadtil</td>
+        </tr>
+        <tr>
+          <td><strong>Line &amp; Kasper</strong></td>
+          <td>Begynder-spor — kuraterede første-events + intro-guide</td>
+        </tr>
+        <tr>
+          <td><strong>Thomas</strong></td>
+          <td>TONEN — voksen lyst-tale, ikke selvudvikling</td>
+        </tr>
+        <tr>
+          <td><strong>Frederik</strong></td>
+          <td>Mixed events hvor singles og par mødes på lige fod</td>
+        </tr>
+        <tr>
+          <td><strong>Camilla &amp; Martin</strong></td>
+          <td>Identitet der tør være VOKSEN — ikke wellness, ikke terapi, ikke begynder</td>
+        </tr>
+        <tr>
+          <td><strong>Henrik</strong></td>
+          <td>Lav-tærskel entry — foredrag/aften hvor man kan komme + gå hjem uden at have lovet noget</td>
+        </tr>
+        <tr>
+          <td><strong>Louise</strong></td>
+          <td>100% kontrol over hvem der ser hvad og hvornår</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Hver personas dealbreaker</h3>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Persona</th>
+          <th>Lukker for evigt hvis...</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Mette</strong></td>
+          <td>Ét nøgenbillede, én eksplicit beskrivelse, eller escort-tone</td>
+        </tr>
+        <tr>
+          <td><strong>Anders</strong></td>
+          <td>Min identitet kan google-frem af kollega/familie</td>
+        </tr>
+        <tr>
+          <td><strong>Maria</strong></td>
+          <td>Sproget bliver "frække par søger spændende oplevelser med krydderi"</td>
+        </tr>
+        <tr>
+          <td><strong>Sofie</strong></td>
+          <td>Det føles billigt eller pornografisk — ét lingerie-stockfoto, og jeg er væk</td>
+        </tr>
+        <tr>
+          <td><strong>Line</strong></td>
+          <td>Eksplicitte billeder på forsiden eller i events-listen</td>
+        </tr>
+        <tr>
+          <td><strong>Kasper</strong></td>
+          <td>FOMO-tricks, fake profiler, manipulation</td>
+        </tr>
+        <tr>
+          <td><strong>Thomas</strong></td>
+          <td>Wellness-sprog. "Tantrisk" eller "rejse mod dybere nærvær"</td>
+        </tr>
+        <tr>
+          <td><strong>Frederik</strong></td>
+          <td>Terapeutisk tone — "kom og find dig selv i et trygt rum"</td>
+        </tr>
+        <tr>
+          <td><strong>Camilla</strong></td>
+          <td>Wellness-æstetik — beige toner, runde sans-serif, blomster, lukkede øjne i sollys</td>
+        </tr>
+        <tr>
+          <td><strong>Martin</strong></td>
+          <td>Problem-framing — "udfordringer i parforholdet", "find hinanden igen"</td>
+        </tr>
+        <tr>
+          <td><strong>Henrik</strong></td>
+          <td>Føles terapeutisk og utydeligt — kan ikke afgøre om det er sex eller "intim kommunikation"</td>
+        </tr>
+        <tr>
+          <td><strong>Louise</strong></td>
+          <td>Ét eksplicit billede vist før hun har givet samtykke til at se det</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <hr>
+
+    <!-- ===== DESIGNBESLUTNINGER ===== -->
+    <div class="section-card">
+      <h2>De store designbeslutninger I skal træffe</h2>
+
+      <p>Det her er debattens kerne. På hvert af disse spørgsmål er panelet splittet — I kan ikke nøjes med at "balancere", I skal vælge.</p>
+
+      <h3>1. Erotik vs. wellness — hvor på spektret?</h3>
+
+      <p><strong>Spørgsmål:</strong> Forsiden, sproget, billederne — hvor langt skal de bevæge sig væk fra wellness mod erotik?</p>
+
+      <p><strong>Risiko ved for blødt:</strong> Mister Thomas, Camilla &amp; Martin, Frederik. Carina og Bjørn har allerede sagt målgruppen er tættere på Erotic World end wellness.</p>
+
+      <p><strong>Risiko ved for hårdt:</strong> Mister Sofie, Line &amp; Kasper, Mette, Louise. Det er kvinderne i panelet, og uden dem mister man parrene.</p>
+
+      <p><strong>Mulig løsning:</strong> Forsiden i "voksen-sensualitet" zone (Frederik/Maria). Antydende, ikke eksplicit. Men inden for tre scrolls skal det være klart at dette ER en seksuel platform.</p>
+
+      <h3>2. Mixed events — eller separation?</h3>
+
+      <p><strong>Spørgsmål:</strong> Skal singles og par mødes på samme events?</p>
+
+      <p><strong>Risiko ved separation:</strong> Mister Frederik (og alle andre singles). De føler sig diskvalificerede.</p>
+
+      <p><strong>Risiko ved mixed:</strong> Mister Mette, Sofie, Louise — det skaber utryghed.</p>
+
+      <p><strong>Mulig løsning:</strong> Tydelige kategorier. Single-only, par-only, og opt-in mixed (par der har valgt at være åbne). Aldrig overrasket.</p>
+
+      <h3>3. Begynder-spor — eller voksen-niveau?</h3>
+
+      <p><strong>Spørgsmål:</strong> Skal nybegyndere have deres eget spor?</p>
+
+      <p><strong>Risiko ved begynder-framing:</strong> Mister Camilla &amp; Martin, Thomas — de føler sig nedladt.</p>
+
+      <p><strong>Risiko ved INGEN begynder-spor:</strong> Mister Line &amp; Kasper — de tør ikke gå ind.</p>
+
+      <p><strong>Mulig løsning:</strong> "Først gang" som filter (ikke som identitet). Et separat spor for første-events der er tydeligt mærket men ikke dominerer forsiden.</p>
+
+      <h3>4. Profilbilleder — nøgenhed tilladt?</h3>
+
+      <p><strong>Spørgsmål:</strong> Må man uploade nøgenbilleder til sin profil?</p>
+
+      <p><strong>Risiko ved at tillade:</strong> Mister Sofie, Line &amp; Kasper, Anders &amp; Mette, Henrik &amp; Louise — det føles som hookup-app.</p>
+
+      <p><strong>Risiko ved totalforbud:</strong> Mister Thomas, Camilla &amp; Martin — det signalerer prudery.</p>
+
+      <p><strong>Mulig løsning:</strong> Lag-baseret. Aldrig nøgenhed på offentlig profil. Tilladt i privat-delte albums hvor brugeren aktivt giver samtykke.</p>
+
+      <h3>5. Henrik &amp; Louises afgørende indsigt</h3>
+
+      <blockquote>
+        <p><em>"Det her produkt fungerer KUN hvis det forstår at i mange par er manden den der finder, og kvinden den der bestemmer. Tal til manden der inviterer respektfuldt og kvinden der bestemmer tempoet."</em></p>
+      </blockquote>
+
+      <p>Det her er ikke en designbeslutning — det er en <strong>positioneringsbeslutning</strong>. Hvis Glød lykkes med at adressere både den inviterende mand (Henrik, Anders, Thomas) og den bestemmende kvinde (Louise, Mette, Sofie) <strong>samtidigt</strong>, har platformen ramt et hul i markedet.</p>
+    </div>
+
+    <!-- ===== KONSENSUS-FEATURES ===== -->
+    <div class="section-card">
+      <h2>Konsensus-features (byg disse)</h2>
+
+      <p>Det her er det panelet er enige om. Byg det først.</p>
+
+      <h3>Identitet &amp; sikkerhed</h3>
+      <ul>
+        <li>Reel ID-verificering bag kulisserne (MitID eller ID + selfie)</li>
+        <li>Verificeret-badge synligt — uden persondata</li>
+        <li>Ingen Google-indeksering af profiler</li>
+        <li>Diskret betalingstekst på kontoudtog</li>
+        <li>Ét-klik sletning af alle data</li>
+        <li>Ingen Meta/Google tracking på følsomme sider</li>
+        <li>Navngiven ansvarlig person — ikke "support@"</li>
+        <li>Tilknytning til Dansk Sexologisk Akademi synligt og brugbart</li>
+      </ul>
+
+      <h3>Profil</h3>
+      <ul>
+        <li>Lag-baseret synlighed (offentlig → match → privat-delt)</li>
+        <li>Pseudonym tilladt udadtil</li>
+        <li>Par kan have fælles profil</li>
+        <li>Pause-funktion uden at miste alt</li>
+        <li>Aldrig ansigtsbilleder offentligt by default</li>
+      </ul>
+
+      <h3>Events</h3>
+      <ul>
+        <li>Tilknytning til facilitator/sexolog vist på hvert event</li>
+        <li>Krystalklar beskrivelse: hvad sker, hvad sker IKKE, dresscode, antal, lokation efter tilmelding</li>
+        <li>Eksplicitets-mærkning (skala eller niveauer 1-5)</li>
+        <li>Adresse først efter tilmelding</li>
+        <li>Synlige værter på alle events</li>
+        <li>Code of conduct læsbar FØR tilmelding</li>
+      </ul>
+
+      <h3>Sociale funktioner</h3>
+      <ul>
+        <li>INGEN swipe, match, likes, online-status, gamification</li>
+        <li>Beskeder kræver gensidigt interesse-signal eller fælles event</li>
+        <li>Modererede temabaserede grupper</li>
+        <li>Per-event tråd før og efter</li>
+        <li>Ét-klik blokér og rapportér</li>
+      </ul>
+
+      <h3>Priser</h3>
+      <ul>
+        <li>Medlemskab obligatorisk: ~149 kr single, ~199-249 kr par</li>
+        <li>Events oveni</li>
+        <li>Intro: 49 kr første måned ELLER 14 dages "kig-ind"</li>
+        <li>Ingen skjulte gebyrer, ingen freemium-tricks</li>
+      </ul>
+    </div>
+
+    <!-- ===== TÆT-PÅ-KONSENSUS ===== -->
+    <div class="section-card">
+      <h2>Tæt-på-konsensus features (anbefalet)</h2>
+
+      <ul>
+        <li>Frederiks beskedmodel: gradueret tilladelse (singles↔singles, par↔par åbent; singles→par kun ved par-opt-in eller fælles event)</li>
+        <li>3-niveau event-kategorisering: sanseligt-socialt → sensuelt → eksplicit</li>
+        <li>Sexolog-modereret forum til generelle spørgsmål</li>
+        <li>"Hvem eventet IKKE er for"-linje i hver event-beskrivelse</li>
+        <li>Eksplicit "exit-strategi" beskrevet: kan man rejse sig og gå?</li>
+      </ul>
+    </div>
+
+    <!-- ===== NOTE TIL CARINA OG BJØRN ===== -->
+    <div class="tips-box">
+      <p><strong>Note til Carina og Bjørn:</strong> Det her dokument er vores bedste bud på hvad personaerne ville sige hvis de mødtes til et designmøde. Det er ikke brugerresearch, men det er kvalificerede gæt baseret på de persona-beskrivelser vi har bygget op.</p>
+      <p>I jeres feedback fra april påpegede I at vores oprindelige personas var for polerede. Det er prøvet rettet ved at tilføje:</p>
+      <ul>
+        <li><strong>Thomas</strong> — den lystdrevne mand</li>
+        <li><strong>Frederik</strong> — den sex-positive single</li>
+        <li><strong>Camilla &amp; Martin</strong> — det lyst-drevne par uden problem-narrativ</li>
+        <li><strong>Henrik &amp; Louise</strong> — den mand-drevne dynamik</li>
+      </ul>
+      <p>I kan se at disse fire trækker debatten markant i den retning I efterspurgte: mere kropslig, mere lyst-drevet, tættere på Erotic World end wellness.</p>
+      <p><strong>Jeres opgave nu:</strong> Læs det igennem og marker hvor I er enige, hvor I er uenige, og hvad der mangler. De fem store designbeslutninger sidst i dokumentet er hvor jeres input er vigtigst — de kan ikke løses uden domæneviden.</p>
+    </div>
+
+    <!-- ===== FOOTER ===== -->
+    <footer class="doc-footer">
+      Glød — Design-paneldebat &middot; 3. maj 2026<br>
+      AI-simuleret paneldebat med 8 personas &middot; Til intern brug
+    </footer>
+
+  </div>
+</body>
+</html>

@@ -1,12 +1,18 @@
 import { serve } from "bun";
 import { createClient } from "redis";
+import { join } from "node:path";
 import { createApp } from "./app";
 import { createAuthService, parseAdminEmails } from "./auth";
 import { normalizeEmail } from "./validators";
 import { readConfig } from "./config";
 import { createPool, PostgresLeadRepository } from "./db";
 import { ResendEmailService } from "./email";
+import { PostgresEventRepository } from "./events";
+import { PostgresMembershipRepository } from "./membership";
+import { PostgresMessagingRepository } from "./messaging";
 import { RedisRateLimiter } from "./rate-limit";
+import { PostgresSubscriptionEventLog, PostgresSubscriptionRepository } from "./subscriptions";
+import { createLocalUploadStore } from "./uploads";
 import type { RateLimiter } from "./types";
 
 async function bootstrap(): Promise<void> {
@@ -32,7 +38,17 @@ async function bootstrap(): Promise<void> {
         waitlistMax: config.rateLimitWaitlistMax,
         waitlistWindowSeconds: config.rateLimitWaitlistWindowSeconds,
         confirmMax: config.rateLimitConfirmMax,
-        confirmWindowSeconds: config.rateLimitConfirmWindowSeconds
+        confirmWindowSeconds: config.rateLimitConfirmWindowSeconds,
+        loginMax: config.rateLimitLoginMax,
+        loginWindowSeconds: config.rateLimitLoginWindowSeconds,
+        signupMax: config.rateLimitSignupMax,
+        signupWindowSeconds: config.rateLimitSignupWindowSeconds,
+        messageMax: config.rateLimitMessageMax,
+        messageWindowSeconds: config.rateLimitMessageWindowSeconds,
+        interestMax: config.rateLimitInterestMax,
+        interestWindowSeconds: config.rateLimitInterestWindowSeconds,
+        uploadMax: config.rateLimitUploadMax,
+        uploadWindowSeconds: config.rateLimitUploadWindowSeconds
       });
     } catch {
       if (config.rateLimitFailOpen) {
@@ -57,12 +73,27 @@ async function bootstrap(): Promise<void> {
     baseURL: config.apiUrl,
     trustedOrigins: config.corsOrigins,
     secret: config.betterAuthSecret,
-    adminEmails
+    adminEmails,
+    isProduction: config.isProduction
   });
 
   if (config.superAdminEmail && config.superAdminPassword) {
     await authService.ensureSuperAdmin(config.superAdminEmail, config.superAdminPassword);
   }
+
+  const eventRepository = new PostgresEventRepository(pool);
+  const messagingRepository = new PostgresMessagingRepository(pool);
+  const subscriptionRepository = new PostgresSubscriptionRepository(pool);
+  const uploadsRoot = process.env.UPLOADS_ROOT ?? join(process.cwd(), "uploads");
+  const uploadStore = createLocalUploadStore(uploadsRoot);
+  // membership-repoet får upload-store så hardDelete kan slette fysiske
+  // filer ved konto-anonymisering (issue A10).
+  const membershipRepository = new PostgresMembershipRepository(pool, uploadStore);
+  // Issue A2: Wire match-checkeren ind så getPublicProfile kan returnere
+  // relation="match" og photo-endpoint kan releasere match-visibility-billeder
+  // ved gensidig interesse. messagingRepository implementerer MatchChecker
+  // via hasMutualInterest. Cirkulær DI undgået ved sen-binding.
+  membershipRepository.setMatchChecker(messagingRepository);
 
   const app = createApp({
     leadRepository: repository,
@@ -70,7 +101,9 @@ async function bootstrap(): Promise<void> {
     emailService: new ResendEmailService(
       config.resendApiKey,
       config.resendFromEmail,
-      config.supportEmail
+      config.supportEmail,
+      config.dataControllerName,
+      config.dataControllerEmail
     ),
     rateLimiter,
     corsOrigins: config.corsOrigins,
@@ -84,7 +117,15 @@ async function bootstrap(): Promise<void> {
     trustProxy: config.trustProxy,
     enableHsts: config.enableHsts,
     hstsMaxAgeSeconds: config.hstsMaxAgeSeconds,
-    authService
+    authService,
+    membershipRepository,
+    uploadStore,
+    eventRepository,
+    messagingRepository,
+    subscriptionRepository,
+    tokenHashSecret: config.betterAuthSecret,
+    stripeWebhookSecret: config.stripeWebhookSecret,
+    subscriptionEventLog: new PostgresSubscriptionEventLog(pool)
   });
 
   const server = serve({

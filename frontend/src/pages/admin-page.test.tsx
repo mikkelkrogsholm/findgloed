@@ -79,7 +79,7 @@ describe("AdminPage", () => {
     expect(screen.getByText("one@example.com")).toBeInTheDocument();
     expect(screen.queryByText("two@example.com")).not.toBeInTheDocument();
 
-    expect(fetchMock).toHaveBeenCalledWith("http://localhost:4564/api/admin/leads", {
+    expect(fetchMock).toHaveBeenCalledWith("http://localhost:39564/api/admin/leads", {
       credentials: "include"
     });
   });
