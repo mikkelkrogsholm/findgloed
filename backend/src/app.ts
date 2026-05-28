@@ -787,6 +787,117 @@ export function createApp(deps: AppDeps): Hono<{ Variables: AppVariables }> {
     return c.json({ ok: true });
   });
 
+  // ---------- Admin: brugere (promote/demote admin-role) ----------
+
+  app.get("/api/admin/users", async (c) => {
+    const authSession = c.get("authSession") as { user?: { role?: string | null } } | undefined;
+    if (authSession?.user?.role !== "admin") {
+      return c.json({ ok: false, code: "FORBIDDEN", message: "Du har ikke adgang." }, 403);
+    }
+    if (!deps.membershipRepository) {
+      return c.json({ ok: false, code: "NOT_AVAILABLE" }, 503);
+    }
+
+    const url = new URL(c.req.url);
+    const limit = Math.max(
+      1,
+      Math.min(200, Number(url.searchParams.get("limit")) || 50)
+    );
+    const offset = Math.max(0, Number(url.searchParams.get("offset")) || 0);
+
+    const result = await deps.membershipRepository.listAllUsersForAdmin({ limit, offset });
+    return c.json({
+      ok: true,
+      items: result.items.map((u) => ({
+        user_id: u.user_id,
+        email: u.email,
+        display_name: u.display_name,
+        role: u.role ?? "user",
+        verification_status: u.verification_status,
+        onboarded_at: u.onboarded_at?.toISOString() ?? null,
+        paused_at: u.paused_at?.toISOString() ?? null,
+        created_at: u.created_at.toISOString()
+      })),
+      meta: { total: result.total, limit, offset, has_more: offset + result.items.length < result.total }
+    });
+  });
+
+  app.patch("/api/admin/users/:id/role", async (c) => {
+    const authSession = c.get("authSession") as
+      | { user?: { id: string; email: string; role?: string | null } }
+      | undefined;
+    if (authSession?.user?.role !== "admin") {
+      return c.json({ ok: false, code: "FORBIDDEN", message: "Du har ikke adgang." }, 403);
+    }
+    if (!deps.membershipRepository) {
+      return c.json({ ok: false, code: "NOT_AVAILABLE" }, 503);
+    }
+
+    const targetId = c.req.param("id");
+    const body = (await c.req.json().catch(() => null)) as { role?: unknown } | null;
+    const newRole = body?.role;
+    if (newRole !== "admin" && newRole !== "user") {
+      return c.json({ ok: false, code: "INVALID_ROLE", message: "role skal være 'admin' eller 'user'." }, 422);
+    }
+
+    // Anti-lockout: en admin må ikke kunne fjerne sin egen admin-rolle —
+    // ellers kan vi ende uden nogen admins overhovedet hvis han laver fejl.
+    if (targetId === authSession?.user?.id && newRole !== "admin") {
+      return c.json(
+        {
+          ok: false,
+          code: "CANNOT_DEMOTE_SELF",
+          message: "Du kan ikke fjerne din egen admin-rolle. Bed en anden admin om at gøre det."
+        },
+        422
+      );
+    }
+
+    // Beskyt superadmin: hvis target-bruger har samme email som SUPERADMIN_EMAIL
+    // kan vedkommende ikke demotes. Sikrer at vi altid har én admin tilbage.
+    const targetProfile = await deps.membershipRepository.getProfile(targetId);
+    if (!targetProfile) {
+      return c.json({ ok: false, code: "USER_NOT_FOUND" }, 404);
+    }
+    const superAdminEmail = (process.env.SUPERADMIN_EMAIL ?? "").trim().toLowerCase();
+    if (
+      superAdminEmail &&
+      targetProfile.email.toLowerCase() === superAdminEmail &&
+      newRole !== "admin"
+    ) {
+      return c.json(
+        {
+          ok: false,
+          code: "CANNOT_DEMOTE_SUPERADMIN",
+          message: "Superadminen kan ikke nedgraderes."
+        },
+        422
+      );
+    }
+
+    const updated = await deps.membershipRepository.setUserRole(targetId, newRole);
+    if (!updated) {
+      return c.json({ ok: false, code: "USER_NOT_FOUND" }, 404);
+    }
+
+    // Audit-log: konsol-besked så vi kan trace hvem-promoverede-hvem.
+    // I fremtiden kan dette flyttes til en dedikeret audit_log-tabel.
+    console.log(
+      `[ADMIN AUDIT] ${authSession.user.email} (${authSession.user.id}) ` +
+        `set role of ${targetProfile.email} (${targetId}) to '${newRole}'`
+    );
+
+    return c.json({
+      ok: true,
+      user: {
+        user_id: updated.user_id,
+        email: updated.email,
+        display_name: updated.display_name,
+        role: updated.role ?? "user"
+      }
+    });
+  });
+
   app.get("/api/admin/leads", async (c) => {
     const authSession = c.get("authSession") as { user?: { role?: string | null } } | undefined;
     const userRole = authSession?.user?.role ?? "user";

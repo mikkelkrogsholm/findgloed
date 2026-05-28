@@ -13,6 +13,7 @@ const ADMIN_LINKS = [
   { href: appConfig.routes.adminEvents, label: "Events" },
   { href: appConfig.routes.adminVerifications, label: "Verifikationer" },
   { href: appConfig.routes.adminReports, label: "Reports" },
+  { href: appConfig.routes.adminUsers, label: "Brugere" },
   { href: appConfig.routes.adminSettings, label: "Indstillinger" }
 ] as const;
 
