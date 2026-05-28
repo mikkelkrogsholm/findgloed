@@ -661,7 +661,7 @@ export class PostgresMembershipRepository implements MembershipRepository {
 
   async setUserRole(
     userId: string,
-    role: "admin" | "user"
+    role: "admin" | "organizer" | "user"
   ): Promise<MembershipProfile | null> {
     // RETURNING må ikke bruge "u."-alias som PROFILE_FIELDS gør — vi henter
     // den opdaterede profil separat for at genbruge PROFILE_FIELDS + rowToProfile.
@@ -692,6 +692,21 @@ export class PostgresMembershipRepository implements MembershipRepository {
          AND u.onboarded_at IS NOT NULL
          AND u.deleted_at IS NULL
          AND COALESCE(u.role, 'user') = 'user'
+       LIMIT 1`,
+      [email]
+    );
+    return result.rows[0] ? rowToProfile(result.rows[0]) : null;
+  }
+
+  // Email-opslag uden role-filter — bruges når en org-owner tilføjer et
+  // teammedlem, hvor target kan have en hvilken som helst role (user,
+  // organizer, admin). Udelukker kun slettede brugere.
+  async findProfileByEmail(email: string): Promise<MembershipProfile | null> {
+    const result = await this.pool.query(
+      `SELECT ${PROFILE_FIELDS}
+       FROM "user" u
+       WHERE LOWER(u.email) = LOWER($1)
+         AND u.deleted_at IS NULL
        LIMIT 1`,
       [email]
     );

@@ -4,6 +4,8 @@ import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypt
 import { APP_SETTING_KEYS, type AppSettingRepository } from "./app-settings";
 import { registerEventRoutes } from "./event-routes";
 import type { EventRepository } from "./events";
+import { registerOrganizationRoutes } from "./organization-routes";
+import type { OrganizationRepository } from "./organization";
 import { registerEventsSsr } from "./ssr-events";
 import { registerSitemapRoutes } from "./ssr-sitemap";
 import { registerMembershipRoutes } from "./membership-routes";
@@ -62,6 +64,7 @@ type AppDeps = {
   membershipRepository?: MembershipRepository;
   uploadStore?: UploadStore;
   eventRepository?: EventRepository;
+  organizationRepository?: OrganizationRepository;
   messagingRepository?: MessagingRepository;
   subscriptionRepository?: SubscriptionRepository;
   // Issue B22: HMAC-secret bruges som nøgle ved hashing af confirmation-tokens
@@ -665,6 +668,20 @@ export function createApp(deps: AppDeps): Hono<{ Variables: AppVariables }> {
     });
   }
 
+  if (
+    authService &&
+    deps.organizationRepository &&
+    deps.eventRepository &&
+    deps.membershipRepository
+  ) {
+    registerOrganizationRoutes(app, {
+      authService,
+      organizationRepository: deps.organizationRepository,
+      eventRepository: deps.eventRepository,
+      membershipRepository: deps.membershipRepository
+    });
+  }
+
   // SEO/SSR: server-side rendered /events og /events/:slug + sitemap/robots.
   // Disse routes lever IKKE under /api/* — Caddy router /events* og
   // /sitemap.xml + /robots.txt direkte til denne container.
@@ -852,8 +869,15 @@ export function createApp(deps: AppDeps): Hono<{ Variables: AppVariables }> {
     const targetId = c.req.param("id");
     const body = (await c.req.json().catch(() => null)) as { role?: unknown } | null;
     const newRole = body?.role;
-    if (newRole !== "admin" && newRole !== "user") {
-      return c.json({ ok: false, code: "INVALID_ROLE", message: "role skal være 'admin' eller 'user'." }, 422);
+    if (newRole !== "admin" && newRole !== "organizer" && newRole !== "user") {
+      return c.json(
+        {
+          ok: false,
+          code: "INVALID_ROLE",
+          message: "role skal være 'admin', 'organizer' eller 'user'."
+        },
+        422
+      );
     }
 
     // Anti-lockout: en admin må ikke kunne fjerne sin egen admin-rolle —

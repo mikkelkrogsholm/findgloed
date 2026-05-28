@@ -9,6 +9,7 @@ import { createPool, PostgresLeadRepository } from "./db";
 import { ResendEmailService } from "./email";
 import { PostgresAppSettingRepository } from "./app-settings";
 import { PostgresEventRepository } from "./events";
+import { PostgresOrganizationRepository } from "./organization";
 import { PostgresMembershipRepository } from "./membership";
 import { PostgresMessagingRepository } from "./messaging";
 import { RedisRateLimiter } from "./rate-limit";
@@ -83,6 +84,7 @@ async function bootstrap(): Promise<void> {
   }
 
   const eventRepository = new PostgresEventRepository(pool);
+  const organizationRepository = new PostgresOrganizationRepository(pool);
   const messagingRepository = new PostgresMessagingRepository(pool);
   const subscriptionRepository = new PostgresSubscriptionRepository(pool);
   const uploadsRoot = process.env.UPLOADS_ROOT ?? join(process.cwd(), "uploads");
@@ -122,6 +124,7 @@ async function bootstrap(): Promise<void> {
     membershipRepository,
     uploadStore,
     eventRepository,
+    organizationRepository,
     messagingRepository,
     subscriptionRepository,
     tokenHashSecret: config.betterAuthSecret,

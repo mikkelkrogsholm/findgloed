@@ -16,18 +16,24 @@ import {
   DialogTitle
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { api } from "@/lib/api";
+import { api, type UserRole } from "@/lib/api";
 import { getMotionMode, revealVariants } from "@/lib/motion";
 
 type AdminUser = {
   user_id: string;
   email: string;
   display_name: string | null;
-  role: "admin" | "user";
+  role: UserRole;
   verification_status: string;
   onboarded_at: string | null;
   paused_at: string | null;
   created_at: string;
+};
+
+const ROLE_LABEL: Record<UserRole, string> = {
+  admin: "administrator",
+  organizer: "arrangør",
+  user: "almindelig bruger"
 };
 
 function formatDate(iso: string): string {
@@ -43,7 +49,7 @@ export function AdminUsersPage() {
   const [search, setSearch] = useState("");
   const [confirmAction, setConfirmAction] = useState<{
     user: AdminUser;
-    newRole: "admin" | "user";
+    newRole: UserRole;
   } | null>(null);
   const [acting, setActing] = useState(false);
 
@@ -95,11 +101,7 @@ export function AdminUsersPage() {
       setConfirmAction(null);
       return;
     }
-    setSuccess(
-      confirmAction.newRole === "admin"
-        ? `${confirmAction.user.email} er nu administrator.`
-        : `${confirmAction.user.email} er ikke længere administrator.`
-    );
+    setSuccess(`${confirmAction.user.email} er nu ${ROLE_LABEL[confirmAction.newRole]}.`);
     setConfirmAction(null);
     await reload();
   }
@@ -174,6 +176,9 @@ export function AdminUsersPage() {
                         {user.role === "admin" && (
                           <Badge variant="outline">Admin</Badge>
                         )}
+                        {user.role === "organizer" && (
+                          <Badge variant="outline">Arrangør</Badge>
+                        )}
                         {user.verification_status !== "verified" && (
                           <Badge variant="outline">Ikke verificeret</Badge>
                         )}
@@ -183,28 +188,37 @@ export function AdminUsersPage() {
                         {user.email} · oprettet {formatDate(user.created_at)}
                       </p>
                     </div>
-                    {user.role === "admin" ? (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        onClick={() =>
-                          setConfirmAction({ user, newRole: "user" })
-                        }
-                        data-testid={`demote-${user.user_id}`}
-                      >
-                        Fjern admin
-                      </Button>
-                    ) : (
-                      <Button
-                        type="button"
-                        onClick={() =>
-                          setConfirmAction({ user, newRole: "admin" })
-                        }
-                        data-testid={`promote-${user.user_id}`}
-                      >
-                        Gør til admin
-                      </Button>
-                    )}
+                    <div className="flex flex-wrap gap-2">
+                      {user.role !== "admin" && (
+                        <Button
+                          type="button"
+                          onClick={() => setConfirmAction({ user, newRole: "admin" })}
+                          data-testid={`promote-admin-${user.user_id}`}
+                        >
+                          Gør til admin
+                        </Button>
+                      )}
+                      {user.role !== "organizer" && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setConfirmAction({ user, newRole: "organizer" })}
+                          data-testid={`promote-organizer-${user.user_id}`}
+                        >
+                          Gør til arrangør
+                        </Button>
+                      )}
+                      {user.role !== "user" && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => setConfirmAction({ user, newRole: "user" })}
+                          data-testid={`demote-${user.user_id}`}
+                        >
+                          Sæt til bruger
+                        </Button>
+                      )}
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -224,12 +238,16 @@ export function AdminUsersPage() {
             <DialogTitle>
               {confirmAction?.newRole === "admin"
                 ? "Gør til administrator?"
-                : "Fjern administrator-rolle?"}
+                : confirmAction?.newRole === "organizer"
+                  ? "Gør til arrangør?"
+                  : "Sæt tilbage til almindelig bruger?"}
             </DialogTitle>
             <DialogDescription>
               {confirmAction?.newRole === "admin"
                 ? `${confirmAction?.user.email} får fuld admin-adgang til alle sider, brugere, events og indstillinger.`
-                : `${confirmAction?.user.email} mister adgang til admin-områderne. Du kan altid promote igen senere.`}
+                : confirmAction?.newRole === "organizer"
+                  ? `${confirmAction?.user.email} kan oprette og administrere organisationer og deres events.`
+                  : `${confirmAction?.user.email} mister sine udvidede rettigheder. Du kan altid ændre rollen igen senere.`}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -245,11 +263,7 @@ export function AdminUsersPage() {
               disabled={acting}
               data-testid="confirm-role-button"
             >
-              {acting
-                ? "Gemmer…"
-                : confirmAction?.newRole === "admin"
-                  ? "Bekræft promote"
-                  : "Bekræft demote"}
+              {acting ? "Gemmer…" : "Bekræft"}
             </Button>
           </DialogFooter>
         </DialogContent>
