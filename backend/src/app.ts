@@ -4,6 +4,8 @@ import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypt
 import { APP_SETTING_KEYS, type AppSettingRepository } from "./app-settings";
 import { registerEventRoutes } from "./event-routes";
 import type { EventRepository } from "./events";
+import { registerEventsSsr } from "./ssr-events";
+import { registerSitemapRoutes } from "./ssr-sitemap";
 import { registerMembershipRoutes } from "./membership-routes";
 import { registerMessagingRoutes } from "./messaging-routes";
 import type { MessagingRepository } from "./messaging";
@@ -660,6 +662,20 @@ export function createApp(deps: AppDeps): Hono<{ Variables: AppVariables }> {
       authService,
       eventRepository: deps.eventRepository,
       membershipRepository: deps.membershipRepository
+    });
+  }
+
+  // SEO/SSR: server-side rendered /events og /events/:slug + sitemap/robots.
+  // Disse routes lever IKKE under /api/* — Caddy router /events* og
+  // /sitemap.xml + /robots.txt direkte til denne container.
+  if (deps.eventRepository) {
+    registerEventsSsr(app, {
+      eventRepository: deps.eventRepository,
+      appUrl: deps.appUrl
+    });
+    registerSitemapRoutes(app, {
+      eventRepository: deps.eventRepository,
+      appUrl: deps.appUrl
     });
   }
 

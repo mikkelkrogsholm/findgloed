@@ -94,6 +94,38 @@ function eventToPublicJson(
   };
 }
 
+// Public version uden adresse, uden is_registered. Bruges af SSR og af
+// public-facing API endpoints. Ingen brugerspecifikke felter eksponeres.
+export function eventToPublicSafeJson(event: EventRecord, registrations: number) {
+  return {
+    id: event.id,
+    slug: event.slug,
+    title: event.title,
+    description: event.description,
+    not_for: event.not_for,
+    category: event.category,
+    level: event.level,
+    beginner_friendly: event.beginner_friendly,
+    experience_required: event.experience_required,
+    facilitator_name: event.facilitator_name,
+    facilitator_credential: event.facilitator_credential,
+    starts_at: event.starts_at.toISOString(),
+    ends_at: event.ends_at.toISOString(),
+    capacity: event.capacity,
+    spots_taken: registrations,
+    spots_left: Math.max(0, event.capacity - registrations),
+    price_cents: event.price_cents,
+    region: event.region,
+    location_label: event.location_label,
+    // Aldrig adresse i public — selv tilmeldte får den via /api/me/events
+    location_address: null,
+    dresscode: event.dresscode,
+    exit_strategy: event.exit_strategy,
+    cover_path: event.cover_path,
+    status: event.status
+  };
+}
+
 export function registerEventRoutes(
   app: Hono<{ Variables: { authSession: AuthSessionData } }>,
   deps: EventDeps
@@ -109,6 +141,56 @@ export function registerEventRoutes(
       c.set("authSession", authSession);
       await next();
     };
+
+  // ---------- Public events API (uden auth, til SSR + SEO) ----------
+  // Skal registreres FØR memberAuthMiddleware fordi catch-all middleware
+  // for /api/events ellers gating'er disse routes.
+
+  app.get("/api/public/events", async (c) => {
+    const url = new URL(c.req.url);
+    const category = url.searchParams.get("category");
+    const level = url.searchParams.get("level");
+    const region = url.searchParams.get("region");
+    const beginner = url.searchParams.get("beginner_friendly");
+    const { limit, offset } = parsePagination(url, { limit: 24, max: 100 });
+
+    const { items: events, total } = await eventRepository.list({
+      category: CATEGORIES.includes(category as EventCategory) ? (category as EventCategory) : undefined,
+      level: LEVELS.includes(level as EventLevel) ? (level as EventLevel) : undefined,
+      region: region ?? undefined,
+      beginnerFriendly: beginner === "true" ? true : beginner === "false" ? false : undefined,
+      upcomingOnly: true,
+      limit,
+      offset
+    });
+
+    // Kun published events i public — published filtres allerede i list(),
+    // men vi dobbelt-tjekker for at undgå at draft/cancelled lækker via cache.
+    const publishedEvents = events.filter((e) => e.status === "published");
+
+    const eventIds = publishedEvents.map((e) => e.id);
+    const counts = await eventRepository.countConfirmedForEvents(eventIds);
+
+    const enriched = publishedEvents.map((event) =>
+      eventToPublicSafeJson(event, counts.get(event.id) ?? 0)
+    );
+
+    return c.json({
+      ok: true,
+      events: enriched,
+      meta: { total, limit, offset, has_more: offset + events.length < total }
+    });
+  });
+
+  app.get("/api/public/events/:slug", async (c) => {
+    const slug = c.req.param("slug");
+    const event = await eventRepository.getBySlug(slug);
+    if (!event || event.status !== "published") {
+      return c.json({ ok: false, code: "NOT_FOUND" }, 404);
+    }
+    const count = await eventRepository.countConfirmed(event.id);
+    return c.json({ ok: true, event: eventToPublicSafeJson(event, count) });
+  });
 
   app.use("/api/events", memberAuthMiddleware);
   app.use("/api/events/*", memberAuthMiddleware);

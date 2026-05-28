@@ -27,6 +27,16 @@
 
 findgloed.dk, www.findgloed.dk {
 	import security_headers
+
+	# SEO-routes: /events, /events/:slug, /sitemap.xml, /robots.txt skal
+	# serveres af api-containeren (Hono SSR) i stedet for SPA. Matcheren
+	# evalueres i rækkefølge — første match vinder. Path-matching i Caddy
+	# bruger glob-syntax: /events* matcher /events, /events/, /events/xxx.
+	@ssr {
+		path /events /events/* /sitemap.xml /robots.txt
+	}
+	reverse_proxy @ssr api:39564
+
 	reverse_proxy web:80
 }
 
