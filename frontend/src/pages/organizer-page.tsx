@@ -53,8 +53,15 @@ export function OrganizerPage() {
   }
 
   useEffect(() => {
-    void reload();
-  }, []);
+    if (session.status === "anonymous") {
+      navigate(appConfig.routes.login);
+      return;
+    }
+    if (session.status === "authenticated") {
+      void reload();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session.status]);
 
   async function handleCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

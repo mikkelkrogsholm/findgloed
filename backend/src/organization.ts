@@ -1,5 +1,5 @@
 import type { Pool } from "pg";
-import { EVENT_FIELDS, type EventRecord, rowToEvent } from "./events";
+import { type EventRecord, rowToEvent } from "./events";
 
 export type OrgRole = "owner" | "editor";
 export type OrganizationStatus = "active" | "suspended";
@@ -331,7 +331,9 @@ export class PostgresOrganizationRepository implements OrganizationRepository {
     const offset = Math.max(0, options?.offset ?? 0);
     const [itemsResult, countResult] = await Promise.all([
       this.pool.query(
-        `SELECT ${EVENT_FIELDS}
+        // NB: e.* (ikke EVENT_FIELDS) fordi event_organization også har en
+        // created_at-kolonne — ukvalificerede navne ville give "ambiguous".
+        `SELECT e.*
          FROM event e
          JOIN event_organization eo ON eo.event_id = e.id
          WHERE eo.organization_id = $1

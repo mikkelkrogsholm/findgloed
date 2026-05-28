@@ -163,6 +163,11 @@ export function OrganizerOrgPage() {
   }
 
   useEffect(() => {
+    if (session.status === "anonymous") {
+      navigate(appConfig.routes.login);
+      return;
+    }
+    if (session.status !== "authenticated") return;
     if (!orgId) {
       setNotFound(true);
       setLoading(false);
@@ -170,7 +175,7 @@ export function OrganizerOrgPage() {
     }
     void reloadAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orgId]);
+  }, [orgId, session.status]);
 
   async function handleSaveOrg(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
