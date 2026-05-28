@@ -634,6 +634,48 @@ export class PostgresMembershipRepository implements MembershipRepository {
     };
   }
 
+  async listAllUsersForAdmin(
+    options?: { limit?: number; offset?: number }
+  ): Promise<{ items: MembershipProfile[]; total: number }> {
+    const limit = Math.max(1, Math.min(200, options?.limit ?? 50));
+    const offset = Math.max(0, options?.offset ?? 0);
+    const baseWhere = `u.deleted_at IS NULL`;
+    const [itemsResult, countResult] = await Promise.all([
+      this.pool.query(
+        `SELECT ${PROFILE_FIELDS}
+         FROM "user" u
+         WHERE ${baseWhere}
+         ORDER BY u."createdAt" DESC
+         LIMIT $1 OFFSET $2`,
+        [limit, offset]
+      ),
+      this.pool.query<{ count: string }>(
+        `SELECT COUNT(*)::text AS count FROM "user" u WHERE ${baseWhere}`
+      )
+    ]);
+    return {
+      items: itemsResult.rows.map(rowToProfile),
+      total: Number(countResult.rows[0]?.count ?? 0)
+    };
+  }
+
+  async setUserRole(
+    userId: string,
+    role: "admin" | "user"
+  ): Promise<MembershipProfile | null> {
+    // RETURNING må ikke bruge "u."-alias som PROFILE_FIELDS gør — vi henter
+    // den opdaterede profil separat for at genbruge PROFILE_FIELDS + rowToProfile.
+    const updateResult = await this.pool.query<{ id: string }>(
+      `UPDATE "user"
+       SET role = $2, "updatedAt" = NOW()
+       WHERE id = $1 AND deleted_at IS NULL
+       RETURNING id`,
+      [userId, role]
+    );
+    if (updateResult.rows.length === 0) return null;
+    return this.getProfile(userId);
+  }
+
   // Issue A24: Direkte verified-by-email-opslag. Returnerer null hvis ingen
   // matchende verificeret+onboarded bruger findes — det udelukker både
   // ikke-eksisterende emails, slettede brugere, og ikke-verificerede brugere.

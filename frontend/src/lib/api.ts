@@ -353,6 +353,37 @@ export const api = {
   hideAdminEventPost: (id: string) =>
     request<{ ok: true }>(`/api/admin/event-posts/${id}`, { method: "DELETE" }),
 
+  // ---------- Admin: brugere ----------
+  listAdminUsers: (params: { limit?: number; offset?: number } = {}) => {
+    const q = new URLSearchParams();
+    if (params.limit !== undefined) q.set("limit", String(params.limit));
+    if (params.offset !== undefined) q.set("offset", String(params.offset));
+    const suffix = q.toString();
+    return request<{
+      ok: true;
+      items: Array<{
+        user_id: string;
+        email: string;
+        display_name: string | null;
+        role: "admin" | "user";
+        verification_status: string;
+        onboarded_at: string | null;
+        paused_at: string | null;
+        created_at: string;
+      }>;
+      meta: { total: number; limit: number; offset: number; has_more: boolean };
+    }>(`/api/admin/users${suffix ? `?${suffix}` : ""}`);
+  },
+
+  setUserRole: (userId: string, role: "admin" | "user") =>
+    request<{
+      ok: true;
+      user: { user_id: string; email: string; display_name: string | null; role: "admin" | "user" };
+    }>(`/api/admin/users/${encodeURIComponent(userId)}/role`, {
+      method: "PATCH",
+      body: JSON.stringify({ role })
+    }),
+
   // ---------- Admin app-settings (invite-code-gate m.fl.) ----------
   listAdminSettings: () =>
     request<{

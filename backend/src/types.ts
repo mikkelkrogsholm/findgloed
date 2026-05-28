@@ -380,6 +380,17 @@ export type MembershipRepository = {
     excludeUserId: string,
     options?: { limit?: number; offset?: number }
   ) => Promise<{ items: PublicMembershipProfile[]; total: number }>;
+
+  // Admin-only: liste over ALLE brugere (inkl. admins, ikke-verificerede,
+  // pauseed) med pagination. Slettede brugere udelades. Bruges af /admin/users
+  // til at promote/demote admins.
+  listAllUsersForAdmin: (
+    options?: { limit?: number; offset?: number }
+  ) => Promise<{ items: MembershipProfile[]; total: number }>;
+
+  // Admin-only: skift role på en bruger. Returnerer den opdaterede profil
+  // eller null hvis brugeren ikke findes / er slettet.
+  setUserRole: (userId: string, role: "admin" | "user") => Promise<MembershipProfile | null>;
   // Issue A24: Direkte opslag af en verificeret + onboarded bruger via email.
   // Returnerer null hvis ingen matcher — eller hvis matchen ikke er
   // færdig-onboarded eller ikke verificeret. Bruges af createCouple så vi
