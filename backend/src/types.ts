@@ -390,13 +390,19 @@ export type MembershipRepository = {
 
   // Admin-only: skift role på en bruger. Returnerer den opdaterede profil
   // eller null hvis brugeren ikke findes / er slettet.
-  setUserRole: (userId: string, role: "admin" | "user") => Promise<MembershipProfile | null>;
+  setUserRole: (
+    userId: string,
+    role: "admin" | "organizer" | "user"
+  ) => Promise<MembershipProfile | null>;
   // Issue A24: Direkte opslag af en verificeret + onboarded bruger via email.
   // Returnerer null hvis ingen matcher — eller hvis matchen ikke er
   // færdig-onboarded eller ikke verificeret. Bruges af createCouple så vi
   // kan finde en partner uden at iterere alle medlemmer (og dermed eksponere
   // hele email-listen mod kalderen).
   findVerifiedByEmail: (email: string) => Promise<MembershipProfile | null>;
+  // Email-opslag uden role-filter. Bruges når en org-owner tilføjer et
+  // teammedlem (target kan være user/organizer/admin). Udelukker slettede.
+  findProfileByEmail: (email: string) => Promise<MembershipProfile | null>;
   getPublicProfile: (
     userId: string,
     viewerId: string

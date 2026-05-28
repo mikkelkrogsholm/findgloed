@@ -59,7 +59,7 @@ export type EventRegistration = {
   notes: string | null;
 };
 
-const EVENT_FIELDS = `
+export const EVENT_FIELDS = `
   id, slug, title, description, not_for, category, level,
   beginner_friendly, experience_required,
   facilitator_user_id, facilitator_name, facilitator_credential,
@@ -72,7 +72,7 @@ const REGISTRATION_FIELDS = `
   id, event_id, user_id, couple_id, status, registered_at, cancelled_at, notes
 `;
 
-function rowToEvent(row: Record<string, unknown>): EventRecord {
+export function rowToEvent(row: Record<string, unknown>): EventRecord {
   return {
     id: String(row.id),
     slug: String(row.slug),

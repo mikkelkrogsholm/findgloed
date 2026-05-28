@@ -62,6 +62,9 @@ export function SiteShell({ children, showDesignLink = false, themePreset }: Sit
   const isAuthenticated = session.status === "authenticated";
   const isVerified = isAuthenticated && session.profile.verification_status === "verified";
   const isAdmin = isAuthenticated && session.profile.role === "admin";
+  const isOrganizer =
+    isAuthenticated &&
+    (session.profile.role === "organizer" || session.profile.role === "admin");
   const hasAcceptedFutureVerification =
     isAuthenticated && session.profile.future_verification_accepted_at !== null;
   const isTemporaryVerified =
@@ -114,6 +117,13 @@ export function SiteShell({ children, showDesignLink = false, themePreset }: Sit
                       active={isCurrent(pathname, link.href)}
                     />
                   ))}
+                  {isOrganizer && (
+                    <NavLink
+                      href={appConfig.routes.organizer}
+                      label="Organisationer"
+                      active={isCurrent(pathname, appConfig.routes.organizer)}
+                    />
+                  )}
                   {isAdmin && (
                     <NavLink
                       href={appConfig.routes.admin}
@@ -204,6 +214,13 @@ export function SiteShell({ children, showDesignLink = false, themePreset }: Sit
                       active={isCurrent(pathname, link.href)}
                     />
                   ))}
+                  {isOrganizer && (
+                    <NavLink
+                      href={appConfig.routes.organizer}
+                      label="Organisationer"
+                      active={isCurrent(pathname, appConfig.routes.organizer)}
+                    />
+                  )}
                   {isAdmin && (
                     <NavLink
                       href={appConfig.routes.admin}

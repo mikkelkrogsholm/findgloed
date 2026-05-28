@@ -179,6 +179,25 @@ describe("PATCH /api/admin/users/:id/role", () => {
     expect(json.user.role).toBe("admin");
   });
 
+  test("admin kan promote en bruger til organizer", async () => {
+    const app = createTestApp({
+      users: [
+        profile("admin-1", "admin@example.com", "admin"),
+        profile("u1", "alice@example.com")
+      ],
+      authService: adminAuth("admin-1", "admin@example.com")
+    });
+
+    const res = await app.request("/api/admin/users/u1/role", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ role: "organizer" })
+    });
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.user.role).toBe("organizer");
+  });
+
   test("admin kan demote en admin tilbage til user", async () => {
     const app = createTestApp({
       users: [

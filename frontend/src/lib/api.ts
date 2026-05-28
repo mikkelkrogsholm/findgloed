@@ -365,7 +365,7 @@ export const api = {
         user_id: string;
         email: string;
         display_name: string | null;
-        role: "admin" | "user";
+        role: UserRole;
         verification_status: string;
         onboarded_at: string | null;
         paused_at: string | null;
@@ -375,10 +375,10 @@ export const api = {
     }>(`/api/admin/users${suffix ? `?${suffix}` : ""}`);
   },
 
-  setUserRole: (userId: string, role: "admin" | "user") =>
+  setUserRole: (userId: string, role: UserRole) =>
     request<{
       ok: true;
-      user: { user_id: string; email: string; display_name: string | null; role: "admin" | "user" };
+      user: { user_id: string; email: string; display_name: string | null; role: UserRole };
     }>(`/api/admin/users/${encodeURIComponent(userId)}/role`, {
       method: "PATCH",
       body: JSON.stringify({ role })
@@ -499,6 +499,88 @@ export const api = {
         email: string | null;
       }>;
     }>(`/api/admin/events/${id}/registrations`),
+
+  // ---------- Organizations ----------
+  listOrganizations: () =>
+    request<{ ok: true; organizations: OrganizationWithRole[] }>("/api/organizations"),
+
+  createOrganization: (body: {
+    name: string;
+    slug?: string;
+    description?: string | null;
+    region?: string | null;
+    contact_email?: string | null;
+  }) =>
+    request<{ ok: true; organization: Organization }>("/api/organizations", {
+      method: "POST",
+      body: JSON.stringify(body)
+    }),
+
+  getOrganization: (id: string) =>
+    request<{ ok: true; organization: OrganizationWithRole }>(
+      `/api/organizations/${encodeURIComponent(id)}`
+    ),
+
+  updateOrganization: (
+    id: string,
+    body: Partial<{
+      name: string;
+      description: string | null;
+      region: string | null;
+      contact_email: string | null;
+      logo_path: string | null;
+      status: OrganizationStatus;
+    }>
+  ) =>
+    request<{ ok: true; organization: Organization }>(
+      `/api/organizations/${encodeURIComponent(id)}`,
+      { method: "PATCH", body: JSON.stringify(body) }
+    ),
+
+  deleteOrganization: (id: string) =>
+    request<{ ok: true }>(`/api/organizations/${encodeURIComponent(id)}`, {
+      method: "DELETE"
+    }),
+
+  listOrgMembers: (id: string) =>
+    request<{ ok: true; members: OrganizationMember[] }>(
+      `/api/organizations/${encodeURIComponent(id)}/members`
+    ),
+
+  addOrgMember: (id: string, body: { email: string; org_role: OrgRole }) =>
+    request<{ ok: true; member: OrganizationMember }>(
+      `/api/organizations/${encodeURIComponent(id)}/members`,
+      { method: "POST", body: JSON.stringify(body) }
+    ),
+
+  removeOrgMember: (id: string, userId: string) =>
+    request<{ ok: true }>(
+      `/api/organizations/${encodeURIComponent(id)}/members/${encodeURIComponent(userId)}`,
+      { method: "DELETE" }
+    ),
+
+  listOrgEvents: (id: string) =>
+    request<{ ok: true; events: AdminEvent[]; meta: { total: number } }>(
+      `/api/organizations/${encodeURIComponent(id)}/events`
+    ),
+
+  createOrgEvent: (id: string, body: OrgEventInput) =>
+    request<{ ok: true; event: AdminEvent }>(
+      `/api/organizations/${encodeURIComponent(id)}/events`,
+      { method: "POST", body: JSON.stringify(body) }
+    ),
+
+  updateOrgEvent: (id: string, eventId: string, body: OrgEventInput) =>
+    request<{ ok: true; event: AdminEvent }>(
+      `/api/organizations/${encodeURIComponent(id)}/events/${encodeURIComponent(eventId)}`,
+      { method: "PATCH", body: JSON.stringify(body) }
+    ),
+
+  deleteOrgEvent: (id: string, eventId: string) =>
+    request<{ ok: true }>(
+      `/api/organizations/${encodeURIComponent(id)}/events/${encodeURIComponent(eventId)}`,
+      { method: "DELETE" }
+    ),
 
   // ---------- Messaging ----------
   signalInterest: (userId: string) =>
@@ -778,6 +860,37 @@ export type AdminReport = {
   reviewed_by_admin_id: string | null;
   resolution_notes: string | null;
 };
+
+export type UserRole = "admin" | "organizer" | "user";
+
+export type OrgRole = "owner" | "editor";
+export type OrganizationStatus = "active" | "suspended";
+
+export type Organization = {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  region: string | null;
+  contact_email: string | null;
+  logo_path: string | null;
+  status: OrganizationStatus;
+  created_at: string;
+  updated_at: string;
+};
+
+export type OrganizationWithRole = Organization & { org_role: OrgRole | null };
+
+export type OrganizationMember = {
+  user_id: string;
+  org_role: OrgRole;
+  display_name: string | null;
+  email: string | null;
+  created_at: string;
+};
+
+// Event-input til org-events: samme felter som admin + valgfri co-host-orgs.
+export type OrgEventInput = AdminEventInput & { co_organization_ids?: string[] };
 
 export type AdminEventInput = {
   slug?: string;

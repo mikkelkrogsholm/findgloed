@@ -32,6 +32,8 @@ export const appConfig = {
     messages: "/messages",
     conversation: "/messages/:id",
     membership: "/membership",
+    organizer: "/organizer",
+    organizerOrg: "/organizer/:id",
     admin: "/admin",
     adminEvents: "/admin/events",
     adminVerifications: "/admin/verifications",
@@ -69,6 +71,8 @@ export type AppRouteName =
   | "messages"
   | "conversation"
   | "membership"
+  | "organizer"
+  | "organizer-org"
   | "admin"
   | "admin-events"
   | "admin-verifications"
