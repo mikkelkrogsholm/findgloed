@@ -500,6 +500,24 @@ export const api = {
       }>;
     }>(`/api/admin/events/${id}/registrations`),
 
+  // ---------- Public organizations (uden auth) ----------
+  listPublicOrganizations: (params: { limit?: number; offset?: number } = {}) => {
+    const qs = new URLSearchParams();
+    if (params.limit !== undefined) qs.set("limit", String(params.limit));
+    if (params.offset !== undefined) qs.set("offset", String(params.offset));
+    const suffix = qs.toString();
+    return request<{
+      ok: true;
+      organizations: PublicOrganization[];
+      meta?: PaginationMeta;
+    }>(`/api/public/organizations${suffix ? `?${suffix}` : ""}`);
+  },
+
+  getPublicOrganization: (slug: string) =>
+    request<{ ok: true; organization: PublicOrganization; events: PublicEvent[] }>(
+      `/api/public/organizations/${encodeURIComponent(slug)}`
+    ),
+
   // ---------- Organizations ----------
   listOrganizations: () =>
     request<{ ok: true; organizations: OrganizationWithRole[] }>("/api/organizations"),
@@ -794,7 +812,20 @@ export type ConversationSummary = {
 export type EventCategory = "single_only" | "couple_only" | "mixed";
 export type EventLevel = "sensual_social" | "sensual" | "explicit";
 
+// Vært-organisation knyttet til et event (host + co-hosts).
+export type EventHostOrg = { name: string; slug: string; is_primary: boolean };
+
+export type PublicOrganization = {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  region: string | null;
+  logo_path: string | null;
+};
+
 export type PublicEvent = {
+  organizations?: EventHostOrg[];
   id: string;
   slug: string;
   title: string;

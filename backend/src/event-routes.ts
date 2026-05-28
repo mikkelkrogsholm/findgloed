@@ -10,6 +10,7 @@ import type {
   EventRepository,
   EventStatus
 } from "./events";
+import type { OrganizationRepository } from "./organization";
 
 type AuthSessionData = {
   user: { id: string; email: string; role?: string | null };
@@ -20,6 +21,8 @@ type EventDeps = {
   authService: AuthService;
   eventRepository: EventRepository;
   membershipRepository: MembershipRepository;
+  // Valgfri: når sat beriges event-svar med vært-organisationer (host + co-hosts).
+  organizationRepository?: OrganizationRepository;
 };
 
 const CATEGORIES: EventCategory[] = ["single_only", "couple_only", "mixed"];
@@ -59,12 +62,16 @@ function asDate(value: unknown): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
+type EventOrgJson = { name: string; slug: string; is_primary: boolean };
+
 function eventToPublicJson(
   event: EventRecord,
   isRegistered: boolean,
-  registrations: number
+  registrations: number,
+  organizations: EventOrgJson[] = []
 ) {
   return {
+    organizations,
     id: event.id,
     slug: event.slug,
     title: event.title,
@@ -96,8 +103,13 @@ function eventToPublicJson(
 
 // Public version uden adresse, uden is_registered. Bruges af SSR og af
 // public-facing API endpoints. Ingen brugerspecifikke felter eksponeres.
-export function eventToPublicSafeJson(event: EventRecord, registrations: number) {
+export function eventToPublicSafeJson(
+  event: EventRecord,
+  registrations: number,
+  organizations: EventOrgJson[] = []
+) {
   return {
+    organizations,
     id: event.id,
     slug: event.slug,
     title: event.title,
@@ -130,7 +142,22 @@ export function registerEventRoutes(
   app: Hono<{ Variables: { authSession: AuthSessionData } }>,
   deps: EventDeps
 ): void {
-  const { authService, eventRepository, membershipRepository } = deps;
+  const { authService, eventRepository, membershipRepository, organizationRepository } = deps;
+
+  // Batch-hent vært-organisationer for events (host + co-hosts). Tom hvis
+  // organizationRepository ikke er injiceret (fx i tests).
+  async function orgLinksFor(eventIds: string[]): Promise<Map<string, EventOrgJson[]>> {
+    const map = new Map<string, EventOrgJson[]>();
+    if (!organizationRepository || eventIds.length === 0) return map;
+    const raw = await organizationRepository.listOrganizationsForEvents(eventIds);
+    for (const [eventId, links] of raw) {
+      map.set(
+        eventId,
+        links.map((l) => ({ name: l.name, slug: l.slug, is_primary: l.is_primary }))
+      );
+    }
+    return map;
+  }
 
   const memberAuthMiddleware: MiddlewareHandler<{ Variables: { authSession: AuthSessionData } }> =
     async (c, next) => {
@@ -169,10 +196,13 @@ export function registerEventRoutes(
     const publishedEvents = events.filter((e) => e.status === "published");
 
     const eventIds = publishedEvents.map((e) => e.id);
-    const counts = await eventRepository.countConfirmedForEvents(eventIds);
+    const [counts, orgMap] = await Promise.all([
+      eventRepository.countConfirmedForEvents(eventIds),
+      orgLinksFor(eventIds)
+    ]);
 
     const enriched = publishedEvents.map((event) =>
-      eventToPublicSafeJson(event, counts.get(event.id) ?? 0)
+      eventToPublicSafeJson(event, counts.get(event.id) ?? 0, orgMap.get(event.id) ?? [])
     );
 
     return c.json({
@@ -188,8 +218,14 @@ export function registerEventRoutes(
     if (!event || event.status !== "published") {
       return c.json({ ok: false, code: "NOT_FOUND" }, 404);
     }
-    const count = await eventRepository.countConfirmed(event.id);
-    return c.json({ ok: true, event: eventToPublicSafeJson(event, count) });
+    const [count, orgMap] = await Promise.all([
+      eventRepository.countConfirmed(event.id),
+      orgLinksFor([event.id])
+    ]);
+    return c.json({
+      ok: true,
+      event: eventToPublicSafeJson(event, count, orgMap.get(event.id) ?? [])
+    });
   });
 
   app.use("/api/events", memberAuthMiddleware);
@@ -250,9 +286,10 @@ export function registerEventRoutes(
     // Issue B16: Batch-fetch registrations + counts i én query hver, i stedet
     // for at køre én DB-rundtur pr. event (N+1).
     const eventIds = allowedEvents.map((e) => e.id);
-    const [registrations, counts] = await Promise.all([
+    const [registrations, counts, orgMap] = await Promise.all([
       eventRepository.listRegistrationsForUserOnEvents(session.user.id, eventIds),
-      eventRepository.countConfirmedForEvents(eventIds)
+      eventRepository.countConfirmedForEvents(eventIds),
+      orgLinksFor(eventIds)
     ]);
 
     const enriched = allowedEvents.map((event) => {
@@ -260,7 +297,7 @@ export function registerEventRoutes(
       const isRegistered =
         !!registration && (registration.status === "confirmed" || registration.status === "pending");
       const count = counts.get(event.id) ?? 0;
-      return eventToPublicJson(event, isRegistered, count);
+      return eventToPublicJson(event, isRegistered, count, orgMap.get(event.id) ?? []);
     });
 
     return c.json({
@@ -284,11 +321,14 @@ export function registerEventRoutes(
     const registration = await eventRepository.getRegistration(event.id, session.user.id);
     const isRegistered =
       !!registration && (registration.status === "confirmed" || registration.status === "pending");
-    const count = await eventRepository.countConfirmed(event.id);
+    const [count, orgMap] = await Promise.all([
+      eventRepository.countConfirmed(event.id),
+      orgLinksFor([event.id])
+    ]);
 
     return c.json({
       ok: true,
-      event: eventToPublicJson(event, isRegistered, count)
+      event: eventToPublicJson(event, isRegistered, count, orgMap.get(event.id) ?? [])
     });
   });
 

@@ -28,6 +28,8 @@ import { MyEventsPage } from "@/pages/my-events-page";
 import { MessagesPage } from "@/pages/messages-page";
 import { ConversationPage } from "@/pages/conversation-page";
 import { MembershipPage } from "@/pages/membership-page";
+import { OrganizationsPage } from "@/pages/organizations-page";
+import { OrganizationPage } from "@/pages/organization-page";
 import { OrganizerPage } from "@/pages/organizer-page";
 import { OrganizerOrgPage } from "@/pages/organizer-org-page";
 import { AdminEventsPage } from "@/pages/admin-events-page";
@@ -104,6 +106,12 @@ function resolveRoute(pathname: string): AppRouteName {
   }
   if (pathname === appConfig.routes.membership) {
     return "membership";
+  }
+  if (pathname === appConfig.routes.organizations) {
+    return "organizations";
+  }
+  if (pathname.startsWith(`${appConfig.routes.organizations}/`)) {
+    return "organization-detail";
   }
   if (pathname === appConfig.routes.organizer) {
     return "organizer";
@@ -197,6 +205,8 @@ export default function App() {
       messages: "Glød - Beskeder",
       conversation: "Glød - Samtale",
       membership: "Glød - Medlemskab",
+      organizations: "Glød - Arrangører",
+      "organization-detail": "Glød - Arrangør",
       organizer: "Glød - Organisationer",
       "organizer-org": "Glød - Organisation",
       "admin-events": "Glød - Admin events",
@@ -242,6 +252,8 @@ export default function App() {
           {route === "messages" && <MessagesPage />}
           {route === "conversation" && <ConversationPage />}
           {route === "membership" && <MembershipPage />}
+          {route === "organizations" && <OrganizationsPage />}
+          {route === "organization-detail" && <OrganizationPage />}
           {route === "organizer" && <OrganizerPage />}
           {route === "organizer-org" && <OrganizerOrgPage />}
           {route === "admin-events" && <AdminEventsPage />}

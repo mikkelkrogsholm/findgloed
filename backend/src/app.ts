@@ -664,7 +664,8 @@ export function createApp(deps: AppDeps): Hono<{ Variables: AppVariables }> {
     registerEventRoutes(app, {
       authService,
       eventRepository: deps.eventRepository,
-      membershipRepository: deps.membershipRepository
+      membershipRepository: deps.membershipRepository,
+      organizationRepository: deps.organizationRepository
     });
   }
 

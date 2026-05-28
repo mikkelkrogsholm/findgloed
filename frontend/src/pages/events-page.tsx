@@ -194,6 +194,11 @@ export function EventsPage() {
                       <p className="mt-1 text-xs text-[color:var(--color-text-secondary)]">
                         {formatDateTime(event.starts_at)}
                       </p>
+                      {event.organizations && event.organizations.length > 0 && (
+                        <p className="mt-1 text-xs text-[color:var(--color-text-tertiary)]">
+                          Afholdes af {event.organizations.map((o) => o.name).join(", ")}
+                        </p>
+                      )}
                     </div>
                     <CardContent className="space-y-3 p-5">
                       <p className="line-clamp-3 text-sm text-[color:var(--color-text-secondary)]">

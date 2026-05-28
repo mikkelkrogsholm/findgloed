@@ -64,6 +64,14 @@ function auth(user: { id: string; email: string; role?: string }): AuthService {
   } as unknown as AuthService;
 }
 
+function anonAuth(): AuthService {
+  return {
+    handler: async () => new Response("ok"),
+    getSession: async () => null,
+    ensureSuperAdmin: async () => undefined
+  } as unknown as AuthService;
+}
+
 function org(id: string, slug: string, name: string, createdBy: string): OrganizationRecord {
   return {
     id,
@@ -134,6 +142,16 @@ function createOrgRepo(seed?: {
     },
     async listAll() {
       return { items: [...orgs.values()], total: orgs.size };
+    },
+    async listPublic() {
+      const active = [...orgs.values()].filter((o) => o.status === "active");
+      return { items: active, total: active.length };
+    },
+    async getPublicBySlug(slug: string) {
+      return [...orgs.values()].find((o) => o.slug === slug && o.status === "active") ?? null;
+    },
+    async listPublishedEventsForOrg() {
+      return [];
     },
     async listMembers(orgId) {
       return members.filter((m) => m.organization_id === orgId);
@@ -222,6 +240,9 @@ function createEventRepo(): EventRepository {
     },
     async delete(id: string) {
       return events.delete(id);
+    },
+    async countConfirmedForEvents() {
+      return new Map<string, number>();
     }
   } as unknown as EventRepository;
 }
@@ -492,5 +513,36 @@ describe("Org-events + co-hosting", () => {
     });
     expect(res.status).toBe(403);
     expect((await res.json()).code).toBe("NOT_PRIMARY_HOST");
+  });
+});
+
+describe("Public organizations", () => {
+  const seed = () =>
+    createOrgRepo({
+      orgs: [
+        org("o1", "klub", "Klub Glød", "u1"),
+        { ...org("o2", "skjult", "Skjult Klub", "u1"), status: "suspended" }
+      ]
+    });
+
+  test("GET /api/public/organizations viser kun aktive, uden kontakt-email", async () => {
+    const app = createTestApp({ authService: anonAuth(), users: [], orgRepo: seed() });
+    const res = await app.request("/api/public/organizations");
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.organizations).toHaveLength(1);
+    expect(data.organizations[0].slug).toBe("klub");
+    expect(data.organizations[0].contact_email).toBeUndefined();
+  });
+
+  test("GET /api/public/organizations/:slug — 200 for aktiv, 404 for suspenderet/ukendt", async () => {
+    const app = createTestApp({ authService: anonAuth(), users: [], orgRepo: seed() });
+    expect((await app.request("/api/public/organizations/klub")).status).toBe(200);
+    expect((await app.request("/api/public/organizations/skjult")).status).toBe(404);
+    expect((await app.request("/api/public/organizations/findes-ikke")).status).toBe(404);
+
+    const ok = await (await app.request("/api/public/organizations/klub")).json();
+    expect(ok.organization.name).toBe("Klub Glød");
+    expect(Array.isArray(ok.events)).toBe(true);
   });
 });

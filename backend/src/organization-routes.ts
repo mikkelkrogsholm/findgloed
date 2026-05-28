@@ -6,6 +6,7 @@ import type {
   EventRepository,
   EventStatus
 } from "./events";
+import { eventToPublicSafeJson } from "./event-routes";
 import type {
   OrganizationRecord,
   OrganizationRepository,
@@ -82,11 +83,54 @@ function organizationToJson(org: OrganizationRecord) {
   };
 }
 
+// Offentlig org-repræsentation: ingen kontakt-email, status eller interne
+// tidsstempler — kun det der må vises til alle (privatliv på en følsom platform).
+function organizationToPublicJson(org: OrganizationRecord) {
+  return {
+    id: org.id,
+    slug: org.slug,
+    name: org.name,
+    description: org.description,
+    region: org.region,
+    logo_path: org.logo_path
+  };
+}
+
 export function registerOrganizationRoutes(
   app: Hono<{ Variables: { authSession: AuthSessionData } }>,
   deps: OrganizationDeps
 ): void {
   const { authService, organizationRepository, eventRepository, membershipRepository } = deps;
+
+  // ---------- Offentlige org-routes (uden auth, til opdagelse) ----------
+  // Skal registreres FØR auth-middleware på /api/organizations* (de ligger
+  // dog på /api/public/* så de fanges alligevel ikke af den).
+
+  app.get("/api/public/organizations", async (c) => {
+    const url = new URL(c.req.url);
+    const limit = Math.max(1, Math.min(100, Number(url.searchParams.get("limit")) || 50));
+    const offset = Math.max(0, Number(url.searchParams.get("offset")) || 0);
+    const { items, total } = await organizationRepository.listPublic({ limit, offset });
+    return c.json({
+      ok: true,
+      organizations: items.map(organizationToPublicJson),
+      meta: { total, limit, offset, has_more: offset + items.length < total }
+    });
+  });
+
+  app.get("/api/public/organizations/:slug", async (c) => {
+    const org = await organizationRepository.getPublicBySlug(c.req.param("slug"));
+    if (!org) return c.json({ ok: false, code: "NOT_FOUND" }, 404);
+
+    const events = await organizationRepository.listPublishedEventsForOrg(org.id, { limit: 50 });
+    const counts = await eventRepository.countConfirmedForEvents(events.map((e) => e.id));
+
+    return c.json({
+      ok: true,
+      organization: organizationToPublicJson(org),
+      events: events.map((e) => eventToPublicSafeJson(e, counts.get(e.id) ?? 0))
+    });
+  });
 
   // Alle org-routes kræver login. Selve role/medlemskab-gaten håndteres
   // pr. route nedenfor.

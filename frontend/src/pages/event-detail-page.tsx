@@ -126,6 +126,28 @@ export function EventDetailPage() {
             <p className="mt-2 text-sm text-[color:var(--color-text-secondary)]">
               {formatDateTime(event.starts_at)} – {formatDateTime(event.ends_at)}
             </p>
+            {event.organizations && event.organizations.length > 0 && (
+              <p
+                className="mt-1 text-sm text-[color:var(--color-text-secondary)]"
+                data-testid="event-hosts"
+              >
+                Afholdes af{" "}
+                {event.organizations.map((host, i) => (
+                  <span key={host.slug}>
+                    {i > 0 && ", "}
+                    <button
+                      type="button"
+                      className="link-inline"
+                      onClick={() =>
+                        navigate(`${appConfig.routes.organizations}/${host.slug}`)
+                      }
+                    >
+                      {host.name}
+                    </button>
+                  </span>
+                ))}
+              </p>
+            )}
           </CardHeader>
           <CardContent className="space-y-5 px-6 pb-8 pt-2">
             <p className="whitespace-pre-line text-[color:var(--color-text-primary)]">

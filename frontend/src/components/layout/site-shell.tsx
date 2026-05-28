@@ -23,6 +23,7 @@ const MEMBER_NAV: Array<{ href: string; label: string; verifiedOnly?: boolean }>
   { href: appConfig.routes.profile, label: "Profil" },
   { href: appConfig.routes.members, label: "Medlemmer", verifiedOnly: true },
   { href: appConfig.routes.events, label: "Events", verifiedOnly: true },
+  { href: appConfig.routes.organizations, label: "Arrangører" },
   { href: appConfig.routes.messages, label: "Beskeder", verifiedOnly: true },
   { href: appConfig.routes.membership, label: "Medlemskab" }
 ];

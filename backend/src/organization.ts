@@ -98,6 +98,18 @@ export type OrganizationRepository = {
     items: OrganizationRecord[];
     total: number;
   }>;
+  // Offentligt katalog: kun aktive organizations.
+  listPublic: (options?: { limit?: number; offset?: number }) => Promise<{
+    items: OrganizationRecord[];
+    total: number;
+  }>;
+  // Offentlig org-opslag på slug — kun aktive (suspenderede skjules).
+  getPublicBySlug: (slug: string) => Promise<OrganizationRecord | null>;
+  // En orgs publicerede, kommende events (til den offentlige org-side).
+  listPublishedEventsForOrg: (
+    orgId: string,
+    options?: { limit?: number }
+  ) => Promise<EventRecord[]>;
   listMembers: (orgId: string) => Promise<OrganizationMember[]>;
   getMembership: (orgId: string, userId: string) => Promise<OrganizationMember | null>;
   countOwners: (orgId: string) => Promise<number>;
@@ -237,6 +249,55 @@ export class PostgresOrganizationRepository implements OrganizationRepository {
       items: itemsResult.rows.map(rowToOrganization),
       total: Number(countResult.rows[0]?.count ?? 0)
     };
+  }
+
+  async listPublic(options?: { limit?: number; offset?: number }): Promise<{
+    items: OrganizationRecord[];
+    total: number;
+  }> {
+    const limit = Math.max(1, Math.min(100, options?.limit ?? 50));
+    const offset = Math.max(0, options?.offset ?? 0);
+    const [itemsResult, countResult] = await Promise.all([
+      this.pool.query(
+        `SELECT ${ORG_FIELDS} FROM organization WHERE status = 'active' ORDER BY name LIMIT $1 OFFSET $2`,
+        [limit, offset]
+      ),
+      this.pool.query<{ count: string }>(
+        `SELECT COUNT(*)::text AS count FROM organization WHERE status = 'active'`
+      )
+    ]);
+    return {
+      items: itemsResult.rows.map(rowToOrganization),
+      total: Number(countResult.rows[0]?.count ?? 0)
+    };
+  }
+
+  async getPublicBySlug(slug: string): Promise<OrganizationRecord | null> {
+    const result = await this.pool.query(
+      `SELECT ${ORG_FIELDS} FROM organization WHERE slug = $1 AND status = 'active' LIMIT 1`,
+      [slug]
+    );
+    return result.rows[0] ? rowToOrganization(result.rows[0]) : null;
+  }
+
+  async listPublishedEventsForOrg(
+    orgId: string,
+    options?: { limit?: number }
+  ): Promise<EventRecord[]> {
+    const limit = Math.max(1, Math.min(100, options?.limit ?? 50));
+    const result = await this.pool.query(
+      // e.* (ikke EVENT_FIELDS) pga. created_at-kollision i join'en.
+      `SELECT e.*
+       FROM event e
+       JOIN event_organization eo ON eo.event_id = e.id
+       WHERE eo.organization_id = $1
+         AND e.status = 'published'
+         AND e.starts_at >= NOW()
+       ORDER BY e.starts_at
+       LIMIT $2`,
+      [orgId, limit]
+    );
+    return result.rows.map(rowToEvent);
   }
 
   async listMembers(orgId: string): Promise<OrganizationMember[]> {
