@@ -114,6 +114,7 @@ export function OrganizerOrgPage() {
   // Org-redigering
   const [editingOrg, setEditingOrg] = useState(false);
   const [orgForm, setOrgForm] = useState({ name: "", description: "", region: "", contact_email: "" });
+  const [logoUploading, setLogoUploading] = useState(false);
 
   // Team
   const [memberEmail, setMemberEmail] = useState("");
@@ -194,6 +195,25 @@ export function OrganizerOrgPage() {
     }
     setSuccess("Organisationen er opdateret.");
     setEditingOrg(false);
+    void reloadAll();
+  }
+
+  async function handleLogoUpload(file: File) {
+    setLogoUploading(true);
+    setError("");
+    const result = await api.uploadOrganizationLogo(orgId, file);
+    setLogoUploading(false);
+    if (!result.ok) {
+      setError(
+        result.code === "FILE_TOO_LARGE"
+          ? "Filen er for stor (max 8MB)."
+          : result.code === "UNSUPPORTED_MIME_TYPE" || result.code === "MIME_MISMATCH"
+            ? "Kun billedfiler (JPG, PNG, WebP)."
+            : "Kunne ikke uploade logo."
+      );
+      return;
+    }
+    setSuccess("Logo opdateret.");
     void reloadAll();
   }
 
@@ -354,6 +374,38 @@ export function OrganizerOrgPage() {
           <p className="body-text-muted text-sm">Indlæser…</p>
         ) : (
           <div className="space-y-8">
+            {org && (
+              <div className="flex items-center gap-4" data-testid="org-logo-section">
+                {org.logo_path ? (
+                  <img
+                    src={`${api.organizationLogoUrl(org.slug)}?t=${encodeURIComponent(org.updated_at)}`}
+                    alt={org.name}
+                    className="h-20 w-20 rounded-2xl border border-[color:var(--border-subtle)] object-cover"
+                  />
+                ) : (
+                  <div className="flex h-20 w-20 items-center justify-center rounded-2xl border border-dashed border-[color:var(--border-subtle)] text-center text-[0.65rem] text-[color:var(--color-text-tertiary)]">
+                    Intet logo
+                  </div>
+                )}
+                {isOwner && (
+                  <label className="glass-pill hover-glow partner-pill inline-flex cursor-pointer items-center rounded-full px-4 py-2 text-xs tracking-wider">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      data-testid="logo-input"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) void handleLogoUpload(f);
+                        e.target.value = "";
+                      }}
+                    />
+                    {logoUploading ? "Uploader…" : org.logo_path ? "Skift logo" : "Upload logo"}
+                  </label>
+                )}
+              </div>
+            )}
+
             {editingOrg && isOwner && (
               <Card className="p-6" data-testid="edit-org-form">
                 <CardHeader className="px-0 pt-0">

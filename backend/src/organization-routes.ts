@@ -13,6 +13,7 @@ import type {
   OrgRole
 } from "./organization";
 import { isValidEmail, normalizeEmail } from "./validators";
+import type { UploadStore } from "./uploads";
 
 type AuthSessionData = {
   user: { id: string; email: string; role?: string | null };
@@ -24,6 +25,8 @@ type OrganizationDeps = {
   organizationRepository: OrganizationRepository;
   eventRepository: EventRepository;
   membershipRepository: MembershipRepository;
+  // Valgfri: når sat kan organisationer uploade et logo.
+  uploadStore?: UploadStore;
 };
 
 const CATEGORIES: EventCategory[] = ["single_only", "couple_only", "mixed"];
@@ -100,7 +103,7 @@ export function registerOrganizationRoutes(
   app: Hono<{ Variables: { authSession: AuthSessionData } }>,
   deps: OrganizationDeps
 ): void {
-  const { authService, organizationRepository, eventRepository, membershipRepository } = deps;
+  const { authService, organizationRepository, eventRepository, membershipRepository, uploadStore } = deps;
 
   // ---------- Offentlige org-routes (uden auth, til opdagelse) ----------
   // Skal registreres FØR auth-middleware på /api/organizations* (de ligger
@@ -130,6 +133,25 @@ export function registerOrganizationRoutes(
       organization: organizationToPublicJson(org),
       events: events.map((e) => eventToPublicSafeJson(e, counts.get(e.id) ?? 0))
     });
+  });
+
+  // Offentligt logo-stream (kun aktive orgs). Bruges af både SSR og SPA.
+  app.get("/api/public/organizations/:slug/logo", async (c) => {
+    const org = await organizationRepository.getPublicBySlug(c.req.param("slug"));
+    if (!org || !org.logo_path || !uploadStore) {
+      return c.json({ ok: false, code: "NOT_FOUND" }, 404);
+    }
+    try {
+      const file = await uploadStore.read(org.logo_path);
+      return new Response(new Uint8Array(file.data) as unknown as BodyInit, {
+        headers: {
+          "Content-Type": file.mimeType,
+          "Cache-Control": "public, max-age=300, stale-while-revalidate=3600"
+        }
+      });
+    } catch {
+      return c.json({ ok: false, code: "NOT_FOUND" }, 404);
+    }
   });
 
   // Alle org-routes kræver login. Selve role/medlemskab-gaten håndteres
@@ -285,6 +307,50 @@ export function registerOrganizationRoutes(
     const ok = await organizationRepository.delete(c.req.param("id"));
     if (!ok) return c.json({ ok: false, code: "NOT_FOUND" }, 404);
     return c.json({ ok: true });
+  });
+
+  // Logo-upload (kun owner/admin). Multipart — body-limit hæves for denne
+  // path i app.ts. Gammelt logo slettes efter nyt er gemt.
+  app.post("/api/organizations/:id/logo", async (c) => {
+    if (!uploadStore) return c.json({ ok: false, code: "NOT_AVAILABLE" }, 503);
+    const session = c.get("authSession");
+    const admin = isAdmin(c);
+    const orgId = c.req.param("id");
+    const access = await loadOrgAccess(orgId, session.user.id, admin);
+    if (!access.ok) return c.json({ ok: false, code: access.status === 404 ? "NOT_FOUND" : "FORBIDDEN" }, access.status);
+    if (access.orgRole !== "owner" && !admin) {
+      return c.json({ ok: false, code: "FORBIDDEN", message: "Kun owners kan ændre logo." }, 403);
+    }
+
+    let formData: FormData;
+    try {
+      formData = await c.req.formData();
+    } catch {
+      return c.json({ ok: false, code: "INVALID_MULTIPART" }, 400);
+    }
+    const file = formData.get("file");
+    if (!(file instanceof File)) {
+      return c.json({ ok: false, code: "FILE_REQUIRED" }, 422);
+    }
+
+    let upload;
+    try {
+      upload = await uploadStore.saveImage("organization", orgId, file);
+    } catch (error) {
+      const message = (error as Error).message;
+      if (message === "UNSUPPORTED_MIME_TYPE") return c.json({ ok: false, code: "UNSUPPORTED_MIME_TYPE" }, 422);
+      if (message === "FILE_TOO_LARGE") return c.json({ ok: false, code: "FILE_TOO_LARGE" }, 413);
+      if (message === "MIME_MISMATCH") return c.json({ ok: false, code: "MIME_MISMATCH" }, 422);
+      throw error;
+    }
+
+    const oldPath = access.org.logo_path;
+    const updated = await organizationRepository.update(orgId, { logo_path: upload.storagePath });
+    if (oldPath && oldPath !== upload.storagePath) {
+      await uploadStore.delete(oldPath).catch(() => undefined);
+    }
+    if (!updated) return c.json({ ok: false, code: "NOT_FOUND" }, 404);
+    return c.json({ ok: true, organization: organizationToJson(updated) });
   });
 
   // ---------- Members ----------

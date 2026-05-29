@@ -111,6 +111,7 @@ async function bootstrap(): Promise<void> {
     rateLimiter,
     corsOrigins: config.corsOrigins,
     appUrl: config.appUrl,
+    apiUrl: config.apiUrl,
     waitlistConfirmPath: config.waitlistConfirmPath,
     partnerConfirmPath: config.partnerConfirmPath,
     confirmationTokenTtlHours: config.waitlistTokenTtlHours,

@@ -33,7 +33,7 @@ findgloed.dk, www.findgloed.dk {
 	# evalueres i rækkefølge — første match vinder. Path-matching i Caddy
 	# bruger glob-syntax: /events* matcher /events, /events/, /events/xxx.
 	@ssr {
-		path /events /events/* /sitemap.xml /robots.txt
+		path /events /events/* /organizations /organizations/* /sitemap.xml /robots.txt
 	}
 	reverse_proxy @ssr api:39564
 

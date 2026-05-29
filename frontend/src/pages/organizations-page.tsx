@@ -56,7 +56,14 @@ export function OrganizationsPage() {
                 data-testid={`public-org-${org.slug}`}
                 onClick={() => navigate(`${appConfig.routes.organizations}/${org.slug}`)}
               >
-                <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  {org.logo_path && (
+                    <img
+                      src={api.organizationLogoUrl(org.slug)}
+                      alt={org.name}
+                      className="h-12 w-12 shrink-0 rounded-xl border border-[color:var(--border-subtle)] object-cover"
+                    />
+                  )}
                   <div className="space-y-1">
                     <p className="font-display text-lg">{org.name}</p>
                     {org.region && <Badge variant="outline">{org.region}</Badge>}

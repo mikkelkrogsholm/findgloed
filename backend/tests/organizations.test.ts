@@ -247,11 +247,25 @@ function createEventRepo(): EventRepository {
   } as unknown as EventRepository;
 }
 
+function stubUploadStore() {
+  return {
+    saveImage: async () => ({
+      storagePath: "organization/x/logo.png",
+      mimeType: "image/png",
+      byteSize: 10
+    }),
+    delete: async () => undefined,
+    read: async () => ({ data: Buffer.from([0x89, 0x50]), mimeType: "image/png" }),
+    fullPath: (p: string) => p
+  };
+}
+
 function createTestApp(opts: {
   authService: AuthService;
   users: MembershipProfile[];
   orgRepo: OrganizationRepository;
   eventRepo?: EventRepository;
+  uploadStore?: ReturnType<typeof stubUploadStore>;
 }) {
   return createApp({
     leadRepository: {
@@ -275,7 +289,9 @@ function createTestApp(opts: {
     authService: opts.authService,
     membershipRepository: createMembership(opts.users),
     organizationRepository: opts.orgRepo,
-    eventRepository: opts.eventRepo ?? createEventRepo()
+    eventRepository: opts.eventRepo ?? createEventRepo(),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    uploadStore: opts.uploadStore as any
   });
 }
 
@@ -544,5 +560,72 @@ describe("Public organizations", () => {
     const ok = await (await app.request("/api/public/organizations/klub")).json();
     expect(ok.organization.name).toBe("Klub Glød");
     expect(Array.isArray(ok.events)).toBe(true);
+  });
+});
+
+describe("SSR organizations", () => {
+  test("GET /organizations returnerer HTML med arrangør-navn", async () => {
+    const orgRepo = createOrgRepo({ orgs: [org("o1", "klub", "Klub Glød", "u1")] });
+    const app = createTestApp({ authService: anonAuth(), users: [], orgRepo });
+    const res = await app.request("/organizations");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("text/html");
+    const body = await res.text();
+    expect(body).toContain("Klub Glød");
+    expect(body).toContain("Arrangører");
+  });
+
+  test("GET /organizations/:slug — HTML for aktiv, 404 for suspenderet", async () => {
+    const orgRepo = createOrgRepo({
+      orgs: [
+        org("o1", "klub", "Klub Glød", "u1"),
+        { ...org("o2", "skjult", "Skjult", "u1"), status: "suspended" }
+      ]
+    });
+    const app = createTestApp({ authService: anonAuth(), users: [], orgRepo });
+    const ok = await app.request("/organizations/klub");
+    expect(ok.status).toBe(200);
+    expect(await ok.text()).toContain("Klub Glød");
+    expect((await app.request("/organizations/skjult")).status).toBe(404);
+  });
+});
+
+describe("Organization logo upload", () => {
+  function logoForm() {
+    const fd = new FormData();
+    fd.append("file", new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], "logo.png", { type: "image/png" }));
+    return { method: "POST", body: fd };
+  }
+
+  test("owner kan uploade logo", async () => {
+    const orgRepo = createOrgRepo({
+      orgs: [org("org-1", "klub", "Klub", "o1")],
+      members: [{ organization_id: "org-1", user_id: "o1", org_role: "owner", created_at: new Date() }]
+    });
+    const app = createTestApp({
+      authService: auth({ id: "o1", email: "o1@x.dk", role: "organizer" }),
+      users: [profile("o1", "o1@x.dk", "organizer")],
+      orgRepo,
+      uploadStore: stubUploadStore()
+    });
+    const res = await app.request("/api/organizations/org-1/logo", logoForm());
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.organization.logo_path).toBe("organization/x/logo.png");
+  });
+
+  test("editor kan IKKE uploade logo", async () => {
+    const orgRepo = createOrgRepo({
+      orgs: [org("org-1", "klub", "Klub", "o1")],
+      members: [{ organization_id: "org-1", user_id: "ed", org_role: "editor", created_at: new Date() }]
+    });
+    const app = createTestApp({
+      authService: auth({ id: "ed", email: "ed@x.dk", role: "organizer" }),
+      users: [profile("ed", "ed@x.dk", "organizer")],
+      orgRepo,
+      uploadStore: stubUploadStore()
+    });
+    const res = await app.request("/api/organizations/org-1/logo", logoForm());
+    expect(res.status).toBe(403);
   });
 });

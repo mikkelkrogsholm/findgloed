@@ -20,13 +20,13 @@ type SsrDeps = {
   appUrl: string;
 };
 
-const CATEGORY_LABEL: Record<string, string> = {
+export const CATEGORY_LABEL: Record<string, string> = {
   single_only: "Kun singles",
   couple_only: "Kun par",
   mixed: "Singles og par"
 };
 
-const LEVEL_LABEL: Record<string, string> = {
+export const LEVEL_LABEL: Record<string, string> = {
   sensual_social: "Sanseligt-socialt",
   sensual: "Sensuelt",
   explicit: "Eksplicit"
@@ -39,7 +39,7 @@ const LEVEL_DESCRIPTION: Record<string, string> = {
   explicit: "Eksplicitte rammer. Kun for medlemmer med tidligere event-erfaring."
 };
 
-function formatDate(date: Date): string {
+export function formatDate(date: Date): string {
   return date.toLocaleDateString("da-DK", {
     weekday: "long",
     day: "numeric",
@@ -59,7 +59,7 @@ function formatDateMachine(date: Date): string {
   return date.toISOString();
 }
 
-function formatPrice(cents: number): string {
+export function formatPrice(cents: number): string {
   const kr = cents / 100;
   return new Intl.NumberFormat("da-DK", {
     style: "currency",
@@ -79,11 +79,11 @@ function metaDescription(event: EventRecord): string {
   return truncate(firstParagraph, 155);
 }
 
-function eventPath(slug: string): string {
+export function eventPath(slug: string): string {
   return `/events/${encodeURIComponent(slug)}`;
 }
 
-function pageShell(opts: {
+export function pageShell(opts: {
   title: string;
   description: string;
   canonical: string;

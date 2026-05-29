@@ -7,6 +7,7 @@ import type { EventRepository } from "./events";
 import { registerOrganizationRoutes } from "./organization-routes";
 import type { OrganizationRepository } from "./organization";
 import { registerEventsSsr } from "./ssr-events";
+import { registerOrganizationsSsr } from "./ssr-organizations";
 import { registerSitemapRoutes } from "./ssr-sitemap";
 import { registerMembershipRoutes } from "./membership-routes";
 import { registerMessagingRoutes } from "./messaging-routes";
@@ -57,6 +58,9 @@ type AppDeps = {
   resendCooldownMinutes?: number;
   rateLimitEnabled?: boolean;
   rateLimitFailOpen?: boolean;
+  // Bruges af SSR til at bygge absolutte logo-URLs på tværs af domæner
+  // (findgloed.dk-siden refererer billeder på api.findgloed.dk).
+  apiUrl?: string;
   trustProxy?: boolean;
   enableHsts?: boolean;
   hstsMaxAgeSeconds?: number;
@@ -362,9 +366,12 @@ export function createApp(deps: AppDeps): Hono<{ Variables: AppVariables }> {
     maxSize: JSON_BODY_LIMIT_BYTES,
     onError: payloadTooLargeResponse
   });
+  // Org-logo-upload har dynamisk :id i pathen, så den matches med regex
+  // i stedet for det statiske MULTIPART_PATHS-sæt.
+  const ORG_LOGO_PATH = /^\/api\/organizations\/[^/]+\/logo$/;
   app.use("/api/*", async (c, next) => {
     const path = new URL(c.req.url).pathname;
-    if (MULTIPART_PATHS.has(path)) {
+    if (MULTIPART_PATHS.has(path) || ORG_LOGO_PATH.test(path)) {
       return multipartLimit(c, next);
     }
     if (WEBHOOK_PATHS.has(path)) {
@@ -679,7 +686,8 @@ export function createApp(deps: AppDeps): Hono<{ Variables: AppVariables }> {
       authService,
       organizationRepository: deps.organizationRepository,
       eventRepository: deps.eventRepository,
-      membershipRepository: deps.membershipRepository
+      membershipRepository: deps.membershipRepository,
+      uploadStore: deps.uploadStore
     });
   }
 
@@ -693,7 +701,16 @@ export function createApp(deps: AppDeps): Hono<{ Variables: AppVariables }> {
     });
     registerSitemapRoutes(app, {
       eventRepository: deps.eventRepository,
+      organizationRepository: deps.organizationRepository,
       appUrl: deps.appUrl
+    });
+  }
+
+  if (deps.organizationRepository) {
+    registerOrganizationsSsr(app, {
+      organizationRepository: deps.organizationRepository,
+      appUrl: deps.appUrl,
+      apiUrl: deps.apiUrl ?? deps.appUrl
     });
   }
 

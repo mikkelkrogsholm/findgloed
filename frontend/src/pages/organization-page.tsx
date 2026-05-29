@@ -68,6 +68,14 @@ export function OrganizationPage() {
           Alle arrangører
         </Button>
 
+        {org.logo_path && (
+          <img
+            src={api.organizationLogoUrl(org.slug)}
+            alt={org.name}
+            className="mb-4 h-24 w-24 rounded-2xl border border-[color:var(--border-subtle)] object-cover"
+          />
+        )}
+
         <PageHeader
           kicker="ARRANGØR"
           title={org.name}

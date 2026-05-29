@@ -104,7 +104,7 @@ export type UploadResult = {
 
 export type UploadStore = {
   saveImage: (
-    bucket: "profile" | "verification",
+    bucket: "profile" | "verification" | "organization",
     ownerId: string,
     file: File
   ) => Promise<UploadResult>;

@@ -518,6 +518,19 @@ export const api = {
       `/api/public/organizations/${encodeURIComponent(slug)}`
     ),
 
+  // Offentlig logo-URL (img-src). Stabil pr. slug.
+  organizationLogoUrl: (slug: string) =>
+    `${API_URL}/api/public/organizations/${encodeURIComponent(slug)}/logo`,
+
+  uploadOrganizationLogo: (id: string, file: File) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    return request<{ ok: true; organization: Organization }>(
+      `/api/organizations/${encodeURIComponent(id)}/logo`,
+      { method: "POST", body: fd }
+    );
+  },
+
   // ---------- Organizations ----------
   listOrganizations: () =>
     request<{ ok: true; organizations: OrganizationWithRole[] }>("/api/organizations"),

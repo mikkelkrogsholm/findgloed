@@ -1,10 +1,12 @@
 import type { Hono } from "hono";
 import type { EventRepository } from "./events";
+import type { OrganizationRepository } from "./organization";
 
 // Sitemap + robots.txt. Serveres af samme api-container som SSR-eventene.
 
 type SitemapDeps = {
   eventRepository: EventRepository;
+  organizationRepository?: OrganizationRepository;
   appUrl: string;
 };
 
@@ -28,7 +30,8 @@ const STATIC_PAGES: Array<{
   { path: "/code-of-conduct", changefreq: "monthly", priority: "0.6" },
   { path: "/privacy", changefreq: "yearly", priority: "0.3" },
   { path: "/terms", changefreq: "yearly", priority: "0.3" },
-  { path: "/events", changefreq: "daily", priority: "0.9" }
+  { path: "/events", changefreq: "daily", priority: "0.9" },
+  { path: "/organizations", changefreq: "weekly", priority: "0.7" }
 ];
 
 // Accepter generisk Hono-app — kalderen kan have egne Variables/Bindings.
@@ -68,12 +71,32 @@ export function registerSitemapRoutes(app: Hono<any, any, any>, deps: SitemapDep
       })
       .join("\n");
 
+    // Org-sider (kun aktive). Hvis repo ikke er injiceret springes de over.
+    let orgEntries = "";
+    if (deps.organizationRepository) {
+      const { items: orgs } = await deps.organizationRepository.listPublic({
+        limit: 1000,
+        offset: 0
+      });
+      orgEntries = orgs
+        .map(
+          (org) =>
+            `  <url>\n` +
+            `    <loc>${xmlEscape(baseUrl + "/organizations/" + org.slug)}</loc>\n` +
+            `    <changefreq>weekly</changefreq>\n` +
+            `    <priority>0.6</priority>\n` +
+            `  </url>`
+        )
+        .join("\n");
+    }
+
     const xml =
       `<?xml version="1.0" encoding="UTF-8"?>\n` +
       `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
       staticEntries +
       "\n" +
       eventEntries +
+      (orgEntries ? "\n" + orgEntries : "") +
       "\n" +
       `</urlset>\n`;
 
@@ -88,6 +111,8 @@ export function registerSitemapRoutes(app: Hono<any, any, any>, deps: SitemapDep
       "Allow: /",
       "Allow: /events",
       "Allow: /events/",
+      "Allow: /organizations",
+      "Allow: /organizations/",
       "Allow: /vision",
       "Allow: /code-of-conduct",
       "Allow: /privacy",
