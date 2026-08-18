@@ -13,6 +13,9 @@ services:
     dns:
       - 8.8.8.8
       - 1.1.1.1
+    networks:
+      - default
+      - findgloed_app_edge
     restart: always
 
   db:
@@ -121,3 +124,8 @@ volumes:
   caddy_data:
   caddy_config:
   findgloed_uploads:
+
+networks:
+  findgloed_app_edge:
+    external: true
+    name: findgloed-app-edge
