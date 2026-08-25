@@ -28,16 +28,17 @@
 findgloed.dk, www.findgloed.dk {
 	import security_headers
 
-	# SEO-routes: /events, /events/:slug, /sitemap.xml, /robots.txt skal
-	# serveres af api-containeren (Hono SSR) i stedet for SPA. Matcheren
-	# evalueres i rækkefølge — første match vinder. Path-matching i Caddy
-	# bruger glob-syntax: /events* matcher /events, /events/, /events/xxx.
-	@ssr {
-		path /events /events/* /organizations /organizations/* /sitemap.xml /robots.txt
+	# First-party Umami tracker; handle_path strips /a before proxying.
+	handle_path /a/* {
+		reverse_proxy umami:3000
 	}
-	reverse_proxy @ssr api:39564
 
-	reverse_proxy web:80
+	# Private medlemsruter hører til den isolerede app.
+	@private path /mit-gloed /mit-gloed/* /login /login/*
+	redir @private https://app.findgloed.dk{uri} 308
+
+	# Det offentlige Astro-site.
+	reverse_proxy findgloed-astro:4321
 }
 
 api.findgloed.dk {
@@ -48,4 +49,22 @@ api.findgloed.dk {
 umami.findgloed.dk {
 	import security_headers
 	reverse_proxy umami:3000
+}
+
+app.findgloed.dk {
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "no-referrer"
+		Permissions-Policy "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()"
+		-Server
+	}
+
+	@new_app_private path /api/me /api/me/*
+	header @new_app_private Cache-Control "private, no-store"
+
+	@new_app_api path /api /api/*
+	reverse_proxy @new_app_api findgloed-app-api:39564
+	reverse_proxy findgloed-app-web:80
 }
