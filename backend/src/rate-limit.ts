@@ -21,6 +21,8 @@ export type RateLimiterOptions = {
   interestWindowSeconds: number;
   uploadMax: number;
   uploadWindowSeconds: number;
+  searchMax: number;
+  searchWindowSeconds: number;
 };
 
 function hashShort(value: string): string {
@@ -86,6 +88,11 @@ export class RedisRateLimiter implements RateLimiter {
         return {
           max: this.options.interestMax,
           windowSeconds: this.options.interestWindowSeconds
+        };
+      case "article_search":
+        return {
+          max: this.options.searchMax,
+          windowSeconds: this.options.searchWindowSeconds
         };
       case "upload":
         return {

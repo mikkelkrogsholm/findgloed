@@ -43,6 +43,60 @@ services:
       retries: 20
     restart: always
 
+  meilisearch:
+    image: getmeili/meilisearch:v1.45.1
+    environment:
+      MEILI_ENV: production
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY}
+      MEILI_NO_ANALYTICS: "true"
+    volumes:
+      - meilisearch_data:/meili_data
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:7700/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    restart: always
+
+  meili-bootstrap:
+    build:
+      context: ./content-site
+      dockerfile: Dockerfile
+      target: development
+      args:
+        BUN_VERSION: "1.3.14"
+    command: ["bun", "run", "search:bootstrap"]
+    environment:
+      MEILI_HOST: http://meilisearch:7700
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY}
+      MEILI_ARTICLE_INDEX: ${MEILI_ARTICLE_INDEX:-articles}
+      MEILI_SEARCH_KEY_FILE: /run/meilisearch/search-key
+    volumes:
+      - meilisearch_runtime:/run/meilisearch
+    depends_on:
+      meilisearch:
+        condition: service_healthy
+    restart: "no"
+
+  content-indexer:
+    build:
+      context: ./content-site
+      dockerfile: Dockerfile
+      target: development
+      args:
+        BUN_VERSION: "1.3.14"
+    command: ["bun", "run", "search:index"]
+    environment:
+      CONTENT_ARTICLES_ROOT: /workspace/knowledge/docs/knowledge/redaktion/artikler
+      MEILI_HOST: http://meilisearch:7700
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY}
+      MEILI_ARTICLE_INDEX: ${MEILI_ARTICLE_INDEX:-articles}
+    depends_on:
+      meili-bootstrap:
+        condition: service_completed_successfully
+    restart: "no"
+
   api:
     build:
       context: ./backend
@@ -86,15 +140,21 @@ services:
       WAITLIST_RESEND_COOLDOWN_MINUTES: ${WAITLIST_RESEND_COOLDOWN_MINUTES}
       DB_SSL_REJECT_UNAUTHORIZED: ${DB_SSL_REJECT_UNAUTHORIZED}
       HSTS_MAX_AGE_SECONDS: ${HSTS_MAX_AGE_SECONDS}
+      MEILI_HOST: http://meilisearch:7700
+      MEILI_ARTICLE_INDEX: ${MEILI_ARTICLE_INDEX:-articles}
+      MEILI_SEARCH_KEY_FILE: /run/meilisearch/search-key
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
+      content-indexer:
+        condition: service_completed_successfully
     volumes:
       # Profil-fotos og verificeringsfiler skal overleve container-rebuild.
       # Default uploads-root er process.cwd()/uploads = /app/uploads (jf. Dockerfile WORKDIR /app).
       - findgloed_uploads:/app/uploads
+      - meilisearch_runtime:/run/meilisearch:ro
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:39564/api/health || exit 1"]
       interval: 10s
@@ -124,6 +184,8 @@ volumes:
   caddy_data:
   caddy_config:
   findgloed_uploads:
+  meilisearch_data:
+  meilisearch_runtime:
 
 networks:
   findgloed_app_edge:

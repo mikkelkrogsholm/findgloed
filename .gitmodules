@@ -1,0 +1,3 @@
+[submodule "content-site"]
+	path = content-site
+	url = https://github.com/FindGlod/web.git

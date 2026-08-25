@@ -37,6 +37,10 @@ findgloed.dk, www.findgloed.dk {
 	@private path /mit-gloed /mit-gloed/* /login /login/*
 	redir @private https://app.findgloed.dk{uri} 308
 
+	# Søgning går via Hono-proxyen; Meilisearch er aldrig offentligt eksponeret.
+	@article_search path /api/search/articles
+	reverse_proxy @article_search api:39564
+
 	# Det offentlige Astro-site.
 	reverse_proxy findgloed-astro:4321
 }

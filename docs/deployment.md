@@ -130,6 +130,10 @@ UMAMI_APP_SECRET=UDFYLD
 
 # Security
 HSTS_MAX_AGE_SECONDS=31536000
+
+# Artikelsøgning (kun internt Docker-netværk)
+MEILI_MASTER_KEY=UDFYLD_MED_URL_SIKKER_SECRET
+MEILI_ARTICLE_INDEX=articles
 ```
 
 Generer sikre secrets med:
@@ -146,7 +150,7 @@ cd /opt/findgloed
 docker compose -f docker-compose.prod.yml up -d --build
 ```
 
-Services starter i rækkefølge: `db` → `redis` → `api` (migrationer køres automatisk) → `web`. Caddy henter TLS-certifikater fra Let's Encrypt automatisk ved opstart.
+Services starter i rækkefølge: `db` + `redis` + `meilisearch` → search-key bootstrap → artikelindeks → `api`. Caddy henter TLS-certifikater fra Let's Encrypt automatisk ved opstart. Meilisearch har ingen offentlig port.
 
 ---
 
@@ -163,6 +167,10 @@ curl https://api.findgloed.dk/api/health
 # Tjek frontend
 curl -I https://findgloed.dk
 # → HTTP/2 200
+
+# Tjek den offentlige, ratebegrænsede søgeproxy
+curl "https://findgloed.dk/api/search/articles?q=samtykke&limit=3"
+# → {"ok":true,...}
 ```
 
 ---

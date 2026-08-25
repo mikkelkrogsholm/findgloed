@@ -2,6 +2,10 @@ import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { APP_SETTING_KEYS, type AppSettingRepository } from "./app-settings";
+import {
+  registerArticleSearchRoutes,
+  type ArticleSearchService
+} from "./article-search";
 import { registerEventRoutes } from "./event-routes";
 import type { EventRepository } from "./events";
 import { registerOrganizationRoutes } from "./organization-routes";
@@ -81,6 +85,7 @@ type AppDeps = {
   subscriptionEventLog?: SubscriptionEventLog;
   // Invite-code-gate (admin-toggle). Hvis undefined er der ingen gate.
   appSettings?: AppSettingRepository;
+  articleSearchService?: ArticleSearchService;
 };
 
 const DEFAULT_TOKEN_TTL_HOURS = 72;
@@ -414,6 +419,19 @@ export function createApp(deps: AppDeps): Hono<{ Variables: AppVariables }> {
   app.get("/api/health", (c) => {
     return c.json({ ok: true, service: "findgloed-api" });
   });
+
+  if (deps.articleSearchService) {
+    app.use("/api/search/articles", async (c, next) => {
+      const limited = await enforceRateLimit(c, "article_search");
+      if (limited) {
+        return limited;
+      }
+      return next();
+    });
+    registerArticleSearchRoutes(app, {
+      searchService: deps.articleSearchService
+    });
+  }
 
   // Issue A18: Stripe webhook-endpoint. Vi forbereder routen FØR Stripe er
   // aktiveret, så vi har et stabilt URL Stripe kan ramme når nøglerne kommer.

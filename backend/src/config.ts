@@ -30,6 +30,8 @@ export type Config = {
   rateLimitUploadWindowSeconds: number;
   rateLimitSignupMax: number;
   rateLimitSignupWindowSeconds: number;
+  rateLimitSearchMax: number;
+  rateLimitSearchWindowSeconds: number;
   redisUrl: string;
   dbHost: string;
   dbPort: number;
@@ -52,6 +54,10 @@ export type Config = {
   // Issue A18: bruges af /api/webhooks/stripe til at validere Stripe-Signature.
   // Hvis tom: webhook-endpointet returnerer 501 NOT_IMPLEMENTED.
   stripeWebhookSecret: string;
+  meiliHost: string;
+  meiliSearchKey: string;
+  meiliSearchKeyFile: string;
+  meiliArticleIndex: string;
 };
 
 function required(name: string, fallback?: string): string {
@@ -162,6 +168,8 @@ export function readConfig(): Config {
     rateLimitUploadWindowSeconds: parseInteger(process.env.RATE_LIMIT_UPLOAD_WINDOW_SECONDS, 60),
     rateLimitSignupMax: parseInteger(process.env.RATE_LIMIT_SIGNUP_MAX, 5),
     rateLimitSignupWindowSeconds: parseInteger(process.env.RATE_LIMIT_SIGNUP_WINDOW_SECONDS, 3600),
+    rateLimitSearchMax: parseInteger(process.env.RATE_LIMIT_SEARCH_MAX, 60),
+    rateLimitSearchWindowSeconds: parseInteger(process.env.RATE_LIMIT_SEARCH_WINDOW_SECONDS, 60),
     redisUrl: process.env.REDIS_URL ?? "redis://redis:6379",
     dbHost: required("DB_HOST", "localhost"),
     dbPort: Number(process.env.DB_PORT ?? 5432),
@@ -179,6 +187,10 @@ export function readConfig(): Config {
     adminEmails: process.env.ADMIN_EMAILS ?? "",
     superAdminEmail: process.env.SUPERADMIN_EMAIL ?? "",
     superAdminPassword: process.env.SUPERADMIN_PASSWORD ?? "",
-    stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET ?? ""
+    stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET ?? "",
+    meiliHost: process.env.MEILI_HOST ?? "http://meilisearch:7700",
+    meiliSearchKey: process.env.MEILI_SEARCH_KEY ?? "",
+    meiliSearchKeyFile: process.env.MEILI_SEARCH_KEY_FILE ?? "",
+    meiliArticleIndex: process.env.MEILI_ARTICLE_INDEX ?? "articles"
   };
 }

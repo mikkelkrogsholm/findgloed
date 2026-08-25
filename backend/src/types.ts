@@ -139,6 +139,7 @@ export type RateLimitScope =
   | "signup_attempt"
   | "message_send"
   | "interest_signal"
+  | "article_search"
   | "upload";
 
 export type RateLimitCheckInput = {

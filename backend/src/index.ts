@@ -1,7 +1,9 @@
 import { serve } from "bun";
 import { createClient } from "redis";
 import { join } from "node:path";
+import { readFileSync } from "node:fs";
 import { createApp } from "./app";
+import { MeilisearchArticleSearch } from "./article-search";
 import { createAuthService, parseAdminEmails } from "./auth";
 import { normalizeEmail } from "./validators";
 import { readConfig } from "./config";
@@ -50,7 +52,9 @@ async function bootstrap(): Promise<void> {
         interestMax: config.rateLimitInterestMax,
         interestWindowSeconds: config.rateLimitInterestWindowSeconds,
         uploadMax: config.rateLimitUploadMax,
-        uploadWindowSeconds: config.rateLimitUploadWindowSeconds
+        uploadWindowSeconds: config.rateLimitUploadWindowSeconds,
+        searchMax: config.rateLimitSearchMax,
+        searchWindowSeconds: config.rateLimitSearchWindowSeconds
       });
     } catch {
       if (config.rateLimitFailOpen) {
@@ -97,6 +101,16 @@ async function bootstrap(): Promise<void> {
   // ved gensidig interesse. messagingRepository implementerer MatchChecker
   // via hasMutualInterest. Cirkulær DI undgået ved sen-binding.
   membershipRepository.setMatchChecker(messagingRepository);
+  const meiliSearchKey = config.meiliSearchKeyFile
+    ? readFileSync(config.meiliSearchKeyFile, "utf8").trim()
+    : config.meiliSearchKey;
+  const articleSearchService = meiliSearchKey
+    ? new MeilisearchArticleSearch({
+        host: config.meiliHost,
+        apiKey: meiliSearchKey,
+        indexUid: config.meiliArticleIndex
+      })
+    : undefined;
 
   const app = createApp({
     leadRepository: repository,
@@ -131,7 +145,8 @@ async function bootstrap(): Promise<void> {
     tokenHashSecret: config.betterAuthSecret,
     stripeWebhookSecret: config.stripeWebhookSecret,
     subscriptionEventLog: new PostgresSubscriptionEventLog(pool),
-    appSettings: new PostgresAppSettingRepository(pool)
+    appSettings: new PostgresAppSettingRepository(pool),
+    articleSearchService
   });
 
   const server = serve({
