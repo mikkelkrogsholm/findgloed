@@ -63,7 +63,7 @@ services:
     build:
       context: ./content-site
       dockerfile: Dockerfile
-      target: development
+      target: search-runtime
       args:
         BUN_VERSION: "1.3.14"
     command: ["bun", "run", "search:bootstrap"]
@@ -83,7 +83,7 @@ services:
     build:
       context: ./content-site
       dockerfile: Dockerfile
-      target: development
+      target: search-runtime
       args:
         BUN_VERSION: "1.3.14"
     command: ["bun", "run", "search:index"]
