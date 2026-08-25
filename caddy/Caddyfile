@@ -39,7 +39,7 @@ findgloed.dk, www.findgloed.dk {
 
 	# Søgning går via Hono-proxyen; Meilisearch er aldrig offentligt eksponeret.
 	@article_search path /api/search/articles
-	reverse_proxy @article_search api:39564
+	reverse_proxy @article_search findgloed-public-api:39564
 
 	# Det offentlige Astro-site.
 	reverse_proxy findgloed-astro:4321
@@ -47,7 +47,7 @@ findgloed.dk, www.findgloed.dk {
 
 api.findgloed.dk {
 	import security_headers
-	reverse_proxy api:39564
+	reverse_proxy findgloed-public-api:39564
 }
 
 umami.findgloed.dk {
